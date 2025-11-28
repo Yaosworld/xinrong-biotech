@@ -1,35 +1,43 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { usePromotionStore } from '@/stores/promotionStore'
 import { usePagination } from '@/hooks/usePagination'
-import { useSearch } from '@/hooks/useSearch'
+import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import NewsCard from '@/components/business/NewsCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const promotionStore = usePromotionStore()
 
-// 搜索功能
-const { searchQuery, debouncedQuery, clearSearch } = useSearch(
-  (query) => promotionStore.setFilter('search', query)
-)
+// 搜索关键词
+const searchQuery = ref('')
+const searchInputValue = ref('')
 
 // 分页功能
-const { currentPageItems, paginationInfo, goToPage } = usePagination(
+const { currentPageItems, paginationInfo, goToPage, setPageSize } = usePagination(
   computed(() => promotionStore.filteredPromotions),
-  { initialPageSize: 9, scrollTarget: '.news-section' }
+  { initialPageSize: 8, scrollTarget: '.news-section' }
 )
 
-// 状态筛选
-const handleStatusChange = (status: string) => {
-  promotionStore.setFilter('status', status as any)
+// 统计数据
+const stats = computed(() => [
+  { number: `${promotionStore.promotions.length}+`, label: '活动资讯' },
+  { number: '50+', label: '学术会议' },
+  { number: '20+', label: '新品发布' }
+])
+
+// 执行搜索
+const handleSearch = () => {
+  promotionStore.setFilter('search', searchInputValue.value.trim())
+  searchQuery.value = searchInputValue.value.trim()
   goToPage(1)
 }
 
 // 清空筛选
 const handleClearFilters = () => {
   promotionStore.clearAllFilters()
-  clearSearch()
+  searchInputValue.value = ''
+  searchQuery.value = ''
   goToPage(1)
 }
 
@@ -39,59 +47,35 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="news-center pt-20">
-    <!-- 页面头部 -->
-    <section class="showcase-section py-16">
-      <div class="container-base">
-        <h1 class="showcase-title text-center mb-4">资讯中心</h1>
-        <p class="text-xl text-dark-300 text-center max-w-2xl mx-auto">
-          最新活动与资讯，第一时间了解我们的产品动态与优惠信息
-        </p>
-      </div>
-    </section>
+  <div class="news-center pt-[72px]">
+    <!-- 展示区 -->
+    <ShowcaseBanner
+      title="最新活动资讯"
+      subtitle="科研动态一手掌握"
+      :stats="stats"
+    />
     
-    <!-- 筛选区 -->
-    <section class="py-6 bg-white border-b sticky top-16 z-40">
+    <!-- 搜索区 -->
+    <section class="py-8 -mt-6 relative z-10">
       <div class="container-base">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <!-- 搜索框 -->
-          <div class="relative w-full sm:w-80">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="搜索活动..."
-              class="w-full pl-10 pr-4 py-2 border border-dark-200 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-dark-400"></i>
-          </div>
-          
-          <!-- 状态筛选 -->
-          <div class="flex items-center gap-2">
-            <button
-              v-for="status in [
-                { value: 'all', label: '全部' },
-                { value: 'active', label: '进行中' },
-                { value: 'coming', label: '即将开始' },
-                { value: 'ended', label: '已结束' }
-              ]"
-              :key="status.value"
-              class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              :class="[
-                promotionStore.filters.status === status.value
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
-              ]"
-              @click="handleStatusChange(status.value)"
-            >
-              {{ status.label }}
-            </button>
-          </div>
+        <div class="search-box max-w-2xl mx-auto">
+          <i class="fas fa-search text-dark-400 ml-4"></i>
+          <input
+            v-model="searchInputValue"
+            type="text"
+            placeholder="搜索促销活动..."
+            class="search-input"
+            @keyup.enter="handleSearch"
+          />
+          <button class="search-btn" @click="handleSearch">
+            搜索
+          </button>
         </div>
       </div>
     </section>
     
     <!-- 活动列表 -->
-    <section class="news-section py-12 bg-dark-50">
+    <section class="news-section py-8">
       <div class="container-base">
         <!-- 加载状态 -->
         <div v-if="promotionStore.loading" class="py-20">
@@ -103,29 +87,39 @@ onMounted(async () => {
           v-else-if="currentPageItems.length === 0"
           icon="fas fa-bullhorn"
           title="暂无匹配的活动"
-          description="尝试调整筛选条件或搜索关键词"
-          action-text="清空筛选"
+          description="尝试调整搜索关键词"
+          action-text="清空搜索"
           @action="handleClearFilters"
         />
         
-        <!-- 活动网格 -->
+        <!-- 活动列表 -->
         <template v-else>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="space-y-6">
             <NewsCard
               v-for="promotion in currentPageItems"
               :key="promotion.id"
               :promotion="promotion"
-              :highlight-keyword="debouncedQuery"
+              :highlight-keyword="searchQuery"
             />
           </div>
           
           <!-- 分页 -->
-          <div v-if="paginationInfo.totalPages > 1" class="mt-10 flex justify-center">
+          <div v-if="paginationInfo.totalPages > 1" class="pagination-wrapper">
+            <span class="text-dark-500 text-sm">共 {{ paginationInfo.totalItems }} 条</span>
+            <el-select
+              :model-value="paginationInfo.pageSize"
+              size="default"
+              style="width: 100px"
+              @change="setPageSize"
+            >
+              <el-option :value="8" label="8条/页" />
+              <el-option :value="16" label="16条/页" />
+            </el-select>
             <el-pagination
               :current-page="paginationInfo.currentPage"
               :page-size="paginationInfo.pageSize"
               :total="paginationInfo.totalItems"
-              layout="prev, pager, next"
+              layout="prev, pager, next, jumper"
               @current-change="goToPage"
             />
           </div>
@@ -134,4 +128,3 @@ onMounted(async () => {
     </section>
   </div>
 </template>
-

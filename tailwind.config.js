@@ -7,31 +7,31 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 品牌色系 - 生物科技感
+        // 品牌色系 - 紫色系（新设计）
         primary: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
+          500: '#a855f7',
+          600: '#9333ea',
+          700: '#7c3aed',
+          800: '#6b21a8',
+          900: '#581c87',
         },
-        // 科技蓝
-        tech: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+        // 科技蓝紫
+        accent: {
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
         },
         // 深色背景
         dark: {
@@ -49,8 +49,16 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
-        display: ['Poppins', 'Noto Sans SC', 'sans-serif'],
+        sans: ['PingFang SC', 'Microsoft YaHei', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['PingFang SC', 'Microsoft YaHei', 'Poppins', 'sans-serif'],
+      },
+      backgroundImage: {
+        // 紫色渐变背景
+        'gradient-showcase': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a855f7 100%)',
+        'gradient-showcase-2': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+        // 卡片图片占位背景
+        'gradient-card': 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)',
+        'gradient-card-hover': 'linear-gradient(135deg, #c7d2fe 0%, #e9d5ff 100%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
@@ -59,6 +67,8 @@ export default {
         'scale-in': 'scaleIn 0.3s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'float': 'float 6s ease-in-out infinite',
+        'float-slow': 'float 8s ease-in-out infinite',
+        'float-slower': 'float 10s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -83,13 +93,17 @@ export default {
         },
       },
       boxShadow: {
-        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-        'card-hover': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-        'glow': '0 0 20px rgba(20, 184, 166, 0.3)',
-        'glow-lg': '0 0 40px rgba(20, 184, 166, 0.4)',
+        'card': '0 2px 12px 0 rgba(0, 0, 0, 0.08)',
+        'card-hover': '0 8px 24px 0 rgba(0, 0, 0, 0.12)',
+        'header': '0 2px 8px 0 rgba(0, 0, 0, 0.06)',
+        'button': '0 4px 14px 0 rgba(124, 58, 237, 0.3)',
+      },
+      borderRadius: {
+        'xl': '12px',
+        '2xl': '16px',
+        '3xl': '24px',
       },
     },
   },
   plugins: [],
 }
-

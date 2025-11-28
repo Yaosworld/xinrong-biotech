@@ -36,12 +36,15 @@ export interface Product {
  * 品牌接口
  */
 export interface Brand {
-  brand_id: string          // 品牌ID, e.g., "B001"
-  show_name: string         // 品牌显示名称
-  logo_url: string          // Logo 图片路径
+  id: string                // 品牌ID, e.g., "B001"
+  brand_id?: string         // 兼容旧字段
+  name: string              // 品牌名称
+  show_name?: string        // 兼容旧字段
+  logo_url?: string         // Logo 图片路径
   category?: string         // 品牌分类
   route?: string | null     // 品牌详情页路由
   is_own?: boolean          // 是否为自主品牌
+  is_own_brand?: boolean    // 兼容字段
   
   // 扩展字段
   description?: string      // 品牌描述

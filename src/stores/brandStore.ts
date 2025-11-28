@@ -72,7 +72,7 @@ export const useBrandStore = defineStore('brand', () => {
     if (filters.value.search) {
       const keyword = filters.value.search.toLowerCase()
       result = result.filter(brand =>
-        brand.show_name.toLowerCase().includes(keyword) ||
+        brand.name.toLowerCase().includes(keyword) ||
         brand.description?.toLowerCase().includes(keyword) ||
         brand.country?.toLowerCase().includes(keyword)
       )
@@ -88,7 +88,7 @@ export const useBrandStore = defineStore('brand', () => {
     // 字母筛选
     if (filters.value.alphabet) {
       result = result.filter(brand =>
-        brand.show_name.charAt(0).toUpperCase() === filters.value.alphabet
+        brand.name.charAt(0).toUpperCase() === filters.value.alphabet
       )
     }
 
@@ -122,10 +122,10 @@ export const useBrandStore = defineStore('brand', () => {
 
     switch (sortBy.value) {
       case 'name-asc':
-        result.sort((a, b) => a.show_name.localeCompare(b.show_name, 'zh-CN'))
+        result.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
         break
       case 'name-desc':
-        result.sort((a, b) => b.show_name.localeCompare(a.show_name, 'zh-CN'))
+        result.sort((a, b) => b.name.localeCompare(a.name, 'zh-CN'))
         break
       case 'featured':
         result.sort((a, b) => {
@@ -185,12 +185,12 @@ export const useBrandStore = defineStore('brand', () => {
 
   // 根据ID获取品牌
   function getBrandById(id: string): Brand | undefined {
-    return brands.value.find(b => b.brand_id === id)
+    return brands.value.find(b => b.id === id)
   }
 
   // 根据名称获取品牌
   function getBrandByName(name: string): Brand | undefined {
-    return brands.value.find(b => b.show_name === name)
+    return brands.value.find(b => b.name === name)
   }
 
   // 更新筛选条件

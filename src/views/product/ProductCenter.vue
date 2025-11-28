@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { usePagination } from '@/hooks/usePagination'
-import { useSearch } from '@/hooks/useSearch'
-import SectionTitle from '@/components/common/SectionTitle.vue'
+import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import ProductCard from '@/components/business/ProductCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -15,16 +14,73 @@ const router = useRouter()
 const productStore = useProductStore()
 const categoryStore = useCategoryStore()
 
-// 搜索功能
-const { searchQuery, isSearching, debouncedQuery, clearSearch } = useSearch(
-  (query) => productStore.setFilter('search', query)
-)
+// 搜索关键词
+const searchQuery = ref('')
+const searchInputValue = ref('')
+
+// 展示的品牌和分类数量
+const showAllBrands = ref(false)
+const showAllCategories = ref(false)
 
 // 分页功能
-const { currentPageItems, paginationInfo, goToPage } = usePagination(
+const { currentPageItems, paginationInfo, goToPage, setPageSize } = usePagination(
   computed(() => productStore.sortedProducts),
   { initialPageSize: 12, scrollTarget: '.products-section' }
 )
+
+// 展示的品牌列表
+const displayedBrands = computed(() => {
+  const brands = productStore.allBrands
+  return showAllBrands.value ? brands : brands.slice(0, 8)
+})
+
+// 展示的分类列表
+const displayedCategories = computed(() => {
+  const categories = categoryStore.categories
+  return showAllCategories.value ? categories : categories.slice(0, 10)
+})
+
+// 统计数据
+const stats = computed(() => [
+  { number: `${productStore.products.length}+`, label: '产品种类' },
+  { number: `${productStore.allBrands.length}+`, label: '合作品牌' },
+  { number: '1000+', label: '服务客户' }
+])
+
+// 执行搜索
+const handleSearch = () => {
+  productStore.setFilter('search', searchInputValue.value.trim())
+  searchQuery.value = searchInputValue.value.trim()
+  goToPage(1)
+}
+
+// 选择品牌
+const selectBrand = (brand: string) => {
+  const currentBrand = productStore.filters.brand
+  productStore.setFilter('brand', currentBrand === brand ? '' : brand)
+  goToPage(1)
+}
+
+// 选择分类
+const selectCategory = (categoryId: string) => {
+  const currentCategory = productStore.filters.categoryId
+  productStore.setFilter('categoryId', currentCategory === categoryId ? '' : categoryId)
+  goToPage(1)
+}
+
+// 清空筛选
+const handleClearFilters = () => {
+  productStore.clearAllFilters()
+  searchInputValue.value = ''
+  searchQuery.value = ''
+  goToPage(1)
+}
+
+// 排序变化
+const handleSortChange = (sort: string) => {
+  productStore.setSortBy(sort as any)
+  goToPage(1)
+}
 
 // 从URL读取筛选条件
 onMounted(async () => {
@@ -33,7 +89,6 @@ onMounted(async () => {
     categoryStore.loadCategories()
   ])
   
-  // 从URL初始化筛选条件
   if (route.query.category) {
     productStore.setFilter('categoryId', route.query.category as string)
   }
@@ -41,7 +96,8 @@ onMounted(async () => {
     productStore.setFilter('brand', route.query.brand as string)
   }
   if (route.query.search) {
-    searchQuery.value = route.query.search as string
+    searchInputValue.value = route.query.search as string
+    handleSearch()
   }
 })
 
@@ -57,200 +113,174 @@ watch(
   },
   { deep: true }
 )
-
-// 分类筛选
-const handleCategoryChange = (categoryId: string) => {
-  productStore.setFilter('categoryId', categoryId)
-  goToPage(1)
-}
-
-// 品牌筛选
-const handleBrandChange = (brand: string) => {
-  productStore.setFilter('brand', brand)
-  goToPage(1)
-}
-
-// 清空筛选
-const handleClearFilters = () => {
-  productStore.clearAllFilters()
-  clearSearch()
-  goToPage(1)
-}
-
-// 排序变化
-const handleSortChange = (sort: string) => {
-  productStore.setSortBy(sort as any)
-  goToPage(1)
-}
 </script>
 
 <template>
-  <div class="product-center pt-20">
-    <!-- 页面头部 -->
-    <section class="showcase-section py-16">
+  <div class="product-center pt-[72px]">
+    <!-- 展示区 -->
+    <ShowcaseBanner
+      title="精选优质产品"
+      subtitle="助力科研创新"
+      :stats="stats"
+    />
+    
+    <!-- 搜索区 -->
+    <section class="py-8 -mt-6 relative z-10">
       <div class="container-base">
-        <h1 class="showcase-title text-center mb-4">产品中心</h1>
-        <p class="text-xl text-dark-300 text-center max-w-2xl mx-auto">
-          探索我们的产品世界，为您提供最优质的科学仪器与试剂
-        </p>
-        
-        <!-- 统计数据 -->
-        <div class="flex justify-center gap-12 mt-8">
-          <div class="text-center">
-            <div class="text-3xl font-bold text-white">{{ productStore.products.length }}+</div>
-            <div class="text-dark-400">产品种类</div>
+        <div class="search-box max-w-3xl mx-auto">
+          <i class="fas fa-search text-dark-400 ml-4"></i>
+          <input
+            v-model="searchInputValue"
+            type="text"
+            placeholder="搜索产品名称、品牌、货号..."
+            class="search-input"
+            @keyup.enter="handleSearch"
+          />
+          <button class="search-btn" @click="handleSearch">
+            搜索
+          </button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 筛选区 -->
+    <section class="pb-6">
+      <div class="container-base">
+        <div class="filter-section">
+          <!-- 合作品牌 -->
+          <div class="mb-6">
+            <div class="filter-header">
+              <div class="filter-title">
+                <i class="fas fa-award text-primary-500"></i>
+                <span>合作品牌</span>
+              </div>
+              <button
+                v-if="productStore.allBrands.length > 8"
+                class="filter-more-btn"
+                @click="showAllBrands = !showAllBrands"
+              >
+                {{ showAllBrands ? '收起' : '更多' }}
+                <i :class="showAllBrands ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+              </button>
+            </div>
+            <div class="filter-tags">
+              <button
+                v-for="brand in displayedBrands"
+                :key="brand"
+                class="filter-tag"
+                :class="{ active: productStore.filters.brand === brand }"
+                @click="selectBrand(brand)"
+              >
+                {{ brand }}
+              </button>
+            </div>
           </div>
-          <div class="text-center">
-            <div class="text-3xl font-bold text-white">{{ categoryStore.categories.length }}+</div>
-            <div class="text-dark-400">产品分类</div>
-          </div>
-          <div class="text-center">
-            <div class="text-3xl font-bold text-white">{{ productStore.allBrands.length }}+</div>
-            <div class="text-dark-400">合作品牌</div>
+          
+          <!-- 产品分类 -->
+          <div>
+            <div class="filter-header">
+              <div class="filter-title">
+                <i class="fas fa-folder text-primary-500"></i>
+                <span>产品分类</span>
+              </div>
+              <button
+                v-if="categoryStore.categories.length > 10"
+                class="filter-more-btn"
+                @click="showAllCategories = !showAllCategories"
+              >
+                {{ showAllCategories ? '收起' : '更多' }}
+                <i :class="showAllCategories ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+              </button>
+            </div>
+            <div class="filter-tags">
+              <button
+                v-for="category in displayedCategories"
+                :key="category.id"
+                class="filter-tag"
+                :class="{ active: productStore.filters.categoryId === category.id }"
+                @click="selectCategory(category.id)"
+              >
+                {{ category.name }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </section>
     
-    <!-- 筛选和产品区 -->
-    <section class="products-section py-12 bg-dark-50">
+    <!-- 产品列表 -->
+    <section class="products-section pb-16">
       <div class="container-base">
-        <div class="flex flex-col lg:flex-row gap-8">
-          <!-- 侧边筛选栏 -->
-          <aside class="lg:w-64 flex-shrink-0">
-            <div class="bg-white rounded-xl p-6 shadow-sm sticky top-24">
-              <h3 class="text-lg font-semibold text-dark-800 mb-4">筛选条件</h3>
-              
-              <!-- 搜索框 -->
-              <div class="mb-6">
-                <label class="block text-sm font-medium text-dark-600 mb-2">搜索产品</label>
-                <div class="relative">
-                  <input
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="输入产品名称..."
-                    class="w-full pl-10 pr-4 py-2 border border-dark-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                  <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-dark-400"></i>
-                  <i
-                    v-if="isSearching"
-                    class="fas fa-spinner fa-spin absolute right-3 top-1/2 -translate-y-1/2 text-primary-500"
-                  ></i>
-                </div>
-              </div>
-              
-              <!-- 分类筛选 -->
-              <div class="mb-6">
-                <label class="block text-sm font-medium text-dark-600 mb-2">产品分类</label>
-                <select
-                  :value="productStore.filters.categoryId"
-                  class="w-full px-3 py-2 border border-dark-200 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  @change="handleCategoryChange(($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="">全部分类</option>
-                  <option
-                    v-for="category in categoryStore.categories"
-                    :key="category.id"
-                    :value="category.id"
-                  >
-                    {{ category.name }}
-                  </option>
-                </select>
-              </div>
-              
-              <!-- 品牌筛选 -->
-              <div class="mb-6">
-                <label class="block text-sm font-medium text-dark-600 mb-2">品牌</label>
-                <select
-                  :value="productStore.filters.brand"
-                  class="w-full px-3 py-2 border border-dark-200 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  @change="handleBrandChange(($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="">全部品牌</option>
-                  <option
-                    v-for="brand in productStore.allBrands"
-                    :key="brand"
-                    :value="brand"
-                  >
-                    {{ brand }}
-                  </option>
-                </select>
-              </div>
-              
-              <!-- 清空筛选 -->
-              <button
-                v-if="productStore.activeFiltersCount > 0"
-                class="w-full py-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
-                @click="handleClearFilters"
-              >
-                <i class="fas fa-times mr-2"></i>
-                清空筛选 ({{ productStore.activeFiltersCount }})
-              </button>
-            </div>
-          </aside>
+        <!-- 工具栏 -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div class="text-primary-600 font-medium">
+            共找到 {{ productStore.sortedProducts.length }} 个产品
+          </div>
           
-          <!-- 产品列表 -->
-          <main class="flex-1">
-            <!-- 工具栏 -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <div class="text-dark-600">
-                共找到 <span class="font-semibold text-primary-600">{{ productStore.sortedProducts.length }}</span> 个产品
-              </div>
-              
-              <div class="flex items-center gap-4">
-                <label class="text-sm text-dark-600">排序：</label>
-                <select
-                  :value="productStore.sortBy"
-                  class="px-3 py-2 border border-dark-200 rounded-lg text-sm"
-                  @change="handleSortChange(($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="name-asc">名称 A-Z</option>
-                  <option value="name-desc">名称 Z-A</option>
-                  <option value="price-asc">价格从低到高</option>
-                  <option value="price-desc">价格从高到低</option>
-                </select>
-              </div>
-            </div>
-            
-            <!-- 加载状态 -->
-            <div v-if="productStore.loading" class="py-20">
-              <LoadingSpinner size="lg" text="加载产品中..." />
-            </div>
-            
-            <!-- 空状态 -->
-            <EmptyState
-              v-else-if="currentPageItems.length === 0"
-              icon="fas fa-box-open"
-              title="暂无匹配的产品"
-              description="尝试调整筛选条件或搜索关键词"
-              action-text="清空筛选"
-              @action="handleClearFilters"
-            />
-            
-            <!-- 产品网格 -->
-            <div v-else class="products-grid">
-              <ProductCard
-                v-for="product in currentPageItems"
-                :key="product.id"
-                :product="product"
-                :highlight-keyword="debouncedQuery"
-              />
-            </div>
-            
-            <!-- 分页 -->
-            <div v-if="paginationInfo.totalPages > 1" class="mt-10 flex justify-center">
-              <el-pagination
-                :current-page="paginationInfo.currentPage"
-                :page-size="paginationInfo.pageSize"
-                :total="paginationInfo.totalItems"
-                layout="prev, pager, next"
-                @current-change="goToPage"
-              />
-            </div>
-          </main>
+          <div class="flex items-center gap-4">
+            <span class="text-dark-500 text-sm">排序：</span>
+            <el-select
+              :model-value="productStore.sortBy"
+              size="default"
+              style="width: 140px"
+              @change="handleSortChange"
+            >
+              <el-option value="name-asc" label="默认排序" />
+              <el-option value="name-desc" label="名称 Z-A" />
+              <el-option value="price-asc" label="价格从低到高" />
+              <el-option value="price-desc" label="价格从高到低" />
+            </el-select>
+          </div>
+        </div>
+        
+        <!-- 加载状态 -->
+        <div v-if="productStore.loading" class="py-20">
+          <LoadingSpinner size="lg" text="加载产品中..." />
+        </div>
+        
+        <!-- 空状态 -->
+        <EmptyState
+          v-else-if="currentPageItems.length === 0"
+          icon="fas fa-box-open"
+          title="暂无匹配的产品"
+          description="尝试调整筛选条件或搜索关键词"
+          action-text="清空筛选"
+          @action="handleClearFilters"
+        />
+        
+        <!-- 产品网格 -->
+        <div v-else class="products-grid">
+          <ProductCard
+            v-for="product in currentPageItems"
+            :key="product.id"
+            :product="product"
+            :highlight-keyword="searchQuery"
+          />
+        </div>
+        
+        <!-- 分页 -->
+        <div v-if="paginationInfo.totalPages > 1" class="pagination-wrapper">
+          <span class="text-dark-500 text-sm">共 {{ paginationInfo.totalItems }} 条</span>
+          <el-select
+            :model-value="paginationInfo.pageSize"
+            size="default"
+            style="width: 110px"
+            @change="setPageSize"
+          >
+            <el-option :value="12" label="12条/页" />
+            <el-option :value="24" label="24条/页" />
+            <el-option :value="48" label="48条/页" />
+          </el-select>
+          <el-pagination
+            :current-page="paginationInfo.currentPage"
+            :page-size="paginationInfo.pageSize"
+            :total="paginationInfo.totalItems"
+            :pager-count="7"
+            layout="prev, pager, next, jumper"
+            @current-change="goToPage"
+          />
         </div>
       </div>
     </section>
   </div>
 </template>
-
