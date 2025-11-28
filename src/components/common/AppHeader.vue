@@ -20,12 +20,40 @@ const navItems = [
 const isScrolled = ref(false)
 const isMobileMenuOpen = ref(false)
 
-// 当前路由是否激活
+// 当前路由是否激活 - 修复后的精确匹配逻辑
 const isActive = (path: string) => {
   if (path === '/') {
     return route.path === '/'
   }
-  return route.path.startsWith(path)
+
+  // 精确匹配
+  if (route.path === path) {
+    return true
+  }
+
+  // 子路由匹配（如 /products/123 匹配 /products）
+  if (route.path.startsWith(path + '/')) {
+    return true
+  }
+
+  return false
+}
+
+// 获取导航链接的样式类
+const getNavLinkClasses = (path: string, isSpecialButton = false) => {
+  const active = isActive(path)
+
+  if (isSpecialButton) {
+    // 关于我们按钮的特殊样式处理
+    return active
+      ? 'bg-primary-700 text-white shadow-lg transform scale-105 border border-primary-800'
+      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:border-gray-300 border border-gray-200'
+  } else {
+    // 普通导航项样式
+    return active
+      ? 'text-primary-600 bg-primary-50 font-semibold border border-primary-200'
+      : 'text-dark-600 hover:text-primary-600 hover:bg-primary-50 border border-transparent'
+  }
 }
 
 // 滚动监听
@@ -65,10 +93,10 @@ onUnmounted(() => {
         <router-link to="/" class="flex items-center gap-3 group">
           <!-- Logo图标 -->
           <div class="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-md transition-transform group-hover:scale-105">
-            <img 
+            <img
               v-if="!logoError"
-              src="/images/common/logo.png" 
-              alt="信荣生物" 
+              src="/images/common/logo.png"
+              alt="信荣生物"
               class="w-full h-full object-contain"
               @error="logoError = true"
             />
@@ -88,25 +116,17 @@ onUnmounted(() => {
             :key="item.path"
             :to="item.path"
             class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-            :class="[
-              isActive(item.path)
-                ? 'text-primary-600'
-                : 'text-dark-600 hover:text-primary-600 hover:bg-primary-50'
-            ]"
+            :class="getNavLinkClasses(item.path)"
           >
             <i :class="item.icon" class="text-sm"></i>
             <span>{{ item.name }}</span>
           </router-link>
-          
-          <!-- 关于我们 - 突出按钮 -->
+
+          <!-- 关于我们 - 修复后的突出按钮 -->
           <router-link
             to="/about"
             class="flex items-center gap-2 px-5 py-2 ml-2 rounded-lg text-sm font-medium transition-all duration-200"
-            :class="[
-              isActive('/about')
-                ? 'bg-primary-700 text-white'
-                : 'bg-primary-600 text-white hover:bg-primary-700'
-            ]"
+            :class="getNavLinkClasses('/about', true)"
           >
             <i class="fas fa-building text-sm"></i>
             <span>关于我们</span>
@@ -137,27 +157,28 @@ onUnmounted(() => {
         class="lg:hidden absolute top-full left-0 right-0 bg-white shadow-lg border-t border-dark-100"
       >
         <nav class="container-base py-4 space-y-1">
-          <button
+          <router-link
             v-for="item in navItems"
             :key="item.path"
+            :to="item.path"
             class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
-            :class="[
-              isActive(item.path)
-                ? 'bg-primary-50 text-primary-600'
-                : 'text-dark-600 hover:bg-dark-50'
-            ]"
+            :class="getNavLinkClasses(item.path)"
             @click="navigateTo(item.path)"
           >
             <i :class="item.icon" class="w-5 text-center"></i>
             <span class="font-medium">{{ item.name }}</span>
-          </button>
-          <button
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-600 text-white"
+          </router-link>
+
+          <!-- 关于我们 - 移动端样式 -->
+          <router-link
+            to="/about"
+            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+            :class="getNavLinkClasses('/about', true)"
             @click="navigateTo('/about')"
           >
             <i class="fas fa-building w-5 text-center"></i>
             <span class="font-medium">关于我们</span>
-          </button>
+          </router-link>
         </nav>
       </div>
     </Transition>
