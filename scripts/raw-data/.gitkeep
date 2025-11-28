@@ -1,0 +1,7 @@
+# 此目录用于存放原始 Excel 数据文件
+# 支持的文件:
+# - products.xlsx    (产品数据)
+# - categories.xlsx  (分类数据)
+# - brands.xlsx      (品牌数据)
+# - promotions.xlsx  (促销活动数据)
+

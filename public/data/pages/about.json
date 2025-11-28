@@ -1,0 +1,77 @@
+{
+  "id": "about",
+  "title": "关于我们",
+  "sections": [
+    {
+      "id": "intro",
+      "title": "公司介绍",
+      "type": "text",
+      "items": [
+        {
+          "title": "我们的使命",
+          "content": "作为一家专注于生物科技领域的企业，我们致力于为科研机构、医疗企业和高等院校提供高品质的科学仪器、实验耗材和生物试剂。"
+        }
+      ]
+    },
+    {
+      "id": "features",
+      "title": "为什么选择我们",
+      "type": "features",
+      "items": [
+        {
+          "icon": "fas fa-flask",
+          "title": "专业品质",
+          "description": "严选全球顶级品牌产品，确保每一件商品都符合最高标准"
+        },
+        {
+          "icon": "fas fa-shipping-fast",
+          "title": "快速配送",
+          "description": "完善的物流体系，确保产品安全、快速送达您手中"
+        },
+        {
+          "icon": "fas fa-headset",
+          "title": "专业服务",
+          "description": "资深技术团队提供专业咨询，解决您的所有疑问"
+        },
+        {
+          "icon": "fas fa-certificate",
+          "title": "品质保证",
+          "description": "所有产品均有正品保证，支持售后服务"
+        }
+      ]
+    },
+    {
+      "id": "timeline",
+      "title": "发展历程",
+      "type": "timeline",
+      "items": [
+        {
+          "year": "2010",
+          "title": "公司成立",
+          "description": "在北京中关村科技园区成立，开始从事生物科技产品代理业务"
+        },
+        {
+          "year": "2013",
+          "title": "业务拓展",
+          "description": "与多家国际知名品牌建立合作关系"
+        },
+        {
+          "year": "2016",
+          "title": "自主品牌",
+          "description": "推出自主品牌产品线，开始自主研发高品质实验耗材"
+        },
+        {
+          "year": "2020",
+          "title": "数字化转型",
+          "description": "全面升级数字化服务平台"
+        },
+        {
+          "year": "2023",
+          "title": "持续创新",
+          "description": "持续扩大产品线，服务客户超过1000家"
+        }
+      ]
+    }
+  ]
+}
+

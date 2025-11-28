@@ -1,0 +1,35 @@
+{
+  "id": "brand_center",
+  "title": "品牌中心",
+  "showcase": {
+    "summaryLines": [
+      "与全球知名品牌合作",
+      "为您提供高品质的生物技术产品与解决方案"
+    ],
+    "stats": [
+      {
+        "key": "brandCount",
+        "number": "100+",
+        "label": "合作品牌"
+      },
+      {
+        "key": "ownBrandCount",
+        "number": "10+",
+        "label": "自主品牌"
+      }
+    ]
+  },
+  "brandSections": {
+    "ownBrandsSection": {
+      "id": "own-brands",
+      "mainTitle": "自主品牌",
+      "subTitle": "Our Own Brands"
+    },
+    "selectedBrandsSection": {
+      "id": "selected-brands",
+      "mainTitle": "甄选品牌",
+      "subTitle": "Selected Brands"
+    }
+  }
+}
+
