@@ -1,0 +1,48 @@
+{
+  "id": "home",
+  "title": "首页",
+  "hero": {
+    "title": "探索生命科学的无限可能",
+    "subtitle": "我们致力于为科研机构和医疗企业提供高品质的科学仪器、实验耗材和生物试剂",
+    "backgroundImage": "/images/hero/home-bg.jpg",
+    "ctaButtons": [
+      {
+        "text": "探索产品",
+        "url": "/products",
+        "type": "primary"
+      },
+      {
+        "text": "了解我们",
+        "url": "/about",
+        "type": "secondary"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "categories",
+      "title": "产品分类",
+      "type": "gallery",
+      "items": []
+    },
+    {
+      "id": "products",
+      "title": "热门产品",
+      "type": "cards",
+      "items": []
+    },
+    {
+      "id": "brands",
+      "title": "合作品牌",
+      "type": "gallery",
+      "items": []
+    },
+    {
+      "id": "news",
+      "title": "最新活动",
+      "type": "cards",
+      "items": []
+    }
+  ]
+}
+

@@ -1,0 +1,36 @@
+{
+  "name": "生物科技企业官网",
+  "logo": "/images/common/logo.png",
+  "contact": {
+    "phone": "400-123-4567",
+    "email": "contact@biotech.com",
+    "address": "北京市海淀区中关村大街1号科技大厦15层"
+  },
+  "socials": {
+    "wechat": "biotech_official",
+    "linkedin": "https://linkedin.com/company/biotech",
+    "weibo": "https://weibo.com/biotech"
+  },
+  "footer": {
+    "copyright": "© 2025 生物科技企业. 保留所有权利.",
+    "links": [
+      {
+        "title": "关于我们",
+        "url": "/about"
+      },
+      {
+        "title": "产品中心",
+        "url": "/products"
+      },
+      {
+        "title": "品牌中心",
+        "url": "/brands"
+      },
+      {
+        "title": "资讯中心",
+        "url": "/news"
+      }
+    ]
+  }
+}
+

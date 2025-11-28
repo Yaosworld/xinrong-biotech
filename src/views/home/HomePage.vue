@@ -16,11 +16,14 @@ const categoryStore = useCategoryStore()
 const brandStore = useBrandStore()
 const promotionStore = usePromotionStore()
 
-// 统计数据
+// 页面标语
+const slogans = ['精选优质产品', '助力科研创新']
+
+// 统计数据（动态计算）
 const stats = computed(() => [
-  { number: `${productStore.products.length}+`, label: '产品种类' },
-  { number: `${brandStore.brands.length}+`, label: '合作品牌' },
-  { number: '1000+', label: '服务客户' }
+  { key: 'products', number: `${productStore.products.length}+`, label: '产品种类' },
+  { key: 'brands', number: `${brandStore.brands.length}+`, label: '合作品牌' },
+  { key: 'customers', number: '1000+', label: '服务客户' }
 ])
 
 // 热门产品（取前8个）
@@ -58,8 +61,7 @@ const goTo = (path: string) => {
   <div class="home-page pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      title="精选优质产品"
-      subtitle="助力科研创新"
+      :slogans="slogans"
       :stats="stats"
     >
       <!-- 搜索框 -->

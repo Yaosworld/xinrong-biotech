@@ -8,12 +8,15 @@ import EmptyState from '@/components/common/EmptyState.vue'
 
 const brandStore = useBrandStore()
 
-// 统计数据
+// 页面标语
+const slogans = ['汇聚全球顶尖生命科学品牌', '为科研创新提供可靠保障']
+
+// 统计数据（动态计算）
 const stats = computed(() => [
-  { number: `${brandStore.brands.length}+`, label: '合作品牌' },
-  { number: '8+', label: '年行业经验' },
-  { number: '1000+', label: '产品种类' },
-  { number: '500+', label: '服务客户' }
+  { key: 'brands', number: `${brandStore.brands.length}+`, label: '合作品牌' },
+  { key: 'years', number: '8+', label: '年行业经验' },
+  { key: 'products', number: '1000+', label: '产品种类' },
+  { key: 'customers', number: '500+', label: '服务客户' }
 ])
 
 // 自主品牌
@@ -35,8 +38,7 @@ onMounted(async () => {
   <div class="brand-center pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      title="汇聚全球顶尖生命科学品牌"
-      subtitle="为科研创新提供可靠保障"
+      :slogans="slogans"
       :stats="stats"
     />
     

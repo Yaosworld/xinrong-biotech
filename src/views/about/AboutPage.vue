@@ -9,11 +9,17 @@ const pageStore = usePageContentStore()
 // 页面内容
 const pageContent = computed(() => pageStore.getPageContent('about'))
 
+// 页面标语
+const slogans = [
+  '专注生命科学领域的生物科技企业',
+  '为科研工作者提供优质的产品和专业的服务'
+]
+
 // 统计数据
 const stats = ref([
-  { number: '8+', label: '年行业经验' },
-  { number: '1000+', label: '合作客户' },
-  { number: '50+', label: '知名品牌' }
+  { key: 'years', number: '8+', label: '年行业经验' },
+  { key: 'customers', number: '1000+', label: '合作客户' },
+  { key: 'brands', number: '50+', label: '知名品牌' }
 ])
 
 // 介绍卡片
@@ -73,8 +79,7 @@ onMounted(async () => {
   <div class="about-page pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      title="专注生命科学领域的生物科技企业"
-      subtitle="为科研工作者提供优质的产品和专业的服务"
+      :slogans="slogans"
       :stats="stats"
     />
     

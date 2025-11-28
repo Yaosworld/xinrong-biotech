@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accent3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg3)"/>
+  <!-- DNA双螺旋 -->
+  <g transform="translate(320, 100)" stroke="url(#accent3)" stroke-width="6" fill="none" opacity="0.9">
+    <path d="M60 0 Q30 50 60 100 T60 200 T60 300"/>
+    <path d="M100 0 Q130 50 100 100 T100 200 T100 300"/>
+    <!-- 横向连接 -->
+    <line x1="60" y1="25" x2="100" y2="25" stroke-width="4"/>
+    <line x1="60" y1="75" x2="100" y2="75" stroke-width="4"/>
+    <line x1="60" y1="125" x2="100" y2="125" stroke-width="4"/>
+    <line x1="60" y1="175" x2="100" y2="175" stroke-width="4"/>
+    <line x1="60" y1="225" x2="100" y2="225" stroke-width="4"/>
+    <line x1="60" y1="275" x2="100" y2="275" stroke-width="4"/>
+    <!-- 碱基对点 -->
+    <circle cx="60" cy="25" r="8" fill="#8b5cf6"/>
+    <circle cx="100" cy="25" r="8" fill="#ec4899"/>
+    <circle cx="60" cy="75" r="8" fill="#ec4899"/>
+    <circle cx="100" cy="75" r="8" fill="#8b5cf6"/>
+    <circle cx="60" cy="125" r="8" fill="#8b5cf6"/>
+    <circle cx="100" cy="125" r="8" fill="#ec4899"/>
+    <circle cx="60" cy="175" r="8" fill="#ec4899"/>
+    <circle cx="100" cy="175" r="8" fill="#8b5cf6"/>
+    <circle cx="60" cy="225" r="8" fill="#8b5cf6"/>
+    <circle cx="100" cy="225" r="8" fill="#ec4899"/>
+    <circle cx="60" cy="275" r="8" fill="#ec4899"/>
+    <circle cx="100" cy="275" r="8" fill="#8b5cf6"/>
+  </g>
+  <!-- 装饰 -->
+  <circle cx="180" cy="150" r="45" fill="#8b5cf6" opacity="0.1"/>
+  <circle cx="620" cy="400" r="55" fill="#ec4899" opacity="0.1"/>
+  <!-- 文字 -->
+  <text x="400" y="480" text-anchor="middle" fill="#94a3b8" font-family="system-ui" font-size="24" font-weight="600">生物试剂</text>
+  <text x="400" y="520" text-anchor="middle" fill="#64748b" font-family="system-ui" font-size="16">Biological Reagents</text>
+</svg>
+

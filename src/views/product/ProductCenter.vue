@@ -40,11 +40,14 @@ const displayedCategories = computed(() => {
   return showAllCategories.value ? categories : categories.slice(0, 10)
 })
 
-// 统计数据
+// 页面标语
+const slogans = ['精选优质产品', '助力科研创新']
+
+// 统计数据（动态计算）
 const stats = computed(() => [
-  { number: `${productStore.products.length}+`, label: '产品种类' },
-  { number: `${productStore.allBrands.length}+`, label: '合作品牌' },
-  { number: '1000+', label: '服务客户' }
+  { key: 'products', number: `${productStore.products.length}+`, label: '产品种类' },
+  { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' },
+  { key: 'customers', number: '1000+', label: '服务客户' }
 ])
 
 // 执行搜索
@@ -119,8 +122,7 @@ watch(
   <div class="product-center pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      title="精选优质产品"
-      subtitle="助力科研创新"
+      :slogans="slogans"
       :stats="stats"
     />
     

@@ -88,6 +88,14 @@ const routes: RouteRecordRaw[] = [
     ]
   },
 
+  // 测试页面
+  {
+    path: '/test/navigation',
+    name: 'NavigationTest',
+    component: () => import('@/views/test/NavigationTest.vue'),
+    meta: { title: '导航状态测试', hidden: true }
+  },
+
   // 404 页面
   {
     path: '/:pathMatch(.*)*',

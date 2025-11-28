@@ -1,0 +1,37 @@
+{
+  "id": "product_center",
+  "title": "产品中心",
+  "showcase": {
+    "summaryLines": [
+      "探索我们的产品世界",
+      "为您提供最优质的科学仪器与试剂"
+    ],
+    "stats": [
+      {
+        "key": "productCount",
+        "number": "3000+",
+        "label": "产品种类"
+      },
+      {
+        "key": "categoryCount",
+        "number": "50+",
+        "label": "产品分类"
+      },
+      {
+        "key": "brandCount",
+        "number": "100+",
+        "label": "合作品牌"
+      }
+    ]
+  },
+  "content": {
+    "productSection": {
+      "searchPlaceholder": "搜索产品名称、品牌或规格...",
+      "filterLabels": {
+        "category": "产品分类",
+        "brand": "合作品牌"
+      }
+    }
+  }
+}
+

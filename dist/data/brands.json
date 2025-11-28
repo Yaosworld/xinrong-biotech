@@ -1,0 +1,134 @@
+[
+  {
+    "id": "B001",
+    "name": "KIRGEN",
+    "logo_url": "/images/brands/kirgen.png",
+    "is_own_brand": true,
+    "is_featured": true,
+    "description": "专业的生物科学产品供应商",
+    "country": "中国",
+    "product_count": 50,
+    "priority": 1
+  },
+  {
+    "id": "B002",
+    "name": "Proteintech",
+    "logo_url": "/images/brands/proteintech.png",
+    "is_own_brand": true,
+    "is_featured": true,
+    "description": "全球领先的抗体与蛋白供应商",
+    "country": "美国",
+    "product_count": 80,
+    "priority": 2
+  },
+  {
+    "id": "B003",
+    "name": "Sigma-Aldrich",
+    "logo_url": "/images/brands/sigma.png",
+    "is_own_brand": true,
+    "is_featured": true,
+    "description": "全球化学与生物化学产品供应商",
+    "country": "美国",
+    "product_count": 120,
+    "priority": 3
+  },
+  {
+    "id": "B004",
+    "name": "泛生科技",
+    "logo_url": "/images/brands/fansheng.png",
+    "is_own_brand": true,
+    "is_featured": true,
+    "description": "国产优质生物试剂品牌",
+    "country": "中国",
+    "product_count": 45,
+    "priority": 4
+  },
+  {
+    "id": "B005",
+    "name": "GG Biotech",
+    "logo_url": "/images/brands/gg-biotech.png",
+    "is_own_brand": false,
+    "is_featured": true,
+    "description": "专业的细胞培养产品供应商",
+    "country": "德国",
+    "product_count": 35,
+    "priority": 5
+  },
+  {
+    "id": "B006",
+    "name": "DDD生物",
+    "logo_url": "/images/brands/ddd.png",
+    "is_own_brand": false,
+    "is_featured": true,
+    "description": "生物技术产品研发与生产商",
+    "country": "中国",
+    "product_count": 40,
+    "priority": 6
+  },
+  {
+    "id": "B007",
+    "name": "MACKLIN麦克林",
+    "logo_url": "/images/brands/macklin.png",
+    "is_own_brand": false,
+    "is_featured": true,
+    "description": "专业的化学试剂供应商",
+    "country": "中国",
+    "product_count": 200,
+    "priority": 7
+  },
+  {
+    "id": "B008",
+    "name": "Solarbio",
+    "logo_url": "/images/brands/solarbio.png",
+    "is_own_brand": false,
+    "is_featured": true,
+    "description": "生物科研试剂专业供应商",
+    "country": "中国",
+    "product_count": 150,
+    "priority": 8
+  },
+  {
+    "id": "B009",
+    "name": "Takara宝生物",
+    "logo_url": "/images/brands/takara.png",
+    "is_own_brand": false,
+    "is_featured": true,
+    "description": "分子生物学产品专家",
+    "country": "日本",
+    "product_count": 90,
+    "priority": 9
+  },
+  {
+    "id": "B010",
+    "name": "TBD科技",
+    "logo_url": "/images/brands/tbd.png",
+    "is_own_brand": false,
+    "is_featured": false,
+    "description": "生物技术产品供应商",
+    "country": "中国",
+    "product_count": 30,
+    "priority": 10
+  },
+  {
+    "id": "B011",
+    "name": "Thermo Fisher",
+    "logo_url": "/images/brands/thermo.png",
+    "is_own_brand": false,
+    "is_featured": true,
+    "description": "全球科学服务领导者",
+    "country": "美国",
+    "product_count": 300,
+    "priority": 11
+  },
+  {
+    "id": "B012",
+    "name": "迈瑞医疗",
+    "logo_url": "/images/brands/mindray.png",
+    "is_own_brand": false,
+    "is_featured": true,
+    "description": "医疗器械与体外诊断产品供应商",
+    "country": "中国",
+    "product_count": 60,
+    "priority": 12
+  }
+]

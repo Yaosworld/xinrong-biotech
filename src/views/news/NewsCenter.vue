@@ -19,11 +19,14 @@ const { currentPageItems, paginationInfo, goToPage, setPageSize } = usePaginatio
   { initialPageSize: 8, scrollTarget: '.news-section' }
 )
 
-// 统计数据
+// 页面标语
+const slogans = ['最新活动资讯', '科研动态一手掌握']
+
+// 统计数据（动态计算）
 const stats = computed(() => [
-  { number: `${promotionStore.promotions.length}+`, label: '活动资讯' },
-  { number: '50+', label: '学术会议' },
-  { number: '20+', label: '新品发布' }
+  { key: 'news', number: `${promotionStore.promotions.length}+`, label: '活动资讯' },
+  { key: 'meetings', number: '50+', label: '学术会议' },
+  { key: 'releases', number: '20+', label: '新品发布' }
 ])
 
 // 执行搜索
@@ -50,8 +53,7 @@ onMounted(async () => {
   <div class="news-center pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      title="最新活动资讯"
-      subtitle="科研动态一手掌握"
+      :slogans="slogans"
       :stats="stats"
     />
     
