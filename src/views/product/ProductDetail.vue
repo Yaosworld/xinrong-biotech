@@ -480,16 +480,23 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(102, 126, 234, 0.03);
+  background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
   border-radius: 16px;
   overflow: hidden;
   aspect-ratio: 1;
+  padding: 1.5rem;
 }
 
 .product-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  border-radius: 12px;
+  transition: transform 0.3s ease;
+}
+
+.product-image:hover {
+  transform: scale(1.02);
 }
 
 .image-placeholder {

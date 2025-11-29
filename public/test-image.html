@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图片间距测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      padding: 40px;
+      background: #f0f0f0;
+      font-family: sans-serif;
+    }
+    h2 {
+      margin: 20px 0 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 280px);
+      gap: 20px;
+    }
+    
+    /* 方案1: 直接用 object-fit: contain，让图片自然留白 */
+    .test-card-1 .image-area {
+      background: #fafafa;
+      padding: 10px;
+    }
+    .test-card-1 .image-wrapper {
+      background: #fff;
+      border-radius: 6px;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    }
+    .test-card-1 .image-wrapper img {
+      max-width: 85%;
+      max-height: 85%;
+      object-fit: contain;
+    }
+
+    /* 方案2: 图片填满，用 padding 控制 */
+    .test-card-2 .image-area {
+      background: #fafafa;
+      padding: 10px;
+    }
+    .test-card-2 .image-wrapper {
+      background: #fff;
+      border-radius: 6px;
+      padding: 12px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    }
+    .test-card-2 .image-wrapper img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: contain;
+    }
+
+    /* 方案3: 绝对定位方式 */
+    .test-card-3 .image-area {
+      background: #fafafa;
+      padding: 10px;
+    }
+    .test-card-3 .image-wrapper {
+      background: #fff;
+      border-radius: 6px;
+      aspect-ratio: 4 / 3;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    }
+    .test-card-3 .image-wrapper img {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      width: calc(100% - 20px);
+      height: calc(100% - 20px);
+      object-fit: contain;
+    }
+
+    .info {
+      padding: 12px;
+      background: #fff;
+      font-size: 13px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body>
+  <h1>产品卡片图片间距测试</h1>
+  <p style="margin-bottom: 30px; color: #666;">测试不同方案，找出四周间距一致的最佳方案</p>
+
+  <div class="test-grid">
+    <!-- 方案1 -->
+    <div class="card test-card-1">
+      <h2 style="padding: 10px 12px 0; margin: 0;">方案1: max-width/max-height 百分比</h2>
+      <div class="image-area">
+        <div class="image-wrapper">
+          <img src="./images/categories/lab-consumables.png" alt="测试图片">
+        </div>
+      </div>
+      <div class="info">
+        <strong>原理：</strong>容器 flex 居中，图片用 max-width: 85% 和 max-height: 85%
+      </div>
+    </div>
+
+    <!-- 方案2 -->
+    <div class="card test-card-2">
+      <h2 style="padding: 10px 12px 0; margin: 0;">方案2: wrapper padding + 图片 aspect-ratio</h2>
+      <div class="image-area">
+        <div class="image-wrapper">
+          <img src="./images/categories/lab-consumables.png" alt="测试图片">
+        </div>
+      </div>
+      <div class="info">
+        <strong>原理：</strong>wrapper 用 padding，图片 width:100% + aspect-ratio
+      </div>
+    </div>
+
+    <!-- 方案3 -->
+    <div class="card test-card-3">
+      <h2 style="padding: 10px 12px 0; margin: 0;">方案3: 绝对定位 + calc</h2>
+      <div class="image-area">
+        <div class="image-wrapper">
+          <img src="./images/categories/lab-consumables.png" alt="测试图片">
+        </div>
+      </div>
+      <div class="info">
+        <strong>原理：</strong>图片绝对定位，用 top/left/right/bottom 固定间距
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top: 40px;">使用不同比例图片测试：</h2>
+  <div class="test-grid" style="margin-top: 10px;">
+    <!-- 方案1 - 另一张图 -->
+    <div class="card test-card-1">
+      <div class="image-area">
+        <div class="image-wrapper">
+          <img src="./images/categories/molecular-biology.png" alt="测试图片">
+        </div>
+      </div>
+      <div class="info">方案1 - 分子生物学图片</div>
+    </div>
+
+    <!-- 方案2 - 另一张图 -->
+    <div class="card test-card-2">
+      <div class="image-area">
+        <div class="image-wrapper">
+          <img src="./images/categories/molecular-biology.png" alt="测试图片">
+        </div>
+      </div>
+      <div class="info">方案2 - 分子生物学图片</div>
+    </div>
+
+    <!-- 方案3 - 另一张图 -->
+    <div class="card test-card-3">
+      <div class="image-area">
+        <div class="image-wrapper">
+          <img src="./images/categories/molecular-biology.png" alt="测试图片">
+        </div>
+      </div>
+      <div class="info">方案3 - 分子生物学图片</div>
+    </div>
+  </div>
+</body>
+</html>
+

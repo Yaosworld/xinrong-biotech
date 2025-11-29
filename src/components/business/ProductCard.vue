@@ -59,15 +59,16 @@ const goToDetail = () => {
   <article class="product-card" @click="goToDetail">
     <!-- 产品图片区 -->
     <div class="product-card-image">
-      <img
-        v-if="!imageError"
-        :src="categoryImagePath"
-        :alt="categoryName"
-        class="w-full h-full object-cover"
-        @error="handleImageError"
-      />
-      <!-- 备用渐变背景 -->
-      <div v-else class="w-full h-full product-card-fallback"></div>
+      <div class="image-wrapper">
+        <img
+          v-if="!imageError"
+          :src="categoryImagePath"
+          :alt="categoryName"
+          @error="handleImageError"
+        />
+        <!-- 备用渐变背景 -->
+        <div v-else class="product-card-fallback"></div>
+      </div>
     </div>
     
     <!-- 产品信息 -->
@@ -115,15 +116,41 @@ const goToDetail = () => {
 
 <style scoped>
 .product-card-image {
-  @apply aspect-[4/3] w-full relative overflow-hidden;
+  @apply w-full relative;
+  padding: 4px;
+  background: linear-gradient(135deg, #f4f5f7 0%, #ebedf0 50%, #f9fafc 100%);
+}
+
+.image-wrapper {
+  @apply w-full rounded-md overflow-hidden;
+  background-color: #fff;
+  padding: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.image-wrapper img {
+  @apply w-full block transition-all duration-300;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+}
+
+.product-card:hover .product-card-image {
+  background: linear-gradient(135deg, #f1f3f5 0%, #ebecf0 50%, #f7f8fa 100%);
+}
+
+.product-card:hover .image-wrapper {
+  box-shadow: 
+    inset 0 0 0 1px rgba(139, 92, 246, 0.1),
+    0 2px 8px rgba(139, 92, 246, 0.08);
 }
 
 .product-card-fallback {
-  background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 50%, #f3e8ff 100%);
+  @apply w-full h-full;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
 }
 
 .product-card:hover .product-card-fallback {
-  background: linear-gradient(135deg, #c7d2fe 0%, #c4b5fd 50%, #e9d5ff 100%);
+  background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 50%, #f3e8ff 100%);
 }
 
 .product-card-info {

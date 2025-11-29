@@ -142,7 +142,7 @@
   .product-card {
     @apply bg-white rounded-2xl shadow-card overflow-hidden cursor-pointer;
     @apply transition-all duration-300 ease-out;
-    @apply border border-transparent hover:border-primary-100;
+    @apply border border-gray-200 hover:border-gray-400;
   }
 
   .product-card:hover {
@@ -151,21 +151,9 @@
   }
 
   .product-card-image {
-    @apply aspect-[4/3] w-full relative overflow-hidden;
-    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 50%, #f3e8ff 100%);
+    @apply w-full relative;
   }
 
-  .product-card-image img {
-    @apply w-full h-full object-cover transition-transform duration-500;
-  }
-
-  .product-card:hover .product-card-image img {
-    transform: scale(1.05);
-  }
-
-  .product-card:hover .product-card-image {
-    background: linear-gradient(135deg, #c7d2fe 0%, #c4b5fd 50%, #e9d5ff 100%);
-  }
 
   .product-card-content {
     @apply p-4;
