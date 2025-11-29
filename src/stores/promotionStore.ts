@@ -64,29 +64,25 @@ export const usePromotionStore = defineStore('promotion', () => {
     })
   })
 
-  // 排序后的促销活动（状态优先级：即将开始 > 进行中 > 已结束）
+  // 排序后的促销活动
+  // 排序优先级：1.过期状态（未过期优先）→ 2.置顶状态 → 3.发布时间（最近优先）
   const sortedPromotions = computed(() => {
-    const statusOrder: Record<PromotionStatus, number> = {
-      coming: 1,
-      active: 2,
-      ended: 3,
-      all: 4
-    }
-
     return [...processedPromotions.value].sort((a, b) => {
-      const statusA = statusOrder[a.status || 'all']
-      const statusB = statusOrder[b.status || 'all']
-
-      if (statusA !== statusB) {
-        return statusA - statusB
+      // 第一优先级：过期状态（未过期的排在前面）
+      const aExpired = a.status === 'ended' ? 1 : 0
+      const bExpired = b.status === 'ended' ? 1 : 0
+      if (aExpired !== bExpired) {
+        return aExpired - bExpired
       }
 
-      // 状态相同，按优先级排序
-      if (a.priority && b.priority && a.priority !== b.priority) {
-        return a.priority - b.priority
+      // 第二优先级：置顶状态（置顶的排在前面）
+      const aFeatured = a.is_featured ? 0 : 1
+      const bFeatured = b.is_featured ? 0 : 1
+      if (aFeatured !== bFeatured) {
+        return aFeatured - bFeatured
       }
 
-      // 优先级相同，按开始日期降序
+      // 第三优先级：发布时间（最近发布的排在前面）
       if (a.start_date && b.start_date) {
         return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
       }
@@ -242,6 +238,17 @@ export const usePromotionStore = defineStore('promotion', () => {
     return undefined
   }
 
+  // 获取促销活动图片路径
+  function getPromotionImagePath(promotion: Promotion): string {
+    // 如果有image_url，直接返回
+    if (promotion.image_url) {
+      return promotion.image_url
+    }
+
+    // 如果没有image_url，返回默认图片
+    return '/images/common/placeholder.png'
+  }
+
   // 更新筛选条件
   function setFilter<K extends keyof PromotionFilters>(key: K, value: PromotionFilters[K]) {
     filters.value[key] = value
@@ -267,7 +274,7 @@ export const usePromotionStore = defineStore('promotion', () => {
     error,
     initialized,
     filters,
-    
+
     // Getters
     processedPromotions,
     sortedPromotions,
@@ -279,10 +286,11 @@ export const usePromotionStore = defineStore('promotion', () => {
     allCategories,
     allTags,
     activeFiltersCount,
-    
+
     // Actions
     loadPromotions,
     getPromotionById,
+    getPromotionImagePath,
     setFilter,
     clearAllFilters
   }
