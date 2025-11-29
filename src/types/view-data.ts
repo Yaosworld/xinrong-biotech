@@ -3,6 +3,14 @@
 // ========================================
 
 /**
+ * Section 标题配置
+ */
+export interface SectionTitleConfig {
+  badge?: string
+  title?: string
+}
+
+/**
  * 页面板块接口
  */
 export interface PageSection {

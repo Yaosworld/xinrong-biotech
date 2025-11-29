@@ -18,31 +18,44 @@
       }
     ]
   },
-  "sections": [
+  "sections": {
+    "products": {
+      "badge": "热门产品",
+      "title": "精选优质产品"
+    },
+    "brands": {
+      "badge": "合作品牌",
+      "title": "全球知名品牌，值得信赖"
+    },
+    "promotions": {
+      "badge": "最新活动",
+      "title": "科研动态一手掌握"
+    },
+    "advantages": {
+      "badge": "我们的优势",
+      "title": "为什么选择我们"
+    }
+  },
+  "advantages": [
     {
-      "id": "categories",
-      "title": "产品分类",
-      "type": "gallery",
-      "items": []
+      "icon": "fas fa-check-circle",
+      "title": "正规授权",
+      "content": "多个知名品牌官方授权代理"
     },
     {
-      "id": "products",
-      "title": "热门产品",
-      "type": "cards",
-      "items": []
+      "icon": "fas fa-th-large",
+      "title": "品类齐全",
+      "content": "一站式满足科研采购需求"
     },
     {
-      "id": "brands",
-      "title": "合作品牌",
-      "type": "gallery",
-      "items": []
+      "icon": "fas fa-bolt",
+      "title": "快速响应",
+      "content": "高效订单处理，准确速达"
     },
     {
-      "id": "news",
-      "title": "最新活动",
-      "type": "cards",
-      "items": []
+      "icon": "fas fa-headset",
+      "title": "专业服务",
+      "content": "资深团队提供技术支持"
     }
   ]
 }
-

@@ -5,7 +5,7 @@
     "logo_url": "/images/brands/kirgen.png",
     "is_own_brand": true,
     "is_featured": true,
-    "description": "专业的生物科学产品供应商",
+    "description": "KIRGEN是专业的生物科学产品供应商，专注于为科研机构和医疗企业提供高品质的实验耗材和试剂产品。公司拥有完善的质量管理体系，所有产品均经过严格的质量检测，确保符合国际标准。KIRGEN致力于成为科研工作者最值得信赖的合作伙伴，为生命科学研究提供坚实的产品支持。",
     "country": "中国",
     "product_count": 50,
     "priority": 1
@@ -16,7 +16,7 @@
     "logo_url": "/images/brands/proteintech.png",
     "is_own_brand": true,
     "is_featured": true,
-    "description": "全球领先的抗体与蛋白供应商",
+    "description": "Proteintech是全球领先的抗体与蛋白供应商，成立于2001年，总部位于美国芝加哥。公司专注于原创抗体的研发与生产，拥有超过20年的抗体制备经验。Proteintech的抗体产品覆盖生命科学研究的各个领域，包括肿瘤研究、神经科学、免疫学等。所有抗体均经过严格的验证，确保特异性和重复性。",
     "country": "美国",
     "product_count": 80,
     "priority": 2
@@ -25,9 +25,9 @@
     "id": "B003",
     "name": "Sigma-Aldrich",
     "logo_url": "/images/brands/sigma.png",
-    "is_own_brand": true,
+    "is_own_brand": false,
     "is_featured": true,
-    "description": "全球化学与生物化学产品供应商",
+    "description": "Sigma-Aldrich是全球领先的化学与生物化学产品供应商，隶属于默克集团。公司提供超过30万种产品，涵盖生命科学研究、化学分析、材料科学等领域。Sigma-Aldrich以其卓越的产品质量和专业的技术服务著称，是全球科研机构和企业的首选供应商。",
     "country": "美国",
     "product_count": 120,
     "priority": 3
@@ -38,7 +38,7 @@
     "logo_url": "/images/brands/fansheng.png",
     "is_own_brand": true,
     "is_featured": true,
-    "description": "国产优质生物试剂品牌",
+    "description": "泛生科技是国产优质生物试剂品牌，专注于为国内科研机构提供高性价比的实验产品。公司产品涵盖细胞培养、分子生物学、蛋白研究等多个领域。泛生科技秉承\"品质第一、服务至上\"的理念，不断创新研发，为国内生命科学研究贡献力量。",
     "country": "中国",
     "product_count": 45,
     "priority": 4
@@ -49,7 +49,7 @@
     "logo_url": "/images/brands/gg-biotech.png",
     "is_own_brand": false,
     "is_featured": true,
-    "description": "专业的细胞培养产品供应商",
+    "description": "GG Biotech是德国专业的细胞培养产品供应商，以其严谨的德国工艺和卓越的产品品质闻名于世。公司主要产品包括细胞培养皿、培养瓶、多孔板等实验耗材。GG Biotech的产品采用优质原材料，经过严格的生产工艺控制，确保产品的一致性和可靠性。",
     "country": "德国",
     "product_count": 35,
     "priority": 5
@@ -60,7 +60,7 @@
     "logo_url": "/images/brands/ddd.png",
     "is_own_brand": false,
     "is_featured": true,
-    "description": "生物技术产品研发与生产商",
+    "description": "DDD生物是专业的生物技术产品研发与生产商，致力于为科研工作者提供创新的实验解决方案。公司拥有先进的研发团队和现代化的生产设施，产品涵盖细胞培养试剂、分子克隆工具等多个领域。",
     "country": "中国",
     "product_count": 40,
     "priority": 6
@@ -71,7 +71,7 @@
     "logo_url": "/images/brands/macklin.png",
     "is_own_brand": false,
     "is_featured": true,
-    "description": "专业的化学试剂供应商",
+    "description": "MACKLIN麦克林是中国领先的化学试剂供应商，提供超过4万种化学试剂和实验材料。公司以\"让科研更简单\"为使命，致力于为科研机构、高校和企业提供高品质、高纯度的化学产品。麦克林的产品通过严格的质量检测，确保满足各类实验需求。",
     "country": "中国",
     "product_count": 200,
     "priority": 7
@@ -82,7 +82,7 @@
     "logo_url": "/images/brands/solarbio.png",
     "is_own_brand": false,
     "is_featured": true,
-    "description": "生物科研试剂专业供应商",
+    "description": "Solarbio索莱宝是专业的生物科研试剂供应商，产品涵盖生化试剂、细胞培养、分子生物学等多个领域。公司拥有完善的产品线和专业的技术团队，为客户提供全方位的实验解决方案。Solarbio秉承\"品质、创新、服务\"的经营理念，赢得了广大科研工作者的信赖。",
     "country": "中国",
     "product_count": 150,
     "priority": 8
@@ -93,7 +93,7 @@
     "logo_url": "/images/brands/takara.png",
     "is_own_brand": false,
     "is_featured": true,
-    "description": "分子生物学产品专家",
+    "description": "Takara宝生物是日本领先的分子生物学产品专家，隶属于宝生物工程株式会社。公司产品涵盖PCR试剂、克隆试剂、逆转录试剂等分子生物学核心产品。Takara以其卓越的产品品质和创新的技术方案，成为全球分子生物学研究领域的重要供应商。",
     "country": "日本",
     "product_count": 90,
     "priority": 9
@@ -104,7 +104,7 @@
     "logo_url": "/images/brands/tbd.png",
     "is_own_brand": false,
     "is_featured": false,
-    "description": "生物技术产品供应商",
+    "description": "TBD科技是新兴的生物技术产品供应商，专注于为科研机构提供性价比优越的实验产品和技术服务。",
     "country": "中国",
     "product_count": 30,
     "priority": 10
@@ -115,7 +115,7 @@
     "logo_url": "/images/brands/thermo.png",
     "is_own_brand": false,
     "is_featured": true,
-    "description": "全球科学服务领导者",
+    "description": "Thermo Fisher Scientific赛默飞世尔科技是全球科学服务领导者，为全球客户提供分析仪器、试剂耗材、软件服务等全方位的科学解决方案。公司业务涵盖生命科学、分析化学、医疗诊断等多个领域，是全球最大的科学仪器和试剂供应商之一。Thermo Fisher致力于帮助客户加速科学发现和改善人类生活。",
     "country": "美国",
     "product_count": 300,
     "priority": 11
@@ -126,7 +126,7 @@
     "logo_url": "/images/brands/mindray.png",
     "is_own_brand": false,
     "is_featured": true,
-    "description": "医疗器械与体外诊断产品供应商",
+    "description": "迈瑞医疗是中国领先的医疗器械与体外诊断产品供应商，产品涵盖生命信息与支持、体外诊断、医学影像三大领域。公司以\"普及高端科技，让更多人分享优质生命关怀\"为使命，持续创新研发，为全球医疗机构提供高品质的医疗解决方案。",
     "country": "中国",
     "product_count": 60,
     "priority": 12

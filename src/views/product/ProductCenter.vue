@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { usePagination } from '@/hooks/usePagination'
+import { usePageShowcase } from '@/composables/usePageShowcase'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import ProductCard from '@/components/business/ProductCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -13,6 +14,10 @@ const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
 const categoryStore = useCategoryStore()
+const { slogans: productSlogans, statsFromConfig: productStatsFromConfig } = usePageShowcase('product-center', [
+  '探索我们的产品世界',
+  '为您提供最优质的科学仪器与试剂'
+])
 
 // 搜索关键词
 const searchQuery = ref('')
@@ -40,15 +45,13 @@ const displayedCategories = computed(() => {
   return showAllCategories.value ? categories : categories.slice(0, 10)
 })
 
-// 页面标语
-const slogans = ['精选优质产品', '助力科研创新']
-
-// 统计数据（动态计算）
-const stats = computed(() => [
+// 统计数据
+const dynamicStats = computed(() => [
   { key: 'products', number: `${productStore.products.length}+`, label: '产品种类' },
-  { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' },
-  { key: 'customers', number: '1000+', label: '服务客户' }
+  { key: 'categories', number: `${categoryStore.categories.length}+`, label: '产品分类' },
+  { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' }
 ])
+const stats = computed(() => productStatsFromConfig.value.length > 0 ? productStatsFromConfig.value : dynamicStats.value)
 
 // 执行搜索
 const handleSearch = () => {
@@ -122,12 +125,12 @@ watch(
   <div class="product-center pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      :slogans="slogans"
+      :slogans="productSlogans"
       :stats="stats"
     />
     
     <!-- 搜索区 -->
-    <section class="py-8 -mt-6 relative z-10">
+    <section class="py-8 mt-2 relative z-10">
       <div class="container-base">
         <div class="search-box max-w-3xl mx-auto">
           <i class="fas fa-search text-dark-400 ml-4"></i>

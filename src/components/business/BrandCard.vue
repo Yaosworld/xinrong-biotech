@@ -64,9 +64,9 @@ const highlightText = (text: string) => {
   return result
 }
 
-// 导航到品牌产品页
+// 导航到品牌详情页
 const goToBrand = () => {
-  router.push({ path: '/products', query: { brand: brandName.value } })
+  router.push(`/brands/${props.brand.id}`)
 }
 </script>
 

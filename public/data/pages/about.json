@@ -1,77 +1,67 @@
 {
   "id": "about",
   "title": "关于我们",
-  "sections": [
-    {
-      "id": "intro",
-      "title": "公司介绍",
-      "type": "text",
-      "items": [
-        {
-          "title": "我们的使命",
-          "content": "作为一家专注于生物科技领域的企业，我们致力于为科研机构、医疗企业和高等院校提供高品质的科学仪器、实验耗材和生物试剂。"
-        }
-      ]
+  "sections": {
+    "intro": {
+      "badge": "公司简介",
+      "title": "值得信赖的科研合作伙伴"
     },
-    {
-      "id": "features",
-      "title": "为什么选择我们",
-      "type": "features",
-      "items": [
-        {
-          "icon": "fas fa-flask",
-          "title": "专业品质",
-          "description": "严选全球顶级品牌产品，确保每一件商品都符合最高标准"
-        },
-        {
-          "icon": "fas fa-shipping-fast",
-          "title": "快速配送",
-          "description": "完善的物流体系，确保产品安全、快速送达您手中"
-        },
-        {
-          "icon": "fas fa-headset",
-          "title": "专业服务",
-          "description": "资深技术团队提供专业咨询，解决您的所有疑问"
-        },
-        {
-          "icon": "fas fa-certificate",
-          "title": "品质保证",
-          "description": "所有产品均有正品保证，支持售后服务"
-        }
-      ]
+    "advantages": {
+      "badge": "核心优势",
+      "title": "为什么选择我们"
     },
-    {
-      "id": "timeline",
-      "title": "发展历程",
-      "type": "timeline",
-      "items": [
-        {
-          "year": "2010",
-          "title": "公司成立",
-          "description": "在北京中关村科技园区成立，开始从事生物科技产品代理业务"
-        },
-        {
-          "year": "2013",
-          "title": "业务拓展",
-          "description": "与多家国际知名品牌建立合作关系"
-        },
-        {
-          "year": "2016",
-          "title": "自主品牌",
-          "description": "推出自主品牌产品线，开始自主研发高品质实验耗材"
-        },
-        {
-          "year": "2020",
-          "title": "数字化转型",
-          "description": "全面升级数字化服务平台"
-        },
-        {
-          "year": "2023",
-          "title": "持续创新",
-          "description": "持续扩大产品线，服务客户超过1000家"
-        }
-      ]
+    "contact": {
+      "badge": "联系我们",
+      "title": "期待与您的合作"
     }
-  ]
+  },
+  "introCards": [
+    {
+      "icon": "fas fa-building",
+      "title": "企业背景",
+      "content": "广州信荣生物科技有限公司成立于 2015 年，总部位于广州。作为一家专注于生命科学领域的生物科技企业，我们在医疗仪器、医疗材料、科研院校的生物试剂产品等领域拥有丰富的经验。我们致力于为科研工作者提供优质的产品和专业的服务。"
+    },
+    {
+      "icon": "fas fa-shopping-cart",
+      "title": "产品优势",
+      "content": "公司代理的产品涵盖生命科学研究的多个方向，从先进仪器设备、到科学实验室的分子生物学、细胞生物学类的耗材，均为国际知名品牌，经过严格检测，确保产品质量卓越。"
+    },
+    {
+      "icon": "fas fa-headset",
+      "title": "专业服务",
+      "content": "我们拥有专业的技术团队，能够为客户提供产品咨询、选型指导、技术培训及售后维护一体化服务。助力客户在生命科学研究领域取得卓越成果。"
+    }
+  ],
+  "advantages": [
+    {
+      "icon": "fas fa-check-circle",
+      "title": "正规授权代理",
+      "content": "多个知名品牌官方授权代理，确保产品质量和售后服务"
+    },
+    {
+      "icon": "fas fa-th-large",
+      "title": "品类齐全",
+      "content": "提供从基础试剂到高端仪器设备的全品类产品，满足一站式采购需求"
+    },
+    {
+      "icon": "fas fa-bolt",
+      "title": "快速响应",
+      "content": "高效的订单处理流程，资深产品专家，准确且速达"
+    },
+    {
+      "icon": "fas fa-warehouse",
+      "title": "专业仓储",
+      "content": "符合国际标准的仓储条件，保证产品质量稳定性和有效性"
+    },
+    {
+      "icon": "fas fa-tags",
+      "title": "价格优势",
+      "content": "直接对接品牌方，减少中间环节，为客户提供更具竞争力的价格"
+    }
+  ],
+  "contact": {
+    "phone": "400-XXX-XXXX",
+    "email": "contact@xinrong.com",
+    "address": "广州市天河区XXX路XXX号"
+  }
 }
-

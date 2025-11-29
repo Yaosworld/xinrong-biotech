@@ -95,6 +95,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/test/NavigationTest.vue'),
     meta: { title: '导航状态测试', hidden: true }
   },
+  {
+    path: '/test/styles',
+    name: 'StyleComparisonTest',
+    component: () => import('@/views/test/StyleComparisonTest.vue'),
+    meta: { title: '导航样式对比测试', hidden: true }
+  },
 
   // 404 页面
   {

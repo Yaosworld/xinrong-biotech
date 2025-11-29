@@ -2,12 +2,17 @@
 import { computed, onMounted, ref } from 'vue'
 import { usePromotionStore } from '@/stores/promotionStore'
 import { usePagination } from '@/hooks/usePagination'
+import { usePageShowcase } from '@/composables/usePageShowcase'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import NewsCard from '@/components/business/NewsCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const promotionStore = usePromotionStore()
+const { slogans: newsSlogans, statsFromConfig: newsStatsFromConfig } = usePageShowcase('news-center', [
+  '最新活动与资讯',
+  '第一时间了解我们的产品动态与优惠信息'
+])
 
 // 搜索关键词
 const searchQuery = ref('')
@@ -19,15 +24,13 @@ const { currentPageItems, paginationInfo, goToPage, setPageSize } = usePaginatio
   { initialPageSize: 8, scrollTarget: '.news-section' }
 )
 
-// 页面标语
-const slogans = ['最新活动资讯', '科研动态一手掌握']
-
-// 统计数据（动态计算）
-const stats = computed(() => [
+// 统计数据
+const dynamicNewsStats = computed(() => [
   { key: 'news', number: `${promotionStore.promotions.length}+`, label: '活动资讯' },
   { key: 'meetings', number: '50+', label: '学术会议' },
   { key: 'releases', number: '20+', label: '新品发布' }
 ])
+const stats = computed(() => newsStatsFromConfig.value.length > 0 ? newsStatsFromConfig.value : dynamicNewsStats.value)
 
 // 执行搜索
 const handleSearch = () => {
@@ -53,12 +56,12 @@ onMounted(async () => {
   <div class="news-center pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      :slogans="slogans"
+      :slogans="newsSlogans"
       :stats="stats"
     />
     
     <!-- 搜索区 -->
-    <section class="py-8 -mt-6 relative z-10">
+    <section class="py-8 mt-2 relative z-10">
       <div class="container-base">
         <div class="search-box max-w-2xl mx-auto">
           <i class="fas fa-search text-dark-400 ml-4"></i>

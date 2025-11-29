@@ -8,12 +8,13 @@ const router = useRouter()
 // Logo图片加载状态
 const logoError = ref(false)
 
-// 导航菜单
+// 导航菜单（包括关于我们，统一处理）
 const navItems = [
   { name: '首页', path: '/', icon: 'fas fa-home' },
   { name: '产品中心', path: '/products', icon: 'fas fa-flask' },
   { name: '品牌中心', path: '/brands', icon: 'fas fa-award' },
-  { name: '资讯中心', path: '/news', icon: 'fas fa-newspaper' }
+  { name: '资讯中心', path: '/news', icon: 'fas fa-newspaper' },
+  { name: '关于我们', path: '/about', icon: 'fas fa-building' }
 ]
 
 // 响应式状态
@@ -39,21 +40,12 @@ const isActive = (path: string) => {
   return false
 }
 
-// 获取导航链接的样式类
-const getNavLinkClasses = (path: string, isSpecialButton = false) => {
+// 获取导航链接的样式类 - 所有导航项统一样式
+const getNavLinkClasses = (path: string) => {
   const active = isActive(path)
-
-  if (isSpecialButton) {
-    // 关于我们按钮的特殊样式处理
-    return active
-      ? 'bg-primary-700 text-white shadow-lg transform scale-105 border border-primary-800'
-      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:border-gray-300 border border-gray-200'
-  } else {
-    // 普通导航项样式
-    return active
-      ? 'text-primary-600 bg-primary-50 font-semibold border border-primary-200'
-      : 'text-dark-600 hover:text-primary-600 hover:bg-primary-50 border border-transparent'
-  }
+  return active
+    ? 'text-primary-600 bg-primary-50 font-semibold'
+    : 'text-dark-600 hover:text-primary-600 hover:bg-primary-50'
 }
 
 // 滚动监听
@@ -121,16 +113,6 @@ onUnmounted(() => {
             <i :class="item.icon" class="text-sm"></i>
             <span>{{ item.name }}</span>
           </router-link>
-
-          <!-- 关于我们 - 修复后的突出按钮 -->
-          <router-link
-            to="/about"
-            class="flex items-center gap-2 px-5 py-2 ml-2 rounded-lg text-sm font-medium transition-all duration-200"
-            :class="getNavLinkClasses('/about', true)"
-          >
-            <i class="fas fa-building text-sm"></i>
-            <span>关于我们</span>
-          </router-link>
         </nav>
 
         <!-- Mobile Menu Button -->
@@ -167,17 +149,6 @@ onUnmounted(() => {
           >
             <i :class="item.icon" class="w-5 text-center"></i>
             <span class="font-medium">{{ item.name }}</span>
-          </router-link>
-
-          <!-- 关于我们 - 移动端样式 -->
-          <router-link
-            to="/about"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
-            :class="getNavLinkClasses('/about', true)"
-            @click="navigateTo('/about')"
-          >
-            <i class="fas fa-building w-5 text-center"></i>
-            <span class="font-medium">关于我们</span>
           </router-link>
         </nav>
       </div>
