@@ -25,7 +25,7 @@
     "id": "B003",
     "name": "Sigma-Aldrich",
     "logo_url": "/images/brands/sigma.png",
-    "is_own_brand": false,
+    "is_own_brand": false,  
     "is_featured": true,
     "description": "Sigma-Aldrich是全球领先的化学与生物化学产品供应商，隶属于默克集团。公司提供超过30万种产品，涵盖生命科学研究、化学分析、材料科学等领域。Sigma-Aldrich以其卓越的产品质量和专业的技术服务著称，是全球科研机构和企业的首选供应商。",
     "country": "美国",

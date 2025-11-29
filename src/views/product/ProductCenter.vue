@@ -60,17 +60,15 @@ const handleSearch = () => {
   goToPage(1)
 }
 
-// 选择品牌
+// 选择品牌（空字符串代表"所有"）
 const selectBrand = (brand: string) => {
-  const currentBrand = productStore.filters.brand
-  productStore.setFilter('brand', currentBrand === brand ? '' : brand)
+  productStore.setFilter('brand', brand)
   goToPage(1)
 }
 
-// 选择分类
+// 选择分类（空字符串代表"所有"）
 const selectCategory = (categoryId: string) => {
-  const currentCategory = productStore.filters.categoryId
-  productStore.setFilter('categoryId', currentCategory === categoryId ? '' : categoryId)
+  productStore.setFilter('categoryId', categoryId)
   goToPage(1)
 }
 
@@ -169,6 +167,14 @@ watch(
               </button>
             </div>
             <div class="filter-tags">
+              <!-- 所有品牌选项 -->
+              <button
+                class="filter-tag"
+                :class="{ active: !productStore.filters.brand }"
+                @click="selectBrand('')"
+              >
+                所有
+              </button>
               <button
                 v-for="brand in displayedBrands"
                 :key="brand"
@@ -198,6 +204,14 @@ watch(
               </button>
             </div>
             <div class="filter-tags">
+              <!-- 所有分类选项 -->
+              <button
+                class="filter-tag"
+                :class="{ active: !productStore.filters.categoryId }"
+                @click="selectCategory('')"
+              >
+                所有
+              </button>
               <button
                 v-for="category in displayedCategories"
                 :key="category.id"

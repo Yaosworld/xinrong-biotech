@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="qqGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#12b7f5"/>
+      <stop offset="100%" style="stop-color:#0099ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="white"/>
+  <rect x="10" y="10" width="180" height="180" rx="12" fill="#f0f9ff" stroke="#12b7f5" stroke-width="2"/>
+  <!-- 模拟二维码图案 -->
+  <g fill="url(#qqGrad)">
+    <rect x="30" y="30" width="40" height="40" rx="4"/>
+    <rect x="130" y="30" width="40" height="40" rx="4"/>
+    <rect x="30" y="130" width="40" height="40" rx="4"/>
+    <rect x="80" y="80" width="40" height="40" rx="4"/>
+    <rect x="50" y="90" width="15" height="15" rx="2"/>
+    <rect x="135" y="90" width="15" height="15" rx="2"/>
+    <rect x="90" y="50" width="20" height="20" rx="2"/>
+    <rect x="90" y="130" width="20" height="20" rx="2"/>
+    <rect x="130" y="130" width="25" height="25" rx="3"/>
+  </g>
+  <text x="100" y="185" text-anchor="middle" fill="#12b7f5" font-family="system-ui" font-size="12" font-weight="500">QQ扫码</text>
+</svg>
+

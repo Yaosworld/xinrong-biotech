@@ -2,14 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBrandStore } from '@/stores/brandStore'
-import { useProductStore } from '@/stores/productStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
-import ProductCard from '@/components/business/ProductCard.vue'
 
 const route = useRoute()
 const router = useRouter()
 const brandStore = useBrandStore()
-const productStore = useProductStore()
 
 const brandId = computed(() => route.params.id as string)
 const imageError = ref(false)
@@ -61,12 +58,6 @@ const descriptionParagraphs = computed(() => {
   return brand.value.description.split(/[。\n]+/).filter(p => p.trim())
 })
 
-// 品牌相关产品
-const brandProducts = computed(() => {
-  if (!brand.value) return []
-  return productStore.products.filter(p => p.brand === brand.value?.name)
-})
-
 // 返回品牌列表
 const goBack = () => {
   router.push('/brands')
@@ -81,10 +72,7 @@ onMounted(async () => {
   generateGeometricShapes()
   loading.value = true
   try {
-    await Promise.all([
-      brandStore.loadBrands(),
-      productStore.loadProducts()
-    ])
+    await brandStore.loadBrands()
   } finally {
     loading.value = false
   }
@@ -187,20 +175,6 @@ onMounted(async () => {
                 </p>
               </div>
             </div>
-
-            <!-- 品牌统计 -->
-            <div v-if="brand.product_count" class="brand-stats">
-              <div class="stat-item">
-                <i class="fas fa-box text-primary-500"></i>
-                <span class="stat-value">{{ brand.product_count }}+</span>
-                <span class="stat-label">产品种类</span>
-              </div>
-              <div v-if="brand.is_featured" class="stat-item">
-                <i class="fas fa-award text-amber-500"></i>
-                <span class="stat-value">推荐</span>
-                <span class="stat-label">精选品牌</span>
-              </div>
-            </div>
           </div>
 
           <!-- 右侧授权证书面板 -->
@@ -219,23 +193,6 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-
-      <!-- 品牌产品 -->
-      <section v-if="brandProducts.length > 0" class="py-12 bg-dark-50 relative z-10">
-        <div class="container-base">
-          <div class="text-center mb-8">
-            <span class="section-badge">品牌产品</span>
-            <h2 class="section-title">{{ brand.name }} 旗下产品 ({{ brandProducts.length }})</h2>
-          </div>
-          <div class="products-grid">
-            <ProductCard
-              v-for="product in brandProducts"
-              :key="product.id"
-              :product="product"
-            />
-          </div>
-        </div>
-      </section>
     </div>
   </div>
 </template>
@@ -347,10 +304,17 @@ onMounted(async () => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
-/* 品牌详情内容 */
+/* 品牌详情内容 - 垂直居中 */
 .brand-detail-content {
   position: relative;
   z-index: 1;
+  min-height: calc(100vh - 72px);
+  display: flex;
+  align-items: center;
+}
+
+.container-base {
+  width: 100%;
 }
 
 .page-main-title {
@@ -375,10 +339,11 @@ onMounted(async () => {
   border-radius: 2px;
 }
 
+/* 双栏布局 - 左侧决定高度，右侧自适应 */
 .detail-layout {
   display: flex;
   gap: 2rem;
-  align-items: stretch;
+  align-items: flex-start;
 }
 
 /* 左侧面板 */
@@ -499,43 +464,13 @@ onMounted(async () => {
   margin-bottom: 0;
 }
 
-/* 品牌统计 */
-.brand-stats {
-  display: flex;
-  gap: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(102, 126, 234, 0.1);
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.stat-item i {
-  font-size: 1.5rem;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-/* 右侧面板 */
+/* 右侧面板 - 跟随左侧高度 */
 .right-panel {
   flex: 0.8;
   padding: 2rem;
   display: flex;
   flex-direction: column;
+  align-self: stretch; /* 跟随左侧高度 */
 }
 
 .certificate-container {
@@ -546,9 +481,14 @@ onMounted(async () => {
   background: rgba(102, 126, 234, 0.03);
   border-radius: 16px;
   border: 2px dashed rgba(102, 126, 234, 0.15);
-  min-height: 300px;
   position: relative;
   overflow: hidden;
+}
+
+.certificate-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 保持图片比例 */
 }
 
 .certificate-placeholder {
@@ -589,11 +529,6 @@ onMounted(async () => {
 
   .brand-title {
     font-size: 1.25rem;
-  }
-
-  .brand-stats {
-    flex-wrap: wrap;
-    gap: 1.5rem;
   }
 
   .back-button {

@@ -84,7 +84,7 @@ onUnmounted(() => {
         <!-- Logo -->
         <router-link to="/" class="flex items-center gap-3 group">
           <!-- Logo图标 -->
-          <div class="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-md transition-transform group-hover:scale-105">
+          <div class="w-11 h-11 overflow-hidden bg-white flex items-center justify-center transition-transform group-hover:scale-105">
             <img
               v-if="!logoError"
               src="/images/common/logo.png"
@@ -92,7 +92,7 @@ onUnmounted(() => {
               class="w-full h-full object-contain"
               @error="logoError = true"
             />
-            <span v-else class="text-white font-bold text-lg">XR</span>
+            <span v-else class="text-primary-600 font-bold text-lg">XR</span>
           </div>
           <!-- 公司名称 -->
           <div class="hidden sm:block">
