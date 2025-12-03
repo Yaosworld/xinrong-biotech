@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useCategoryStore } from '@/stores/categoryStore'
+import { getCategoryName, getCategoryImagePath } from '@/hooks/useCategoryImage'
+import DOMPurify from 'dompurify'
 import type { Product } from '@/types'
 
 interface Props {
@@ -14,34 +15,37 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const router = useRouter()
-const categoryStore = useCategoryStore()
 const imageError = ref(false)
 
 // 获取分类名称
-const categoryName = computed(() => categoryStore.getCategoryName(props.product.categoryId))
+const categoryName = computed(() => getCategoryName(props.product.categoryId))
 
 // 获取分类图片路径
-const categoryImagePath = computed(() => categoryStore.getCategoryImagePath(props.product.categoryId))
+const categoryImagePath = computed(() => getCategoryImagePath(props.product.categoryId))
 
-// 高亮关键词
+// 安全高亮关键词（使用DOMPurify防止XSS）
 const highlightText = (text: string) => {
   if (!props.highlightKeyword || !text) return text
-  
+
   const keywords = props.highlightKeyword
     .trim()
     .split(/\s+/)
     .filter(k => k.length > 0)
     .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  
+
   if (keywords.length === 0) return text
-  
+
   let result = text
   keywords.forEach(keyword => {
     const regex = new RegExp(`(${keyword})`, 'gi')
     result = result.replace(regex, '<mark class="search-highlight">$1</mark>')
   })
-  
-  return result
+
+  // 使用DOMPurify清理HTML，只允许mark标签和class属性
+  return DOMPurify.sanitize(result, {
+    ALLOWED_TAGS: ['mark'],
+    ALLOWED_ATTR: ['class']
+  })
 }
 
 // 图片加载错误处理
@@ -115,44 +119,72 @@ const goToDetail = () => {
 </template>
 
 <style scoped>
+/* 主容器样式 */
+.product-card {
+  @apply bg-white rounded-2xl shadow-card overflow-hidden cursor-pointer;
+  @apply transition-all duration-300 ease-out;
+  @apply border border-gray-200 hover:border-gray-400;
+}
+
+.product-card:hover {
+  @apply shadow-card-hover;
+  transform: translateY(-6px);
+}
+
+/* 产品图片区域 */
 .product-card-image {
-  @apply w-full relative;
-  padding: 4px;
+  @apply w-full relative p-1;
   background: linear-gradient(135deg, #f4f5f7 0%, #ebedf0 50%, #f9fafc 100%);
-}
-
-.image-wrapper {
-  @apply w-full rounded-md overflow-hidden;
-  background-color: #fff;
-  padding: 4px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-
-.image-wrapper img {
-  @apply w-full block transition-all duration-300;
-  aspect-ratio: 4 / 3;
-  object-fit: contain;
+  transition: background 0.3s ease-out;
 }
 
 .product-card:hover .product-card-image {
   background: linear-gradient(135deg, #f1f3f5 0%, #ebecf0 50%, #f7f8fa 100%);
 }
 
+.image-wrapper {
+  @apply w-full rounded-md overflow-hidden bg-white p-1;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease-out;
+}
+
 .product-card:hover .image-wrapper {
-  box-shadow: 
+  box-shadow:
     inset 0 0 0 1px rgba(139, 92, 246, 0.1),
     0 2px 8px rgba(139, 92, 246, 0.08);
+}
+
+.image-wrapper img {
+  @apply w-full block transition-transform duration-300 ease-out;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
 }
 
 .product-card-fallback {
   @apply w-full h-full;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
+  transition: background 0.3s ease-out;
 }
 
 .product-card:hover .product-card-fallback {
   background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 50%, #f3e8ff 100%);
 }
 
+/* 产品内容区域 */
+.product-card-content {
+  @apply p-4;
+}
+
+.product-card-title {
+  @apply text-base font-semibold text-dark-800 mb-3 line-clamp-1;
+  @apply transition-colors duration-200 ease-out;
+}
+
+.product-card:hover .product-card-title {
+  @apply text-primary-700;
+}
+
+/* 产品信息网格 */
 .product-card-info {
   @apply space-y-1.5 text-sm;
 }
@@ -168,5 +200,14 @@ const goToDetail = () => {
 
 .info-value {
   @apply text-primary-600 font-medium flex-1 min-w-0;
+}
+
+/* 搜索高亮样式 */
+:deep(.search-highlight) {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: inherit;
 }
 </style>

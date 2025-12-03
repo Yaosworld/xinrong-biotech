@@ -14,37 +14,37 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/products',
     name: 'ProductCenter',
-    component: () => import('@/views/product/ProductCenter.vue'),
+    component: () => import('@/views/products/ProductCenter.vue'),
     meta: { title: '产品中心' }
   },
   {
     path: '/products/:id',
     name: 'ProductDetail',
-    component: () => import('@/views/product/ProductDetail.vue'),
+    component: () => import('@/views/products/ProductDetail.vue'),
     meta: { title: '产品详情' }
   },
   {
     path: '/brands',
     name: 'BrandCenter',
-    component: () => import('@/views/brand/BrandCenter.vue'),
+    component: () => import('@/views/brands/BrandCenter.vue'),
     meta: { title: '品牌中心' }
   },
   {
     path: '/brands/:id',
     name: 'BrandDetail',
-    component: () => import('@/views/brand/BrandDetail.vue'),
+    component: () => import('@/views/brands/BrandDetail.vue'),
     meta: { title: '品牌详情' }
   },
   {
     path: '/news',
-    name: 'NewsCenter',
-    component: () => import('@/views/news/NewsCenter.vue'),
-    meta: { title: '资讯中心' }
+    name: 'PromotionCenter',
+    component: () => import('@/views/promotions/PromotionCenter.vue'),
+    meta: { title: '促销中心' }
   },
   {
     path: '/news/promotion/:id',
     name: 'PromotionDetail',
-    component: () => import('@/views/news/PromotionDetail.vue'),
+    component: () => import('@/views/promotions/PromotionDetail.vue'),
     meta: { title: '活动详情' }
   },
   {

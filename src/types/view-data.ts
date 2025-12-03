@@ -133,9 +133,9 @@ export interface BrandSectionConfig {
 }
 
 /**
- * 资讯中心页面配置
+ * 促销中心页面配置
  */
-export interface NewsCenterContent extends PageContent {
+export interface PromotionCenterContent extends PageContent {
   showcase: ShowcaseContent
   content: {
     id: string

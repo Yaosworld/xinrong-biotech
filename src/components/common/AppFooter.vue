@@ -29,7 +29,7 @@ const contactInfo = ref({
 </script>
 
 <template>
-  <footer class="bg-dark-800 text-white">
+  <footer class="bg-dark-800 text-white relative z-10">
     <div class="container-base py-12">
       <div class="grid md:grid-cols-4 gap-8">
         <!-- 公司信息 -->

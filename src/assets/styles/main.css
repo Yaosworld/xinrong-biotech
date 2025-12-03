@@ -138,35 +138,7 @@
     @apply shadow-card-hover;
   }
 
-  /* 产品卡片 */
-  .product-card {
-    @apply bg-white rounded-2xl shadow-card overflow-hidden cursor-pointer;
-    @apply transition-all duration-300 ease-out;
-    @apply border border-gray-200 hover:border-gray-400;
-  }
-
-  .product-card:hover {
-    @apply shadow-card-hover;
-    transform: translateY(-6px);
-  }
-
-  .product-card-image {
-    @apply w-full relative;
-  }
-
-
-  .product-card-content {
-    @apply p-4;
-  }
-
-  .product-card-title {
-    @apply text-base font-semibold text-dark-800 mb-3 line-clamp-1;
-    @apply transition-colors duration-200;
-  }
-
-  .product-card:hover .product-card-title {
-    @apply text-primary-700;
-  }
+  /* 产品卡片样式已移至 ProductCard.vue 组件中 */
 
   /* ==================== 
      按钮样式 

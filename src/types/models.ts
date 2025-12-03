@@ -24,12 +24,6 @@ export interface Product {
   specs: string         // 规格参数
   unit?: string         // 销售单位, e.g., "台"
   desc: string          // 产品详细描述
-  
-  // 价格与库存字段 (可选，用于筛选功能)
-  originalPrice?: number   // 原价
-  currentPrice?: number    // 现价（促销价）
-  stock?: number           // 库存数量
-  isOnSale?: boolean       // 是否促销中
 }
 
 /**
@@ -63,7 +57,8 @@ export interface Promotion {
   title: string            // 标题
   summary: string          // 摘要
   description?: string     // 详细描述
-  image_url?: string       // 活动图片
+  cover_url?: string       // 活动封面图片
+  poster_url?: string      // 活动海报图片
   icon_class?: string      // FontAwesome 图标类名
   
   // 时间信息
@@ -83,14 +78,14 @@ export interface Promotion {
   applicable_products?: string  // 适用产品描述
   
   // 状态信息 (动态计算)
-  status?: 'active' | 'ended' | 'coming'  // 活动状态
+  status?: 'active' | 'ended' | 'coming' | 'endingSoon'  // 活动状态
   statusText?: string      // 状态文本
 }
 
 /**
  * 促销状态类型
  */
-export type PromotionStatus = 'active' | 'ended' | 'coming' | 'all'
+export type PromotionStatus = 'active' | 'ended' | 'coming' | 'endingSoon' | 'all'
 
 /**
  * 排序方式类型
@@ -98,12 +93,8 @@ export type PromotionStatus = 'active' | 'ended' | 'coming' | 'all'
 export type SortOption = 
   | 'name-asc' 
   | 'name-desc' 
-  | 'price-asc' 
-  | 'price-desc' 
   | 'featured'
   | 'priority'
-  | 'date-asc'
-  | 'date-desc'
 
 /**
  * 产品筛选条件
@@ -112,9 +103,6 @@ export interface ProductFilters {
   search: string
   categoryId: string
   brand: string
-  priceRange: [number, number]
-  inStock: boolean
-  hasDiscount: boolean
 }
 
 /**
@@ -134,12 +122,6 @@ export interface BrandFilters {
  */
 export interface PromotionFilters {
   search: string
-  status: PromotionStatus
-  dateRange: [string, string] | null
-  hasDiscount: boolean
-  priceRange: [number, number]
-  category: string
-  tags: string[]
 }
 
 /**

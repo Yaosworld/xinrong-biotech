@@ -2,7 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
-import { useCategoryStore } from '@/stores/categoryStore'
+import { CATEGORIES } from '@/hooks/useCategoryImage'
 import { useBrandStore } from '@/stores/brandStore'
 import { usePromotionStore } from '@/stores/promotionStore'
 import { usePageContentStore } from '@/stores/pageContentStore'
@@ -15,7 +15,6 @@ import type { SectionTitleConfig } from '@/types'
 
 const router = useRouter()
 const productStore = useProductStore()
-const categoryStore = useCategoryStore()
 const brandStore = useBrandStore()
 const promotionStore = usePromotionStore()
 const pageStore = usePageContentStore()
@@ -65,7 +64,6 @@ const latestPromotions = computed(() => {
 onMounted(async () => {
   await Promise.all([
     productStore.loadProducts(),
-    categoryStore.loadCategories(),
     brandStore.loadBrands(),
     promotionStore.loadPromotions(),
     pageStore.loadPageContent('home')
@@ -110,7 +108,7 @@ const goTo = (path: string) => {
       <div class="container-base">
         <div class="flex flex-wrap justify-center gap-3">
           <button
-            v-for="category in categoryStore.categories.slice(0, 8)"
+            v-for="category in CATEGORIES.slice(0, 8)"
             :key="category.id"
             class="filter-tag"
             @click="goTo(`/products?category=${category.id}`)"

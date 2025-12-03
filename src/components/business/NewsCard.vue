@@ -17,9 +17,9 @@ const router = useRouter()
 const promotionStore = usePromotionStore()
 const imageError = ref(false)
 
-// 获取促销活动图片路径（仿照商品中心）
-const promotionImagePath = computed(() => {
-  return promotionStore.getPromotionImagePath(props.promotion)
+// 获取促销活动封面图片路径（仿照商品中心）
+const promotionCoverPath = computed(() => {
+  return promotionStore.getPromotionCoverPath(props.promotion)
 })
 
 // 高亮关键词
@@ -61,13 +61,25 @@ const formatDateRange = (start: string, end: string) => {
   return `${format(s)} - ${format(e)}`
 }
 
-// 状态类
-const statusClass = computed(() => {
+// 时间状态样式类
+const timeStatusClass = computed(() => {
   switch (props.promotion.status) {
-    case 'active': return 'status-badge-active'
-    case 'coming': return 'status-badge-coming'
-    case 'ended': return 'status-badge-ended'
+    case 'endingSoon': return 'time-status-ending-soon'  // 即将结束
+    case 'active': return 'time-status-active'           // 正在进行
+    case 'coming': return 'time-status-coming'           // 即将开始
+    case 'ended': return 'time-status-ended'             // 已结束
     default: return ''
+  }
+})
+
+// 时间状态图标
+const timeStatusIcon = computed(() => {
+  switch (props.promotion.status) {
+    case 'endingSoon': return 'fas fa-hourglass-end'    // 即将结束
+    case 'active': return 'fas fa-play-circle'          // 正在进行
+    case 'coming': return 'fas fa-clock'                // 即将开始
+    case 'ended': return 'fas fa-check-circle'          // 已结束
+    default: return 'fas fa-info-circle'
   }
 })
 
@@ -83,8 +95,8 @@ const goToDetail = () => {
     <div class="news-card-image">
       <div class="image-wrapper">
         <img
-          v-if="!imageError && promotionImagePath"
-          :src="promotionImagePath"
+          v-if="!imageError && promotionCoverPath"
+          :src="promotionCoverPath"
           :alt="promotion.title"
           @error="imageError = true"
         />
@@ -96,25 +108,23 @@ const goToDetail = () => {
         <div v-if="!imageError" class="image-overlay"></div>
       </div>
       
-      <!-- 状态标签 -->
-      <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
-        <span v-if="promotion.is_featured" class="status-badge status-badge-top">置顶</span>
-        <span v-if="promotion.priority && promotion.priority <= 3" class="status-badge status-badge-hot">热门</span>
-      </div>
-      
-      <!-- 结束标签 -->
-      <div v-if="promotion.status === 'ended'" class="absolute top-3 right-3 z-10">
-        <span class="status-badge status-badge-ended">活动已结束</span>
-      </div>
     </div>
     
     <!-- 右侧内容 -->
     <div class="news-card-content">
       <div>
-        <!-- 发布日期 -->
-        <div class="flex items-center justify-end text-sm text-dark-400 mb-2">
-          <i class="fas fa-calendar-alt mr-1.5"></i>
-          发布：{{ promotion.start_date ? formatDate(promotion.start_date) : '-' }}
+        <!-- 发布日期和状态标签 -->
+        <div class="flex items-center justify-between text-sm mb-2">
+          <!-- 发布日期（左对齐） -->
+          <span class="text-dark-400">
+            <i class="fas fa-calendar-alt mr-1.5"></i>
+            发布：{{ promotion.start_date ? formatDate(promotion.start_date) : '-' }}
+          </span>
+          <!-- 状态标签（右对齐） -->
+          <span :class="['time-status-badge', timeStatusClass]">
+            <i :class="timeStatusIcon" class="mr-1"></i>
+            {{ promotion.statusText }}
+          </span>
         </div>
         
         <!-- 标题 -->
@@ -280,22 +290,33 @@ const goToDetail = () => {
     0 0 20px rgba(0, 0, 0, 0.1);
 }
 
-.status-badge-top {
-  @apply bg-yellow-100 text-yellow-800;
-  backdrop-filter: blur(1px);
-  box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3);
+/* 时间状态标签基础样式 */
+.time-status-badge {
+  @apply inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full;
 }
 
-.status-badge-hot {
-  @apply bg-red-100 text-red-800;
-  backdrop-filter: blur(1px);
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+/* 即将结束 - 红橙色系，表示紧迫 */
+.time-status-ending-soon {
+  @apply bg-orange-100 text-orange-700;
+  box-shadow: 0 1px 4px rgba(234, 88, 12, 0.2);
 }
 
-.status-badge-ended {
-  @apply bg-gray-100 text-gray-800;
-  backdrop-filter: blur(1px);
-  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.3);
+/* 正在进行 - 绿色系，表示活跃 */
+.time-status-active {
+  @apply bg-green-100 text-green-700;
+  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.2);
+}
+
+/* 即将开始 - 蓝色系，表示等待 */
+.time-status-coming {
+  @apply bg-blue-100 text-blue-700;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
+}
+
+/* 已结束 - 灰色系，表示完成 */
+.time-status-ended {
+  @apply bg-gray-100 text-gray-500;
+  box-shadow: 0 1px 4px rgba(156, 163, 175, 0.2);
 }
 
 /* 响应式设计 */

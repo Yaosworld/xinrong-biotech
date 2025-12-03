@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useCategoryStore } from '@/stores/categoryStore'
+import { CATEGORIES } from '@/hooks/useCategoryImage'
 import SectionTitle from '@/components/common/SectionTitle.vue'
 
 const router = useRouter()
-const categoryStore = useCategoryStore()
-
-const categories = computed(() => categoryStore.categories)
 
 const goToCategory = (categoryId: string) => {
   router.push(`/products?category=${categoryId}`)
@@ -35,7 +31,7 @@ const getCategoryIcon = (id: string) => {
       
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <article
-          v-for="category in categories"
+          v-for="category in CATEGORIES"
           :key="category.id"
           class="group relative overflow-hidden rounded-2xl cursor-pointer"
           @click="goToCategory(category.id)"

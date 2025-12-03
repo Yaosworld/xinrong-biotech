@@ -2,14 +2,13 @@
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
-import { useCategoryStore } from '@/stores/categoryStore'
+import { CATEGORIES } from '@/hooks/useCategoryImage'
 import { useBrandStore } from '@/stores/brandStore'
 import { usePromotionStore } from '@/stores/promotionStore'
 import { useAdminStore } from '@/stores/adminStore'
 
 const router = useRouter()
 const productStore = useProductStore()
-const categoryStore = useCategoryStore()
 const brandStore = useBrandStore()
 const promotionStore = usePromotionStore()
 const adminStore = useAdminStore()
@@ -24,7 +23,7 @@ const stats = computed(() => [
   },
   {
     title: '产品分类',
-    value: categoryStore.categories.length,
+    value: CATEGORIES.length,
     icon: 'Folder',
     color: 'bg-green-500'
   },
@@ -78,7 +77,6 @@ const formatTime = (timestamp: string) => {
 onMounted(async () => {
   await Promise.all([
     productStore.loadProducts(),
-    categoryStore.loadCategories(),
     brandStore.loadBrands(),
     promotionStore.loadPromotions()
   ])
