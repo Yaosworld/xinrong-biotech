@@ -172,7 +172,7 @@ onMounted(async () => {
             <!-- 品牌介绍 -->
             <div v-if="brand.description" class="brand-description">
               <h3 class="section-title-inner">
-                <i class="fas fa-file-alt text-primary-500"></i>
+                <i class="fas fa-file-alt text-gradient-600"></i>
                 品牌介绍
               </h3>
               <div class="description-content">
@@ -193,7 +193,7 @@ onMounted(async () => {
           <!-- 右侧授权证书面板 - 仅当有有效证书图片时显示 -->
           <div v-if="hasValidCertificate" class="right-panel glass-card">
             <h3 class="section-title-inner">
-              <i class="fas fa-certificate text-primary-500"></i>
+              <i class="fas fa-certificate text-gradient-600"></i>
               代理授权证书
             </h3>
             <div class="certificate-container">

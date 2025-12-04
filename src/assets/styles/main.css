@@ -55,7 +55,7 @@
      ==================== */
   .showcase-section {
     @apply relative py-16 md:py-20 overflow-hidden;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a855f7 100%);
+    background: linear-gradient(135deg, #667eea, #764ba2);
   }
 
   .showcase-title {
@@ -145,19 +145,22 @@
      ==================== */
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-2.5;
-    @apply bg-primary-600 text-white font-medium rounded-lg;
-    @apply hover:bg-primary-700 active:bg-primary-800;
+    @apply text-white font-medium rounded-lg;
     @apply transition-all duration-200 ease-out;
     @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
     @apply shadow-button hover:shadow-lg;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
   }
 
   .btn-primary:hover {
     transform: translateY(-1px);
+    background: linear-gradient(135deg, #5a67d8, #6b4199);
   }
 
   .btn-primary:active {
     transform: translateY(0);
+    background: linear-gradient(135deg, #667eea, #764ba2);
   }
 
   .btn-secondary {
@@ -169,14 +172,43 @@
 
   .btn-outline {
     @apply inline-flex items-center justify-center px-6 py-2.5;
-    @apply border-2 border-primary-600 text-primary-600 font-medium rounded-lg;
-    @apply hover:bg-primary-600 hover:text-white;
+    @apply font-medium rounded-lg;
     @apply transition-all duration-200 ease-out;
+    position: relative;
+    background: white;
+    color: #667eea;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .btn-outline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    margin: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #667eea, #764ba2);
   }
 
   .btn-outline:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    color: white;
+    box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
+  }
+
+  .btn-outline:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #667eea, #764ba2);
   }
 
   /* ==================== 
@@ -201,12 +233,20 @@
   .filter-tag {
     @apply px-4 py-1.5 rounded-lg text-sm font-medium cursor-pointer;
     @apply bg-dark-50 text-dark-600 border border-transparent;
-    @apply hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200;
     @apply transition-all duration-200;
   }
 
+  .filter-tag:hover {
+    @apply text-white border-transparent;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(118, 75, 162, 0.2);
+  }
+
   .filter-tag.active {
-    @apply bg-primary-50 text-primary-600 border-primary-200;
+    @apply text-white border-transparent;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    box-shadow: 0 2px 8px rgba(118, 75, 162, 0.2);
   }
 
   .filter-more-btn {
@@ -226,8 +266,16 @@
   }
 
   .search-btn {
-    @apply px-8 py-3 bg-primary-600 text-white font-medium rounded-xl;
-    @apply hover:bg-primary-700 transition-colors;
+    @apply px-8 py-3 text-white font-medium rounded-xl;
+    @apply transition-all duration-200 ease-out;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+  }
+
+  .search-btn:hover {
+    background: linear-gradient(135deg, #5a67d8, #6b4199);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
   }
 
   /* ==================== 
@@ -274,8 +322,9 @@
      ==================== */
   .section-badge {
     @apply inline-flex items-center px-5 py-2 rounded-full text-sm font-medium;
-    @apply bg-primary-600 text-white;
-    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+    @apply text-white;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    box-shadow: 0 4px 14px rgba(118, 75, 162, 0.35);
   }
 
   .section-title {
@@ -351,11 +400,11 @@
      ==================== */
   .intro-card {
     @apply bg-white rounded-2xl shadow-card p-6;
-    @apply border-l-4 border-primary-500;
+    @apply border-l-4 border-gradient-600;
   }
 
   .intro-card-icon {
-    @apply w-12 h-12 rounded-xl bg-primary-100 text-primary-600;
+    @apply w-12 h-12 rounded-xl bg-gradient-100 text-gradient-600;
     @apply flex items-center justify-center text-xl mb-4;
   }
 
@@ -376,7 +425,7 @@
 
   .advantage-timeline::before {
     content: '';
-    @apply absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary-300 via-primary-400 to-primary-200;
+    @apply absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gradient-300 via-gradient-400 to-gradient-200;
     transform: translateX(-50%);
   }
 
@@ -389,7 +438,7 @@
   }
 
   .advantage-number {
-    @apply w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white;
+    @apply w-12 h-12 rounded-full bg-gradient-to-br from-gradient-600 to-gradient-700 text-white;
     @apply flex items-center justify-center font-bold text-lg flex-shrink-0;
     @apply shadow-lg relative z-10;
     @apply ring-4 ring-white;
@@ -397,12 +446,12 @@
 
   .advantage-content {
     @apply flex-1 bg-white rounded-2xl shadow-card p-5;
-    @apply border-l-4 border-primary-300 hover:border-primary-500;
+    @apply border-l-4 border-gradient-300 hover:border-gradient-600;
     @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5;
   }
 
   .advantage-icon {
-    @apply w-10 h-10 rounded-lg bg-primary-100 text-primary-600;
+    @apply w-10 h-10 rounded-lg bg-gradient-100 text-gradient-600;
     @apply flex items-center justify-center;
   }
 

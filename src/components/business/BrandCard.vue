@@ -29,7 +29,7 @@ const brandInitial = computed(() => {
 // 随机背景颜色
 const bgColorClass = computed(() => {
   const colors = [
-    'bg-primary-500',
+    'bg-gradient-600',
     'bg-purple-500',
     'bg-indigo-500',
     'bg-blue-500',
@@ -76,7 +76,7 @@ const goToBrand = () => {
 
 <style scoped>
 .brand-card {
-  @apply flex flex-col items-center bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary-200;
+  @apply flex flex-col items-center bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-gradient-200;
   width: 200px;
   height: 140px;
 }

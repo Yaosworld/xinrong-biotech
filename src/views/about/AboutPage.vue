@@ -153,7 +153,7 @@ const contactInfo = {
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
               <!-- 图标 -->
-              <div class="w-16 h-16 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fas fa-phone-alt text-xl"></i>
               </div>
               <!-- 字段名 -->
@@ -174,7 +174,7 @@ const contactInfo = {
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
               <!-- 图标 -->
-              <div class="w-16 h-16 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fas fa-envelope text-xl"></i>
               </div>
               <!-- 字段名 -->
@@ -192,7 +192,7 @@ const contactInfo = {
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
               <!-- 图标 -->
-              <div class="w-16 h-16 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fab fa-weixin text-xl"></i>
               </div>
               <!-- 字段名 -->
@@ -214,7 +214,7 @@ const contactInfo = {
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
               <!-- 图标 -->
-              <div class="w-16 h-16 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fas fa-map-marker-alt text-xl"></i>
               </div>
               <!-- 字段名 -->

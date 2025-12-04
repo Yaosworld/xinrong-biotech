@@ -166,7 +166,7 @@ watch(
           <div class="mb-6">
             <div class="filter-header">
               <div class="filter-title">
-                <i class="fas fa-award text-primary-500"></i>
+                <i class="fas fa-award text-gradient-600"></i>
                 <span>合作品牌</span>
               </div>
               <button
@@ -203,7 +203,7 @@ watch(
           <div>
             <div class="filter-header">
               <div class="filter-title">
-                <i class="fas fa-folder text-primary-500"></i>
+                <i class="fas fa-folder text-gradient-600"></i>
                 <span>产品分类</span>
               </div>
               <button
@@ -244,7 +244,7 @@ watch(
       <div class="container-base">
         <!-- 工具栏 -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div class="text-primary-600 font-medium">
+          <div class="text-gradient-600 font-medium">
             共找到 {{ productStore.sortedProducts.length }} 个产品
           </div>
           

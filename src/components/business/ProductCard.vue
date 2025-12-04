@@ -181,7 +181,7 @@ const goToDetail = () => {
 }
 
 .product-card:hover .product-card-title {
-  @apply text-primary-700;
+  @apply text-gradient-700;
 }
 
 /* 产品信息网格 */
@@ -199,7 +199,7 @@ const goToDetail = () => {
 }
 
 .info-value {
-  @apply text-primary-600 font-medium flex-1 min-w-0;
+  @apply text-gradient-600 font-medium flex-1 min-w-0;
 }
 
 /* 搜索高亮样式 */

@@ -217,7 +217,7 @@ onMounted(async () => {
             <!-- 活动详情 -->
             <div v-if="descriptionParagraphs.length > 0" class="promotion-description">
               <h3 class="section-title-inner">
-                <i class="fas fa-file-alt text-primary-500"></i>
+                <i class="fas fa-file-alt text-gradient-600"></i>
                 活动详情
               </h3>
               <div class="description-content">
@@ -248,7 +248,7 @@ onMounted(async () => {
           <!-- 右侧海报面板 -->
           <div class="right-panel glass-card">
             <h3 class="section-title-inner">
-              <i class="fas fa-image text-primary-500"></i>
+              <i class="fas fa-image text-gradient-600"></i>
               活动海报
             </h3>
             <div class="poster-container">
@@ -283,7 +283,7 @@ onMounted(async () => {
             <!-- 活动详情 -->
             <div v-if="descriptionParagraphs.length > 0" class="promotion-description">
               <h3 class="section-title-inner">
-                <i class="fas fa-file-alt text-primary-500"></i>
+                <i class="fas fa-file-alt text-gradient-600"></i>
                 活动详情
               </h3>
               <div class="description-content">

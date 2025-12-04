@@ -101,7 +101,7 @@ const goToDetail = () => {
           @error="imageError = true"
         />
         <div v-else class="news-card-fallback flex items-center justify-center">
-          <i :class="promotion.icon_class || 'fas fa-bullhorn'" class="text-4xl text-primary-300"></i>
+          <i :class="promotion.icon_class || 'fas fa-bullhorn'" class="text-4xl text-gradient-300"></i>
         </div>
 
         <!-- 高级蒙版层 -->
@@ -153,7 +153,7 @@ const goToDetail = () => {
       
       <!-- 底部信息 -->
       <div class="flex items-center justify-end text-sm">
-        <span class="text-primary-600">
+        <span class="text-gradient-600">
           活动时间：{{ promotion.start_date && promotion.end_date ? formatDateRange(promotion.start_date, promotion.end_date) : '-' }}
         </span>
       </div>
@@ -197,7 +197,7 @@ const goToDetail = () => {
 
 /* 备用显示区域 */
 .news-card-fallback {
-  @apply w-full h-full bg-gradient-to-br from-primary-50 to-primary-100;
+  @apply w-full h-full bg-gradient-to-br from-gradient-50 to-gradient-100;
 }
 
 /* 高级蒙版层 - 毛玻璃效果 */
@@ -250,7 +250,7 @@ const goToDetail = () => {
 
 /* 标签样式 */
 .tag-pill {
-  @apply inline-block px-3 py-1 text-xs font-medium bg-primary-100 text-primary-700 rounded-full;
+  @apply inline-block px-3 py-1 text-xs font-medium bg-gradient-100 text-gradient-700 rounded-full;
 }
 
 /* 状态标签 */

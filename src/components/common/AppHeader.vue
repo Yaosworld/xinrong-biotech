@@ -44,8 +44,8 @@ const isActive = (path: string) => {
 const getNavLinkClasses = (path: string) => {
   const active = isActive(path)
   return active
-    ? 'text-primary-600 bg-primary-50 font-semibold'
-    : 'text-dark-600 hover:text-primary-600 hover:bg-primary-50'
+    ? 'text-gradient-600 bg-gradient-50 font-semibold'
+    : 'text-dark-600 hover:text-gradient-600 hover:bg-gradient-50'
 }
 
 // 滚动监听
@@ -80,11 +80,11 @@ onUnmounted(() => {
     :class="isScrolled ? 'shadow-header' : ''"
   >
     <div class="container-base">
-      <div class="flex items-center justify-between h-16 md:h-[72px]">
+      <div class="flex items-center justify-between h-20 md:h-24">
         <!-- Logo -->
-        <router-link to="/" class="flex items-center gap-3 group">
+        <router-link to="/" class="flex items-center gap-4 group">
           <!-- Logo图标 -->
-          <div class="w-11 h-11 overflow-hidden bg-white flex items-center justify-center transition-transform group-hover:scale-105">
+          <div class="w-16 h-16 overflow-hidden bg-white flex items-center justify-center transition-transform group-hover:scale-105">
             <img
               v-if="!logoError"
               src="/images/common/logo.png"
@@ -92,35 +92,35 @@ onUnmounted(() => {
               class="w-full h-full object-contain"
               @error="logoError = true"
             />
-            <span v-else class="text-primary-600 font-bold text-lg">XR</span>
+            <span v-else class="text-gradient-600 font-bold text-2xl">XR</span>
           </div>
           <!-- 公司名称 -->
           <div class="hidden sm:block">
-            <div class="text-lg font-bold text-dark-800 group-hover:text-primary-600 transition-colors">广州信荣生物科技有限公司</div>
-            <div class="text-[10px] text-dark-400 tracking-wide">GUANGZHOU XINRONG BIOTECHNOLOGY CO., LTD.</div>
+            <div class="text-xl md:text-2xl font-bold text-dark-800 group-hover:text-gradient-600 transition-colors">广州信荣生物科技有限公司</div>
+            <div class="text-xs md:text-sm text-dark-400 tracking-wide">GUANGZHOU XINRONG BIOTECHNOLOGY CO., LTD.</div>
           </div>
         </router-link>
 
         <!-- Desktop Navigation -->
-        <nav class="hidden lg:flex items-center gap-1">
+        <nav class="hidden lg:flex items-center gap-2">
           <router-link
             v-for="item in navItems"
             :key="item.path"
             :to="item.path"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+            class="flex items-center gap-3 px-5 py-3 rounded-lg text-base lg:text-lg font-medium transition-all duration-200"
             :class="getNavLinkClasses(item.path)"
           >
-            <i :class="item.icon" class="text-sm"></i>
+            <i :class="item.icon" class="text-lg lg:text-xl"></i>
             <span>{{ item.name }}</span>
           </router-link>
         </nav>
 
         <!-- Mobile Menu Button -->
         <button
-          class="lg:hidden p-2 rounded-lg text-dark-600 hover:bg-dark-100 transition-colors"
+          class="lg:hidden p-3 rounded-lg text-dark-600 hover:bg-dark-100 transition-colors"
           @click="toggleMobileMenu"
         >
-          <i :class="isMobileMenuOpen ? 'fas fa-times' : 'fas fa-bars'" class="text-xl"></i>
+          <i :class="isMobileMenuOpen ? 'fas fa-times' : 'fas fa-bars'" class="text-2xl"></i>
         </button>
       </div>
     </div>
@@ -138,17 +138,17 @@ onUnmounted(() => {
         v-if="isMobileMenuOpen"
         class="lg:hidden absolute top-full left-0 right-0 bg-white shadow-lg border-t border-dark-100"
       >
-        <nav class="container-base py-4 space-y-1">
+        <nav class="container-base py-4 space-y-2">
           <router-link
             v-for="item in navItems"
             :key="item.path"
             :to="item.path"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+            class="w-full flex items-center gap-4 px-5 py-4 rounded-lg transition-colors"
             :class="getNavLinkClasses(item.path)"
             @click="navigateTo(item.path)"
           >
-            <i :class="item.icon" class="w-5 text-center"></i>
-            <span class="font-medium">{{ item.name }}</span>
+            <i :class="item.icon" class="w-6 text-center text-lg"></i>
+            <span class="font-medium text-lg">{{ item.name }}</span>
           </router-link>
         </nav>
       </div>
