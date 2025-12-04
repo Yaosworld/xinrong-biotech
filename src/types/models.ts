@@ -47,6 +47,7 @@ export interface Brand {
   product_count?: number    // 关联产品数量
   priority?: number         // 显示优先级
   website_url?: string      // 官网链接
+  certificate_url?: string  // 品牌证书图片路径
 }
 
 /**
@@ -78,7 +79,7 @@ export interface Promotion {
   applicable_products?: string  // 适用产品描述
   
   // 状态信息 (动态计算)
-  status?: 'active' | 'ended' | 'coming' | 'endingSoon'  // 活动状态
+  status?: 'active' | 'ended' | 'coming' | 'endingSoon' | 'all'  // 活动状态
   statusText?: string      // 状态文本
 }
 

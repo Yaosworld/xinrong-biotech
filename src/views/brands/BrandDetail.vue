@@ -57,6 +57,7 @@ const hasValidCertificate = computed(() => {
   return brand.value?.certificate_url && !certificateImageError.value
 })
 
+
 // 品牌描述分段（支持多段落）
 const descriptionParagraphs = computed(() => {
   if (!brand.value?.description) return []
@@ -78,6 +79,7 @@ const handleImageError = () => {
 const handleCertificateImageError = () => {
   certificateImageError.value = true
 }
+
 
 onMounted(async () => {
   generateGeometricShapes()
@@ -520,6 +522,7 @@ onMounted(async () => {
   text-align: center;
   padding: 2rem;
 }
+
 
 /* 响应式设计 */
 @media (max-width: 1024px) {

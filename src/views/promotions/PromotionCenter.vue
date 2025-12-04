@@ -2,17 +2,48 @@
 import { computed, onMounted, ref } from 'vue'
 import { usePromotionStore } from '@/stores/promotionStore'
 import { usePagination } from '@/hooks/usePagination'
-import { usePageShowcase } from '@/composables/usePageShowcase'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import NewsCard from '@/components/business/NewsCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const promotionStore = usePromotionStore()
-const { slogans: promotionSlogans, statsFromConfig: promotionStatsFromConfig } = usePageShowcase('promotion-center', [
+
+// 本地横幅标语
+const promotionSlogans = [
   '最新优惠活动',
   '第一时间了解我们的产品优惠与促销信息'
-])
+]
+
+// 默认统计数据
+const defaultStats = [
+  { key: 'active', number: '10+', label: '进行中活动' },
+  { key: 'categories', number: '5+', label: '活动分类' },
+  { key: 'views', number: '10K+', label: '浏览次数' }
+]
+
+// 动态统计数据
+const dynamicStats = computed(() => {
+  // 使用处理后的活动数据，包含status字段
+  const activePromotions = promotionStore.activePromotions.length
+  const totalPromotions = promotionStore.processedPromotions.length
+
+  return [
+    { key: 'active', number: `${activePromotions}+`, label: '进行中活动' },
+    { key: 'categories', number: '5+', label: '活动分类' },
+    { key: 'views', number: '10K+', label: '浏览次数' }
+  ]
+})
+
+// 优先使用动态数据，如果没有数据则使用默认数据
+const stats = computed(() => {
+  // 如果活动数据已加载且有数据，使用动态统计数据
+  if (promotionStore.promotions.length > 0) {
+    return dynamicStats.value
+  }
+  // 否则使用默认统计数据
+  return defaultStats
+})
 
 // 搜索关键词
 const searchQuery = ref('')
@@ -23,14 +54,6 @@ const { currentPageItems, paginationInfo, goToPage, setPageSize } = usePaginatio
   computed(() => promotionStore.filteredPromotions),
   { initialPageSize: 8, scrollTarget: '.promotion-section' }
 )
-
-// 统计数据
-const dynamicPromotionStats = computed(() => [
-  { key: 'promotions', number: `${promotionStore.promotions.length}+`, label: '优惠活动' },
-  { key: 'meetings', number: '50+', label: '学术会议' },
-  { key: 'releases', number: '20+', label: '新品发布' }
-])
-const stats = computed(() => promotionStatsFromConfig.value.length > 0 ? promotionStatsFromConfig.value : dynamicPromotionStats.value)
 
 // 执行搜索
 const handleSearch = () => {

@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { CATEGORIES } from '@/hooks/useCategoryImage'
 import { usePagination } from '@/hooks/usePagination'
-import { usePageShowcase } from '@/composables/usePageShowcase'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import ProductCard from '@/components/business/ProductCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -13,10 +12,36 @@ import EmptyState from '@/components/common/EmptyState.vue'
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
-const { slogans: productSlogans, statsFromConfig: productStatsFromConfig } = usePageShowcase('product-center', [
+
+// 本地横幅标语
+const productSlogans = [
   '探索我们的产品世界',
-  '为您提供最优质的科学仪器与试剂'
+  '为您提供最优质的试剂耗材与仪器设备'
+]
+
+// 默认统计数据
+const defaultStats = [
+  { key: 'categories', number: '10+', label: '产品分类' },
+  { key: 'brands', number: '50+', label: '知名品牌' },
+  { key: 'products', number: '500+', label: '优质产品' }
+]
+
+// 动态统计数据
+const dynamicStats = computed(() => [
+  { key: 'products', number: `${productStore.products.length}+`, label: '商品种类' },
+  { key: 'categories', number: `${CATEGORIES.length}+`, label: '产品类别' },
+  { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' }
 ])
+
+// 优先使用动态数据，如果没有数据则使用默认数据
+const stats = computed(() => {
+  // 如果产品数据已加载且有数据，使用动态统计数据
+  if (productStore.products.length > 0 || productStore.allBrands.length > 0) {
+    return dynamicStats.value
+  }
+  // 否则使用默认统计数据
+  return defaultStats
+})
 
 // 搜索关键词
 const searchQuery = ref('')
@@ -42,14 +67,6 @@ const displayedBrands = computed(() => {
 const displayedCategories = computed(() => {
   return showAllCategories.value ? CATEGORIES : CATEGORIES.slice(0, 10)
 })
-
-// 统计数据
-const dynamicStats = computed(() => [
-  { key: 'products', number: `${productStore.products.length}+`, label: '产品种类' },
-  { key: 'categories', number: `${CATEGORIES.length}+`, label: '产品分类' },
-  { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' }
-])
-const stats = computed(() => productStatsFromConfig.value.length > 0 ? productStatsFromConfig.value : dynamicStats.value)
 
 // 执行搜索
 const handleSearch = () => {

@@ -25,6 +25,16 @@ export const useBrandStore = defineStore('brand', () => {
     return brands.value.filter(brand => brand.is_own_brand !== true)
   })
 
+  // 国内品牌列表
+  const domesticBrands = computed(() => {
+    return brands.value.filter(brand => brand.country === '中国')
+  })
+
+  // 国外品牌列表
+  const internationalBrands = computed(() => {
+    return brands.value.filter(brand => brand.country !== '中国')
+  })
+
   // 按优先级排序的品牌列表
   const sortedBrands = computed(() => {
     return [...brands.value].sort((a, b) => (a.priority || 999) - (b.priority || 999))
@@ -78,6 +88,8 @@ export const useBrandStore = defineStore('brand', () => {
     // Getters
     ownBrands,
     agentBrands,
+    domesticBrands,
+    internationalBrands,
     sortedBrands,
 
     // Actions

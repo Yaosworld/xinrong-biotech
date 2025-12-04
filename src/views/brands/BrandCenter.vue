@@ -1,43 +1,47 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useBrandStore } from '@/stores/brandStore'
-import { usePageContentStore } from '@/stores/pageContentStore'
-import { usePageShowcase } from '@/composables/usePageShowcase'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import BrandCard from '@/components/business/BrandCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import type { SectionTitleConfig } from '@/types'
 
 const brandStore = useBrandStore()
-const pageStore = usePageContentStore()
-const { slogans: brandSlogans, statsFromConfig: brandStatsFromConfig } = usePageShowcase('brand-center', [
-  '与全球知名品牌合作',
-  '为您提供高品质的生物技术产品与解决方案'
+
+// 本地横幅标语
+const brandSlogans = [
+  '拥有自主品牌，提供高品质产品与专业解决方案',
+  '代理全球知名品牌，满足您多样化以及个性化的实验需求'
+]
+
+// 默认统计数据
+const defaultStats = [
+  { key: 'domesticCount', number: '30+', label: '国内品牌' },
+  { key: 'internationalCount', number: '20+', label: '国际品牌' }
+]
+
+// 动态统计数据
+const dynamicStats = computed(() => [
+  { key: 'domesticCount', number: `${brandStore.domesticBrands.length}+`, label: '国内品牌' },
+  { key: 'internationalCount', number: `${brandStore.internationalBrands.length}+`, label: '国际品牌' }
 ])
 
-// 页面内容
-const pageContent = computed(() => pageStore.getPageContent?.('brand-center') ?? pageStore.getPage('brand-center'))
-
-// 从数据源获取 sections 标题配置
-const sections = computed<Record<string, SectionTitleConfig>>(() => pageContent.value?.sections || {})
-
-// 统计数据
-const dynamicBrandStats = computed(() => [
-  { key: 'brandCount', number: `${brandStore.brands.length}+`, label: '合作品牌' },
-  { key: 'ownBrandCount', number: `${brandStore.ownBrands.length}+`, label: '自主品牌' }
-])
-const stats = computed(() => brandStatsFromConfig.value.length > 0 ? brandStatsFromConfig.value : dynamicBrandStats.value)
+// 优先使用动态数据，如果没有数据则使用默认数据
+const stats = computed(() => {
+  // 如果品牌数据已加载且有数据，使用动态统计数据
+  if (brandStore.brands.length > 0 || brandStore.ownBrands.length > 0) {
+    return dynamicStats.value
+  }
+  // 否则使用默认统计数据
+  return defaultStats
+})
 
 // 使用store中的computed属性
 const ownBrands = computed(() => brandStore.ownBrands)
 const partnerBrands = computed(() => brandStore.agentBrands)
 
 onMounted(async () => {
-  await Promise.all([
-    brandStore.loadBrands(),
-    pageStore.loadPageContent('brand-center')
-  ])
+  await brandStore.loadBrands()
 })
 </script>
 
@@ -53,8 +57,8 @@ onMounted(async () => {
     <section v-if="ownBrands.length > 0" class="py-12 bg-dark-50">
       <div class="container-base">
         <div class="text-center mb-8">
-          <span class="section-badge">{{ sections.ownBrands?.badge || '自主品牌' }}</span>
-          <h2 class="section-title">{{ sections.ownBrands?.title || '自主研发，品质保证' }}</h2>
+          <span class="section-badge">自主品牌</span>
+          <h2 class="section-title">自主研发，品质保证</h2>
         </div>
         
         <!-- 自主品牌使用水平居中布局 -->
@@ -73,8 +77,8 @@ onMounted(async () => {
     <section class="py-12">
       <div class="container-base">
         <div class="text-center mb-8">
-          <span class="section-badge">{{ sections.partnerBrands?.badge || '甄选品牌' }}</span>
-          <h2 class="section-title">{{ sections.partnerBrands?.title || '全球知名品牌，值得信赖' }}</h2>
+          <span class="section-badge">甄选品牌</span>
+          <h2 class="section-title">全球知名品牌，值得信赖</h2>
         </div>
         
         <!-- 加载状态 -->

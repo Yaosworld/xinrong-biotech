@@ -2,9 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
-import { getCategoryById, getCategoryImagePath } from '@/hooks/useCategoryImage'
 import { usePageContentStore } from '@/stores/pageContentStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import ContactModal from '@/components/common/ContactModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,7 +12,6 @@ const productStore = useProductStore()
 const pageContentStore = usePageContentStore()
 
 const productId = computed(() => route.params.id as string)
-const imageError = ref(false)
 const showContactModal = ref(false)
 const loading = ref(true)
 
@@ -55,27 +54,13 @@ const product = computed(() => {
   return productStore.getProductById(productId.value)
 })
 
-// 分类信息
-const category = computed(() => {
-  if (!product.value) return null
-  return getCategoryById(product.value.categoryId)
-})
-
-// 分类图片路径
-const categoryImagePath = computed(() => {
-  if (!product.value) return '/images/common/placeholder.png'
-  return getCategoryImagePath(product.value.categoryId)
-})
-
 // 联系信息
-const contactInfo = computed(() => {
-  return pageContentStore.siteInfo?.contact || {
-    phone: '400-123-4567',
-    mobile: '138-0000-0000',
-    email: 'contact@xinrong-bio.com',
-    wechatQrcode: '/images/common/wechat-qrcode.svg',
-    qqQrcode: '/images/common/qq-qrcode.svg'
-  }
+const contactInfo = ref({
+  phone1: '15919646073',
+  phone2: '13422057239',
+  email: '15919646073@139.com',
+  wechatQrcode: '/images/common/wx-qrcode-contact.png',
+  workTime: '周一至周五 8:00-17:30'
 })
 
 // 返回产品列表（使用浏览器历史记录保持之前的筛选状态）
@@ -154,58 +139,41 @@ onMounted(async () => {
       <div class="container-base py-8">
         <h2 class="page-main-title">产品详情</h2>
         
-        <div class="detail-layout">
-          <!-- 左侧产品图片面板 -->
-          <div class="left-panel glass-card">
-            <div class="product-image-container">
-              <img
-                v-if="!imageError"
-                :src="categoryImagePath"
-                :alt="product.name"
-                class="product-image"
-                @error="imageError = true"
-              />
-              <div v-else class="image-placeholder">
-                <i class="fas fa-image text-5xl text-primary-300 mb-4"></i>
-                <p class="text-dark-400 font-medium">暂无产品图片</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 右侧产品信息面板 -->
+        <div class="detail-layout single-column">
+          <!-- 产品信息面板 -->
           <div class="right-panel glass-card">
             <!-- 产品名称 -->
             <h1 class="product-title">{{ product.name }}</h1>
             
             <!-- 信息列表 -->
             <div class="info-list">
+              <!-- 产品货号 -->
+              <div class="info-item">
+                <span class="info-label">货号</span>
+                <span class="info-value">{{ product.sku || '-' }}</span>
+              </div>
+
               <!-- 品牌 -->
               <div class="info-item">
                 <span class="info-label">品牌</span>
                 <span class="info-value brand-value">{{ product.brand || '-' }}</span>
               </div>
-              
+
               <!-- 规格参数 -->
               <div class="info-item">
-                <span class="info-label">规格参数</span>
+                <span class="info-label">规格</span>
                 <span class="info-value">{{ product.specs || '-' }}</span>
               </div>
-              
-              <!-- 产品货号 -->
-              <div class="info-item">
-                <span class="info-label">产品货号</span>
-                <span class="info-value font-mono">{{ product.sku || '-' }}</span>
-              </div>
-              
+
               <!-- 销售单位 -->
               <div class="info-item">
-                <span class="info-label">销售单位</span>
+                <span class="info-label">单位</span>
                 <span class="info-value">{{ product.unit || '-' }}</span>
               </div>
-              
+
               <!-- 产品描述 -->
               <div class="info-item desc-item">
-                <span class="info-label">产品描述</span>
+                <span class="info-label">描述</span>
                 <p class="info-value desc-value">{{ product.desc || '暂无描述' }}</p>
               </div>
             </div>
@@ -222,99 +190,12 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 咨询订购弹窗 -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showContactModal" class="modal-overlay" @click.self="closeContactModal">
-          <div class="contact-modal">
-            <!-- 关闭按钮 -->
-            <button class="modal-close" @click="closeContactModal">
-              <i class="fas fa-times"></i>
-            </button>
-            
-            <h3 class="modal-title">
-              <i class="fas fa-headset text-primary-500 mr-2"></i>
-              联系我们
-            </h3>
-            <p class="modal-subtitle">选择以下任意方式与我们取得联系</p>
-            
-            <div class="contact-methods">
-              <!-- 电话联系 -->
-              <div class="contact-method">
-                <div class="method-icon phone-icon">
-                  <i class="fas fa-phone-alt"></i>
-                </div>
-                <div class="method-info">
-                  <div class="method-label">电话咨询</div>
-                  <a :href="`tel:${contactInfo.phone}`" class="method-value">{{ contactInfo.phone }}</a>
-                  <a v-if="contactInfo.mobile" :href="`tel:${contactInfo.mobile}`" class="method-value text-sm">{{ contactInfo.mobile }}</a>
-                </div>
-              </div>
-              
-              <!-- 微信联系 -->
-              <div class="contact-method">
-                <div class="method-icon wechat-icon">
-                  <i class="fab fa-weixin"></i>
-                </div>
-                <div class="method-info">
-                  <div class="method-label">微信咨询</div>
-                  <div class="qrcode-wrapper">
-                    <img 
-                      :src="contactInfo.wechatQrcode" 
-                      alt="微信二维码"
-                      class="qrcode-img"
-                      @error="($event.target as HTMLImageElement).style.display = 'none'"
-                    />
-                    <div class="qrcode-placeholder">
-                      <i class="fab fa-weixin text-3xl text-green-500"></i>
-                      <span class="text-xs text-dark-400 mt-1">扫码添加</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- QQ联系 -->
-              <div class="contact-method">
-                <div class="method-icon qq-icon">
-                  <i class="fab fa-qq"></i>
-                </div>
-                <div class="method-info">
-                  <div class="method-label">QQ咨询</div>
-                  <div class="qrcode-wrapper">
-                    <img 
-                      :src="contactInfo.qqQrcode" 
-                      alt="QQ二维码"
-                      class="qrcode-img"
-                      @error="($event.target as HTMLImageElement).style.display = 'none'"
-                    />
-                    <div class="qrcode-placeholder">
-                      <i class="fab fa-qq text-3xl text-blue-500"></i>
-                      <span class="text-xs text-dark-400 mt-1">扫码添加</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 邮箱联系 -->
-              <div class="contact-method">
-                <div class="method-icon email-icon">
-                  <i class="fas fa-envelope"></i>
-                </div>
-                <div class="method-info">
-                  <div class="method-label">邮箱咨询</div>
-                  <a :href="`mailto:${contactInfo.email}`" class="method-value">{{ contactInfo.email }}</a>
-                </div>
-              </div>
-            </div>
-            
-            <div v-if="contactInfo.workTime" class="work-time">
-              <i class="fas fa-clock mr-2"></i>
-              工作时间：{{ contactInfo.workTime }}
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- 联系我们弹窗 -->
+    <ContactModal
+      :show="showContactModal"
+      :contact-info="contactInfo"
+      @close="closeContactModal"
+    />
   </div>
 </template>
 
@@ -460,51 +341,22 @@ onMounted(async () => {
   border-radius: 2px;
 }
 
-/* 双栏布局 - 左侧决定高度 */
+/* 单列布局 - 水平居中 */
 .detail-layout {
   display: flex;
-  gap: 2rem;
-  align-items: flex-start;
-}
-
-/* 左侧面板 */
-.left-panel {
-  flex: 1;
-  padding: 2rem;
-}
-
-.product-image-container {
-  width: 100%;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
-  border-radius: 16px;
-  overflow: hidden;
-  aspect-ratio: 1;
-  padding: 1.5rem;
 }
 
-.product-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 12px;
-  transition: transform 0.3s ease;
+.detail-layout.single-column {
+  justify-content: center;
 }
 
-.product-image:hover {
-  transform: scale(1.02);
-}
-
-.image-placeholder {
-  text-align: center;
-  padding: 2rem;
-}
-
-/* 右侧面板 */
+/* 产品信息面板 */
 .right-panel {
-  flex: 1;
+  flex: none;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
   padding: 2rem;
   display: flex;
   flex-direction: column;
@@ -581,198 +433,12 @@ onMounted(async () => {
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
 
-/* 弹窗样式 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.contact-modal {
-  background: white;
-  border-radius: 20px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 500px;
-  position: relative;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-}
-
-.modal-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-  transition: all 0.2s;
-}
-
-.modal-close:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
-}
-
-.modal-subtitle {
-  color: #64748b;
-  font-size: 0.875rem;
-  margin-bottom: 1.5rem;
-}
-
-.contact-methods {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-.contact-method {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: 12px;
-  background: #f8fafc;
-  transition: background 0.2s;
-}
-
-.contact-method:hover {
-  background: #f1f5f9;
-}
-
-.method-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
-}
-
-.phone-icon {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-}
-
-.wechat-icon {
-  background: linear-gradient(135deg, #07c160, #00a64a);
-}
-
-.qq-icon {
-  background: linear-gradient(135deg, #12b7f5, #0099ff);
-}
-
-.email-icon {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.method-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.method-label {
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-bottom: 0.25rem;
-}
-
-.method-value {
-  color: #1e293b;
-  font-weight: 500;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 0.2s;
-}
-
-.method-value:hover {
-  color: #667eea;
-}
-
-.qrcode-wrapper {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-}
-
-.qrcode-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.qrcode-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.work-time {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-  text-align: center;
-  font-size: 0.875rem;
-  color: #64748b;
-}
-
-/* 弹窗动画 */
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .contact-modal,
-.modal-leave-to .contact-modal {
-  transform: scale(0.9) translateY(20px);
-}
 
 /* 响应式设计 */
 @media (max-width: 1024px) {
-  .detail-layout {
-    flex-direction: column;
-  }
-
-  .left-panel,
   .right-panel {
-    flex: none;
     width: 100%;
-  }
-
-  .product-image-container {
-    max-height: 400px;
-    aspect-ratio: auto;
+    padding: 1.5rem;
   }
 
   .back-button {
