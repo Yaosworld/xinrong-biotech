@@ -2,7 +2,7 @@
   {
     "id": "P001",
     "name": "DMEM高糖培养基",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "KIRGEN",
     "sku": "KIR-细胞-00002",
     "specs": "500mL",
@@ -12,7 +12,7 @@
   {
     "id": "P002",
     "name": "RPMI-1640培养基 研究级",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "迈瑞医疗",
     "sku": "迈瑞医-细胞-00003",
     "specs": "500mL",
@@ -22,7 +22,7 @@
   {
     "id": "P003",
     "name": "胎牛血清",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "Solarbio",
     "sku": "SOL-细胞-00004",
     "specs": "500mL",
@@ -32,7 +32,7 @@
   {
     "id": "P004",
     "name": "PBS缓冲液",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "迈瑞医疗",
     "sku": "迈瑞医-细胞-00005",
     "specs": "1L",
@@ -42,7 +42,7 @@
   {
     "id": "P005",
     "name": "胰蛋白酶 高级型",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "GG Biotech",
     "sku": "GG-细胞-00006",
     "specs": "6孔",
@@ -52,7 +52,7 @@
   {
     "id": "P006",
     "name": "MEM培养基",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "KIRGEN",
     "sku": "KIR-细胞-00007",
     "specs": "1L",
@@ -62,7 +62,7 @@
   {
     "id": "P007",
     "name": "F-12培养基 高级型",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "Takara宝生物",
     "sku": "TAK-细胞-00008",
     "specs": "500μL",
@@ -72,7 +72,7 @@
   {
     "id": "P008",
     "name": "青霉素-链霉素溶液",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "DDD生物",
     "sku": "DDD-细胞-00009",
     "specs": "100次",
@@ -82,7 +82,7 @@
   {
     "id": "P009",
     "name": "无血清培养基 超级型",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "Thermo Fisher",
     "sku": "THE-细胞-00010",
     "specs": "500mL",
@@ -92,7 +92,7 @@
   {
     "id": "P010",
     "name": "干细胞培养基 研究级",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "Proteintech",
     "sku": "PRO-细胞-00011",
     "specs": "500个",
@@ -102,7 +102,7 @@
   {
     "id": "P011",
     "name": "DMEM高糖培养基",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "Solarbio",
     "sku": "SOL-细胞-00012",
     "specs": "500mL",
@@ -112,7 +112,7 @@
   {
     "id": "P012",
     "name": "RPMI-1640培养基",
-    "categoryId": "C01",
+    "categoryId": "C04",
     "brand": "TBD科技",
     "sku": "TBD-细胞-00013",
     "specs": "6孔",
@@ -122,7 +122,7 @@
   {
     "id": "P013",
     "name": "Taq DNA聚合酶",
-    "categoryId": "C02",
+    "categoryId": "C05",
     "brand": "Takara宝生物",
     "sku": "TAK-PCR-00001",
     "specs": "250U",
@@ -132,7 +132,7 @@
   {
     "id": "P014",
     "name": "dNTPs Mix",
-    "categoryId": "C02",
+    "categoryId": "C05",
     "brand": "Thermo Fisher",
     "sku": "THE-PCR-00002",
     "specs": "10mM",
@@ -142,7 +142,7 @@
   {
     "id": "P015",
     "name": "PCR Buffer 10X",
-    "categoryId": "C02",
+    "categoryId": "C05",
     "brand": "KIRGEN",
     "sku": "KIR-PCR-00003",
     "specs": "1mL",
@@ -152,7 +152,7 @@
   {
     "id": "P016",
     "name": "高保真DNA聚合酶",
-    "categoryId": "C02",
+    "categoryId": "C05",
     "brand": "Proteintech",
     "sku": "PRO-PCR-00004",
     "specs": "500U",
@@ -162,7 +162,7 @@
   {
     "id": "P017",
     "name": "逆转录酶",
-    "categoryId": "C02",
+    "categoryId": "C05",
     "brand": "Takara宝生物",
     "sku": "TAK-PCR-00005",
     "specs": "200U",
@@ -172,7 +172,7 @@
   {
     "id": "P018",
     "name": "Real-Time PCR Master Mix",
-    "categoryId": "C02",
+    "categoryId": "C05",
     "brand": "Thermo Fisher",
     "sku": "THE-PCR-00006",
     "specs": "500次",
@@ -232,7 +232,7 @@
   {
     "id": "P024",
     "name": "离心机",
-    "categoryId": "C04",
+    "categoryId": "C01",
     "brand": "Thermo Fisher",
     "sku": "THE-仪器-00001",
     "specs": "台式",
@@ -242,7 +242,7 @@
   {
     "id": "P025",
     "name": "PCR仪",
-    "categoryId": "C04",
+    "categoryId": "C01",
     "brand": "Thermo Fisher",
     "sku": "THE-仪器-00002",
     "specs": "96孔",
@@ -252,7 +252,7 @@
   {
     "id": "P026",
     "name": "电泳仪",
-    "categoryId": "C04",
+    "categoryId": "C01",
     "brand": "迈瑞医疗",
     "sku": "迈瑞医-仪器-00003",
     "specs": "垂直式",
@@ -262,7 +262,7 @@
   {
     "id": "P027",
     "name": "移液器套装",
-    "categoryId": "C04",
+    "categoryId": "C01",
     "brand": "Thermo Fisher",
     "sku": "THE-仪器-00004",
     "specs": "0.5-10μL",
@@ -272,7 +272,7 @@
   {
     "id": "P028",
     "name": "无水乙醇",
-    "categoryId": "C05",
+    "categoryId": "C03",
     "brand": "MACKLIN麦克林",
     "sku": "MAC-化学-00001",
     "specs": "500mL",
@@ -282,7 +282,7 @@
   {
     "id": "P029",
     "name": "三氯甲烷",
-    "categoryId": "C05",
+    "categoryId": "C03",
     "brand": "MACKLIN麦克林",
     "sku": "MAC-化学-00002",
     "specs": "500mL",
@@ -292,7 +292,7 @@
   {
     "id": "P030",
     "name": "异丙醇",
-    "categoryId": "C05",
+    "categoryId": "C03",
     "brand": "MACKLIN麦克林",
     "sku": "MAC-化学-00003",
     "specs": "500mL",
@@ -302,7 +302,7 @@
   {
     "id": "P031",
     "name": "DMSO",
-    "categoryId": "C05",
+    "categoryId": "C03",
     "brand": "Sigma-Aldrich",
     "sku": "SIG-化学-00004",
     "specs": "100mL",
@@ -312,7 +312,7 @@
   {
     "id": "P032",
     "name": "Tris-HCl",
-    "categoryId": "C05",
+    "categoryId": "C03",
     "brand": "Solarbio",
     "sku": "SOL-化学-00005",
     "specs": "100g",
@@ -322,7 +322,7 @@
   {
     "id": "P033",
     "name": "离心管 15mL",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "KIRGEN",
     "sku": "KIR-耗材-00001",
     "specs": "500支/箱",
@@ -332,7 +332,7 @@
   {
     "id": "P034",
     "name": "离心管 50mL",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "KIRGEN",
     "sku": "KIR-耗材-00002",
     "specs": "500支/箱",
@@ -342,7 +342,7 @@
   {
     "id": "P035",
     "name": "移液器吸头 10μL",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "Thermo Fisher",
     "sku": "THE-耗材-00003",
     "specs": "960支/盒",
@@ -352,7 +352,7 @@
   {
     "id": "P036",
     "name": "移液器吸头 200μL",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "Thermo Fisher",
     "sku": "THE-耗材-00004",
     "specs": "960支/盒",
@@ -362,7 +362,7 @@
   {
     "id": "P037",
     "name": "移液器吸头 1000μL",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "KIRGEN",
     "sku": "KIR-耗材-00005",
     "specs": "480支/盒",
@@ -372,7 +372,7 @@
   {
     "id": "P038",
     "name": "细胞培养皿 100mm",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "GG Biotech",
     "sku": "GG-耗材-00006",
     "specs": "100个/箱",
@@ -382,7 +382,7 @@
   {
     "id": "P039",
     "name": "细胞培养瓶 T75",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "GG Biotech",
     "sku": "GG-耗材-00007",
     "specs": "50个/箱",
@@ -392,7 +392,7 @@
   {
     "id": "P040",
     "name": "PCR管 0.2mL",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "KIRGEN",
     "sku": "KIR-耗材-00008",
     "specs": "1000支/袋",
@@ -402,7 +402,7 @@
   {
     "id": "P041",
     "name": "96孔板",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "GG Biotech",
     "sku": "GG-耗材-00009",
     "specs": "50块/箱",
@@ -412,7 +412,7 @@
   {
     "id": "P042",
     "name": "冻存管 2mL",
-    "categoryId": "C06",
+    "categoryId": "C02",
     "brand": "KIRGEN",
     "sku": "KIR-耗材-00010",
     "specs": "500支/箱",
@@ -422,7 +422,7 @@
   {
     "id": "P043",
     "name": "RNA提取试剂盒",
-    "categoryId": "C07",
+    "categoryId": "C03",
     "brand": "Takara宝生物",
     "sku": "TAK-提取-00001",
     "specs": "50次",
@@ -432,7 +432,7 @@
   {
     "id": "P044",
     "name": "DNA提取试剂盒",
-    "categoryId": "C07",
+    "categoryId": "C03",
     "brand": "Thermo Fisher",
     "sku": "THE-提取-00002",
     "specs": "50次",
@@ -442,7 +442,7 @@
   {
     "id": "P045",
     "name": "质粒提取试剂盒",
-    "categoryId": "C07",
+    "categoryId": "C03",
     "brand": "KIRGEN",
     "sku": "KIR-提取-00003",
     "specs": "100次",
@@ -452,7 +452,7 @@
   {
     "id": "P046",
     "name": "蛋白Marker",
-    "categoryId": "C08",
+    "categoryId": "C05",
     "brand": "Thermo Fisher",
     "sku": "THE-电泳-00001",
     "specs": "500μL",
@@ -462,7 +462,7 @@
   {
     "id": "P047",
     "name": "DNA Marker",
-    "categoryId": "C08",
+    "categoryId": "C05",
     "brand": "Takara宝生物",
     "sku": "TAK-电泳-00002",
     "specs": "50次",
@@ -472,7 +472,7 @@
   {
     "id": "P048",
     "name": "琼脂糖",
-    "categoryId": "C08",
+    "categoryId": "C05",
     "brand": "MACKLIN麦克林",
     "sku": "MAC-电泳-00003",
     "specs": "100g",
@@ -482,7 +482,7 @@
   {
     "id": "P049",
     "name": "SDS-PAGE凝胶配制试剂盒",
-    "categoryId": "C08",
+    "categoryId": "C05",
     "brand": "Solarbio",
     "sku": "SOL-电泳-00004",
     "specs": "50次",
@@ -492,7 +492,7 @@
   {
     "id": "P050",
     "name": "转膜缓冲液",
-    "categoryId": "C08",
+    "categoryId": "C05",
     "brand": "Solarbio",
     "sku": "SOL-电泳-00005",
     "specs": "1L",

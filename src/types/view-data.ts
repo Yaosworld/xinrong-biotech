@@ -3,6 +3,14 @@
 // ========================================
 
 /**
+ * Section 标题配置
+ */
+export interface SectionTitleConfig {
+  badge?: string
+  title?: string
+}
+
+/**
  * 页面板块接口
  */
 export interface PageSection {
@@ -125,9 +133,9 @@ export interface BrandSectionConfig {
 }
 
 /**
- * 资讯中心页面配置
+ * 促销中心页面配置
  */
-export interface NewsCenterContent extends PageContent {
+export interface PromotionCenterContent extends PageContent {
   showcase: ShowcaseContent
   content: {
     id: string

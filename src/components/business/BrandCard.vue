@@ -5,12 +5,9 @@ import type { Brand } from '@/types'
 
 interface Props {
   brand: Brand
-  highlightKeyword?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  highlightKeyword: ''
-})
+const props = defineProps<Props>()
 
 const router = useRouter()
 const imageError = ref(false)
@@ -32,7 +29,7 @@ const brandInitial = computed(() => {
 // 随机背景颜色
 const bgColorClass = computed(() => {
   const colors = [
-    'bg-primary-500',
+    'bg-gradient-600',
     'bg-purple-500',
     'bg-indigo-500',
     'bg-blue-500',
@@ -43,30 +40,10 @@ const bgColorClass = computed(() => {
   return colors[index]
 })
 
-// 高亮关键词
-const highlightText = (text: string) => {
-  if (!props.highlightKeyword || !text) return text
-  
-  const keywords = props.highlightKeyword
-    .trim()
-    .split(/\s+/)
-    .filter(k => k.length > 0)
-    .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  
-  if (keywords.length === 0) return text
-  
-  let result = text
-  keywords.forEach(keyword => {
-    const regex = new RegExp(`(${keyword})`, 'gi')
-    result = result.replace(regex, '<mark class="search-highlight">$1</mark>')
-  })
-  
-  return result
-}
 
-// 导航到品牌产品页
+// 导航到品牌详情页
 const goToBrand = () => {
-  router.push({ path: '/products', query: { brand: brandName.value } })
+  router.push(`/brands/${props.brand.id}`)
 }
 </script>
 
@@ -78,22 +55,53 @@ const goToBrand = () => {
         v-if="!imageError && brand.logo_url"
         :src="brand.logo_url"
         :alt="brand.name"
-        class="w-full h-full object-contain"
+        class="brand-logo-img"
         @error="imageError = true"
       />
       <div
         v-else
-        class="w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl font-bold"
+        class="brand-logo-placeholder"
         :class="bgColorClass"
       >
         {{ brandInitial }}
       </div>
     </div>
-    
+
     <!-- 品牌名称 -->
-    <h3
-      class="brand-card-name"
-      v-html="highlightText(brandName)"
-    ></h3>
+    <h3 class="brand-card-name">
+      {{ brandName }}
+    </h3>
   </article>
 </template>
+
+<style scoped>
+.brand-card {
+  @apply flex flex-col items-center bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-gradient-200;
+  width: 200px;
+  height: 140px;
+}
+
+.brand-card-logo {
+  @apply flex items-center justify-center;
+  width: 100%;
+  height: 100px;
+}
+
+.brand-logo-img {
+  @apply w-full h-full object-contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.brand-logo-placeholder {
+  @apply w-full h-full rounded-t-lg flex items-center justify-center text-white text-2xl font-bold;
+}
+
+.brand-card-name {
+  @apply text-sm font-medium text-gray-800 text-center py-2 px-3 leading-tight;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

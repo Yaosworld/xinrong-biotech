@@ -20,6 +20,10 @@ export const usePageContentStore = defineStore('pageContent', () => {
     return (pageId: string) => pages.value.get(pageId)
   })
 
+  function getPageContent(pageId: string) {
+    return pages.value.get(pageId)
+  }
+
   // 是否已加载网站信息
   const hasSiteInfo = computed(() => siteInfo.value !== null)
 
@@ -91,6 +95,11 @@ export const usePageContentStore = defineStore('pageContent', () => {
     siteInfo.value = null
   }
 
+  // 兼容旧 API
+  async function loadPageContent(pageId: string) {
+    return fetchPage(pageId)
+  }
+
   return {
     // State
     pages,
@@ -100,12 +109,14 @@ export const usePageContentStore = defineStore('pageContent', () => {
     
     // Getters
     getPage,
+    getPageContent,
     hasSiteInfo,
     
     // Actions
     loadSiteInfo,
     fetchPage,
     preloadPages,
+    loadPageContent,
     clearCache
   }
 })

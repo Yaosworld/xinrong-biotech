@@ -19,7 +19,12 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
-  }
+    open: true,
+    proxy: {
+      // 确保静态资源不被路由拦截
+    }
+  },
+  // 确保静态资源正确处理
+  publicDir: 'public'
 })
 

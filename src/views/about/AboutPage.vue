@@ -1,23 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { usePageContentStore } from '@/stores/pageContentStore'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
-const pageStore = usePageContentStore()
+// 本地横幅标语
+const aboutSlogans = [
+  '专注生命科学领域的生物科技企业',
+  '为科研工作者提供优质的产品和专业的服务'
+]
 
-// 页面内容
-const pageContent = computed(() => pageStore.getPageContent('about'))
+// 本地统计数据
+const stats = [
+  { key: 'years', number: '8+', label: '年行业经验' },
+  { key: 'customers', number: '1000+', label: '合作客户' },
+  { key: 'brands', number: '50+', label: '知名品牌' }
+]
 
-// 统计数据
-const stats = ref([
-  { number: '8+', label: '年行业经验' },
-  { number: '1000+', label: '合作客户' },
-  { number: '50+', label: '知名品牌' }
-])
-
-// 介绍卡片
-const introCards = ref([
+// 固定的介绍卡片数据
+const introCards = [
   {
     icon: 'fas fa-building',
     title: '企业背景',
@@ -33,10 +31,10 @@ const introCards = ref([
     title: '专业服务',
     content: '我们拥有专业的技术团队，能够为客户提供产品咨询、选型指导、技术培训及售后维护一体化服务。助力客户在生命科学研究领域取得卓越成果。'
   }
-])
+]
 
-// 核心优势
-const advantages = ref([
+// 固定的核心优势数据
+const advantages = [
   {
     icon: 'fas fa-check-circle',
     title: '正规授权代理',
@@ -62,19 +60,24 @@ const advantages = ref([
     title: '价格优势',
     content: '直接对接品牌方，减少中间环节，为客户提供更具竞争力的价格'
   }
-])
+]
 
-onMounted(async () => {
-  await pageStore.loadPageContent('about')
-})
+// 固定的联系信息
+const contactInfo = {
+  phone1: '15919646073',
+  phone2: '13422057239',
+  email: '15919646073@139.com',
+  wechatQrcode: '/images/common/wx-qrcode-contact.png',
+  workTime: '周一至周五 8:00 - 17:30',
+  address: '广东省广州市黄埔区云埔街道双井东路2号鸫汇商业中心612'
+}
 </script>
 
 <template>
   <div class="about-page pt-[72px]">
     <!-- 展示区 -->
     <ShowcaseBanner
-      title="专注生命科学领域的生物科技企业"
-      subtitle="为科研工作者提供优质的产品和专业的服务"
+      :slogans="aboutSlogans"
       :stats="stats"
     />
     
@@ -85,12 +88,8 @@ onMounted(async () => {
           <span class="section-badge">公司简介</span>
           <h2 class="section-title">值得信赖的科研合作伙伴</h2>
         </div>
-        
-        <div v-if="pageStore.loading" class="py-10">
-          <LoadingSpinner text="加载中..." />
-        </div>
-        
-        <div v-else class="space-y-6">
+
+        <div class="space-y-6">
           <div
             v-for="(card, index) in introCards"
             :key="index"
@@ -148,30 +147,85 @@ onMounted(async () => {
           <span class="section-badge">联系我们</span>
           <h2 class="section-title">期待与您的合作</h2>
         </div>
-        
-        <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <div class="card-base p-6 text-center">
-            <div class="w-14 h-14 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center mx-auto mb-4">
-              <i class="fas fa-phone-alt text-xl"></i>
+
+        <div class="max-w-4xl mx-auto space-y-6">
+          <!-- 电话号码 -->
+          <div class="card-base p-6">
+            <div class="flex items-center gap-6">
+              <!-- 图标 -->
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-phone-alt text-xl"></i>
+              </div>
+              <!-- 字段名 -->
+              <div class="w-24 flex-shrink-0">
+                <h3 class="font-semibold text-dark-800 text-lg">电话咨询</h3>
+              </div>
+              <!-- 文本信息 -->
+              <div class="flex-1">
+                <div class="space-y-1">
+                  <p class="text-dark-600 text-lg">{{ contactInfo.phone1 }}</p>
+                  <p class="text-dark-600 text-lg">{{ contactInfo.phone2 }}</p>
+                </div>
+              </div>
             </div>
-            <h3 class="font-semibold text-dark-800 mb-2">电话咨询</h3>
-            <p class="text-dark-500">400-XXX-XXXX</p>
           </div>
-          
-          <div class="card-base p-6 text-center">
-            <div class="w-14 h-14 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center mx-auto mb-4">
-              <i class="fas fa-envelope text-xl"></i>
+
+          <!-- 邮箱 -->
+          <div class="card-base p-6">
+            <div class="flex items-center gap-6">
+              <!-- 图标 -->
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-envelope text-xl"></i>
+              </div>
+              <!-- 字段名 -->
+              <div class="w-24 flex-shrink-0">
+                <h3 class="font-semibold text-dark-800 text-lg">邮箱</h3>
+              </div>
+              <!-- 文本信息 -->
+              <div class="flex-1">
+                <p class="text-dark-600 text-lg">{{ contactInfo.email }}</p>
+              </div>
             </div>
-            <h3 class="font-semibold text-dark-800 mb-2">邮箱</h3>
-            <p class="text-dark-500">contact@xinrong.com</p>
           </div>
-          
-          <div class="card-base p-6 text-center">
-            <div class="w-14 h-14 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center mx-auto mb-4">
-              <i class="fas fa-map-marker-alt text-xl"></i>
+
+          <!-- 微信 -->
+          <div class="card-base p-6">
+            <div class="flex items-center gap-6">
+              <!-- 图标 -->
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
+                <i class="fab fa-weixin text-xl"></i>
+              </div>
+              <!-- 字段名 -->
+              <div class="w-24 flex-shrink-0">
+                <h3 class="font-semibold text-dark-800 text-lg">微信客服</h3>
+              </div>
+              <!-- 图片 -->
+              <div class="flex-1 flex items-center">
+                <img
+                  :src="contactInfo.wechatQrcode"
+                  alt="微信二维码"
+                  class="w-20 h-20 object-contain border border-gray-200 rounded-lg p-1 bg-white"
+                />
+              </div>
             </div>
-            <h3 class="font-semibold text-dark-800 mb-2">地址</h3>
-            <p class="text-dark-500">广州市天河区XXX路XXX号</p>
+          </div>
+
+          <!-- 公司地址 -->
+          <div class="card-base p-6">
+            <div class="flex items-center gap-6">
+              <!-- 图标 -->
+              <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-map-marker-alt text-xl"></i>
+              </div>
+              <!-- 字段名 -->
+              <div class="w-24 flex-shrink-0">
+                <h3 class="font-semibold text-dark-800 text-lg">公司地址</h3>
+              </div>
+              <!-- 文本信息 -->
+              <div class="flex-1">
+                <p class="text-dark-600 text-lg">{{ contactInfo.address }}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

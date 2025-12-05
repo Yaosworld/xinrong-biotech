@@ -15,10 +15,7 @@ export const useProductStore = defineStore('product', () => {
   const filters = ref<ProductFilters>({
     search: '',
     categoryId: '',
-    brand: '',
-    priceRange: [0, 999999],
-    inStock: false,
-    hasDiscount: false
+    brand: ''
   })
 
   // 排序状态
@@ -77,29 +74,6 @@ export const useProductStore = defineStore('product', () => {
       )
     }
 
-    // 价格区间筛选
-    const [minPrice, maxPrice] = filters.value.priceRange
-    if (minPrice > 0 || maxPrice < 999999) {
-      result = result.filter(product => {
-        const price = product.currentPrice || product.originalPrice || 0
-        return price >= minPrice && price <= maxPrice
-      })
-    }
-
-    // 库存筛选
-    if (filters.value.inStock) {
-      result = result.filter(product => (product.stock || 0) > 0)
-    }
-
-    // 促销筛选
-    if (filters.value.hasDiscount) {
-      result = result.filter(product =>
-        product.currentPrice &&
-        product.originalPrice &&
-        product.currentPrice < product.originalPrice
-      )
-    }
-
     return result
   })
 
@@ -114,20 +88,6 @@ export const useProductStore = defineStore('product', () => {
       case 'name-desc':
         result.sort((a, b) => b.name.localeCompare(a.name, 'zh-CN'))
         break
-      case 'price-asc':
-        result.sort((a, b) => {
-          const priceA = a.currentPrice || a.originalPrice || 0
-          const priceB = b.currentPrice || b.originalPrice || 0
-          return priceA - priceB
-        })
-        break
-      case 'price-desc':
-        result.sort((a, b) => {
-          const priceA = a.currentPrice || a.originalPrice || 0
-          const priceB = b.currentPrice || b.originalPrice || 0
-          return priceB - priceA
-        })
-        break
     }
 
     return result
@@ -139,9 +99,6 @@ export const useProductStore = defineStore('product', () => {
     if (filters.value.search) count++
     if (filters.value.categoryId) count++
     if (filters.value.brand) count++
-    if (filters.value.priceRange[0] > 0 || filters.value.priceRange[1] < 999999) count++
-    if (filters.value.inStock) count++
-    if (filters.value.hasDiscount) count++
     return count
   })
 
@@ -193,10 +150,7 @@ export const useProductStore = defineStore('product', () => {
     filters.value = {
       search: '',
       categoryId: '',
-      brand: '',
-      priceRange: [0, 999999],
-      inStock: false,
-      hasDiscount: false
+      brand: ''
     }
   }
 
