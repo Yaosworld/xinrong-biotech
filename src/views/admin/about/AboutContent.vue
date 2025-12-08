@@ -54,14 +54,24 @@ const removeIntroCard = (index: number) => {
   formData.value.introCards.splice(index, 1)
 }
 
-// 添加优势项
+// 核心优势最大数量
+const MAX_ADVANTAGES = 6
+
+// 添加优势项（最多6个）
 const addAdvantage = () => {
+  if (formData.value.advantages.length >= MAX_ADVANTAGES) {
+    ElMessage.warning(`核心优势最多只能添加 ${MAX_ADVANTAGES} 项`)
+    return
+  }
   formData.value.advantages.push({
     icon: 'fas fa-check-circle',
     title: '',
     content: ''
   })
 }
+
+// 是否可以添加优势项
+const canAddAdvantage = () => formData.value.advantages.length < MAX_ADVANTAGES
 
 // 删除优势项
 const removeAdvantage = (index: number) => {
@@ -198,9 +208,9 @@ onMounted(() => {
     <div class="content-area">
       <!-- 公司介绍 Tab -->
       <template v-if="activeTab === 'intro'">
-        <div class="split-layout">
-          <!-- 左侧编辑区 -->
-          <div class="edit-side">
+        <div class="vertical-layout">
+          <!-- 上方编辑区 -->
+          <div class="edit-panel-horizontal">
             <div class="edit-header">
               <div class="edit-title">
                 <i class="fas fa-building"></i>
@@ -211,8 +221,8 @@ onMounted(() => {
                 <i class="fas fa-plus mr-1"></i> 添加
               </el-button>
             </div>
-            <div class="edit-list">
-              <div v-for="(card, index) in formData.introCards" :key="index" class="edit-card">
+            <div class="edit-cards-grid">
+              <div v-for="(card, index) in formData.introCards" :key="index" class="edit-card compact">
                 <div class="card-top">
                   <div class="card-icon-preview">
                     <i :class="card.icon"></i>
@@ -249,8 +259,8 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- 右侧预览区 -->
-          <div class="preview-side">
+          <!-- 下方预览区 -->
+          <div class="preview-panel-horizontal">
             <div class="preview-header">
               <i class="fas fa-eye"></i>
               <span>效果预览</span>
@@ -285,21 +295,17 @@ onMounted(() => {
 
       <!-- 核心优势 Tab -->
       <template v-if="activeTab === 'advantages'">
-        <div class="split-layout">
-          <!-- 左侧编辑区 -->
-          <div class="edit-side">
+        <div class="three-column-layout">
+          <!-- 左侧编辑区 - 第一列（1-3项） -->
+          <div class="edit-column">
             <div class="edit-header">
               <div class="edit-title">
                 <i class="fas fa-trophy"></i>
-                <span>核心优势项</span>
-                <span class="count-badge">{{ formData.advantages.length }} 项</span>
+                <span>优势项 1-3</span>
               </div>
-              <el-button type="primary" size="small" @click="addAdvantage">
-                <i class="fas fa-plus mr-1"></i> 添加
-              </el-button>
             </div>
             <div class="edit-list">
-              <div v-for="(item, index) in formData.advantages" :key="index" class="edit-card advantage-edit">
+              <div v-for="(item, index) in formData.advantages.slice(0, 3)" :key="index" class="edit-card advantage-edit">
                 <div class="card-top">
                   <div class="advantage-number">{{ String(index + 1).padStart(2, '0') }}</div>
                   <div class="card-icon-preview advantage-icon">
@@ -329,15 +335,59 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
-              <div v-if="formData.advantages.length === 0" class="empty-tip">
-                <i class="fas fa-inbox"></i>
-                <span>暂无优势项</span>
+            </div>
+          </div>
+
+          <!-- 中间编辑区 - 第二列（4-6项） -->
+          <div class="edit-column">
+            <div class="edit-header">
+              <div class="edit-title">
+                <i class="fas fa-trophy"></i>
+                <span>优势项 4-6</span>
+              </div>
+              <el-button type="primary" size="small" :disabled="!canAddAdvantage()" @click="addAdvantage">
+                <i class="fas fa-plus mr-1"></i> 添加 ({{ formData.advantages.length }}/{{ MAX_ADVANTAGES }})
+              </el-button>
+            </div>
+            <div class="edit-list">
+              <div v-for="(item, index) in formData.advantages.slice(3, 6)" :key="index + 3" class="edit-card advantage-edit">
+                <div class="card-top">
+                  <div class="advantage-number">{{ String(index + 4).padStart(2, '0') }}</div>
+                  <div class="card-icon-preview advantage-icon">
+                    <i :class="item.icon"></i>
+                  </div>
+                  <el-button type="danger" text circle size="small" @click="removeAdvantage(index + 3)">
+                    <i class="fas fa-trash"></i>
+                  </el-button>
+                </div>
+                <div class="card-fields">
+                  <div class="field-row">
+                    <label>图标</label>
+                    <el-select v-model="item.icon" size="small">
+                      <el-option v-for="icon in commonIcons" :key="icon" :value="icon">
+                        <i :class="icon" style="margin-right: 8px; color: #667eea;"></i>
+                        {{ icon.replace('fas fa-', '') }}
+                      </el-option>
+                    </el-select>
+                  </div>
+                  <div class="field-row">
+                    <label>标题</label>
+                    <el-input v-model="item.title" size="small" placeholder="优势标题" />
+                  </div>
+                  <div class="field-row">
+                    <label>描述</label>
+                    <el-input v-model="item.content" type="textarea" :rows="2" size="small" placeholder="优势描述" />
+                  </div>
+                </div>
+              </div>
+              <div v-if="formData.advantages.length < 4" class="empty-tip small">
+                <span>点击添加更多优势项</span>
               </div>
             </div>
           </div>
 
           <!-- 右侧预览区 -->
-          <div class="preview-side">
+          <div class="preview-column">
             <div class="preview-header">
               <i class="fas fa-eye"></i>
               <span>效果预览</span>
@@ -952,9 +1002,90 @@ onMounted(() => {
 
 .mr-1 { margin-right: 4px; }
 
+/* 垂直布局 - 公司介绍 */
+.vertical-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.edit-panel-horizontal {
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.edit-cards-grid {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.edit-cards-grid .edit-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-card.compact {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.preview-panel-horizontal {
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* 三列布局 - 核心优势 */
+.three-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 16px;
+  min-height: 500px;
+}
+
+.edit-column {
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-column {
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-tip.small {
+  padding: 16px;
+  font-size: 12px;
+}
+
+@media (max-width: 1200px) {
+  .three-column-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+  .preview-column {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 1000px) {
   .split-layout {
     grid-template-columns: 1fr;
+  }
+  .three-column-layout {
+    grid-template-columns: 1fr;
+  }
+  .preview-column {
+    grid-column: span 1;
   }
 }
 </style>

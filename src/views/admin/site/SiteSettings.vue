@@ -420,12 +420,6 @@ onMounted(() => { loadData() })
         <!-- 联系弹窗预览 - 匹配 ContactModal -->
         <div v-if="previewMode === 'contact'" class="preview-content contact-preview">
           <div class="mock-modal">
-            <div class="modal-header">
-              <div class="header-icon"><i class="fas fa-headset"></i></div>
-              <h3>联系我们</h3>
-              <p>如果您有任何疑问或需求，请通过以下方式联系我们</p>
-              <div class="work-time-badge"><i class="far fa-clock"></i> 服务时间：{{ contactForm.workTime || '周一至周五 8:00 - 17:30' }}</div>
-            </div>
             <div class="modal-body">
               <div class="contact-cards">
                 <!-- 微信客服 -->
