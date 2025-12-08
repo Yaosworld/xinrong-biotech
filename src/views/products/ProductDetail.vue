@@ -2,14 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
-import { usePageContentStore } from '@/stores/pageContentStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ContactModal from '@/components/common/ContactModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
-const pageContentStore = usePageContentStore()
 
 const productId = computed(() => route.params.id as string)
 const showContactModal = ref(false)
@@ -90,7 +88,6 @@ onMounted(async () => {
   try {
     await Promise.all([
       productStore.loadProducts(),
-      pageContentStore.loadSiteInfo()
     ])
   } finally {
     loading.value = false
