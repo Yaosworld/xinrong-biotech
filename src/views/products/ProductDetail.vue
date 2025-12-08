@@ -2,12 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
+import { useSiteStore } from '@/stores/siteStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ContactModal from '@/components/common/ContactModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
+const siteStore = useSiteStore()
 
 const productId = computed(() => route.params.id as string)
 const showContactModal = ref(false)
@@ -52,22 +54,20 @@ const product = computed(() => {
   return productStore.getProductById(productId.value)
 })
 
-// 联系信息
-const contactInfo = ref({
-  phone1: '15919646073',
-  phone2: '13422057239',
-  email: '15919646073@139.com',
-  wechatQrcode: '/images/common/wx-qrcode-contact.png',
-  workTime: '周一至周五 8:00-17:30'
-})
+// 从 store 获取联系信息
+const contactInfo = computed(() => ({
+  phone1: siteStore.primaryPhone,
+  phone2: siteStore.secondaryPhone,
+  email: siteStore.contact.email,
+  wechatQrcode: siteStore.contact.wechatQrcode,
+  workTime: siteStore.contact.workTime
+}))
 
 // 返回产品列表（使用浏览器历史记录保持之前的筛选状态）
 const goBack = () => {
-  // 检查是否有历史记录可以返回
   if (window.history.length > 1) {
     router.back()
   } else {
-    // 如果没有历史记录，直接跳转到产品中心
     router.push('/products')
   }
 }
@@ -86,9 +86,7 @@ onMounted(async () => {
   generateGeometricShapes()
   loading.value = true
   try {
-    await Promise.all([
-      productStore.loadProducts(),
-    ])
+    await productStore.loadProducts()
   } finally {
     loading.value = false
   }
@@ -429,7 +427,6 @@ onMounted(async () => {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
-
 
 /* 响应式设计 */
 @media (max-width: 1024px) {

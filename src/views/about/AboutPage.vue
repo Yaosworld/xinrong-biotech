@@ -1,5 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
+import { useSiteStore } from '@/stores/siteStore'
+
+const siteStore = useSiteStore()
+
+// 从 store 获取联系信息
+const contact = computed(() => siteStore.contact)
 
 // 本地横幅标语
 const aboutSlogans = [
@@ -61,16 +68,6 @@ const advantages = [
     content: '直接对接品牌方，减少中间环节，为客户提供更具竞争力的价格'
   }
 ]
-
-// 固定的联系信息
-const contactInfo = {
-  phone1: '15919646073',
-  phone2: '13422057239',
-  email: '15919646073@139.com',
-  wechatQrcode: '/images/common/wx-qrcode-contact.png',
-  workTime: '周一至周五 8:00 - 17:30',
-  address: '广东省广州市黄埔区云埔街道双井东路2号鸫汇商业中心612'
-}
 </script>
 
 <template>
@@ -152,19 +149,17 @@ const contactInfo = {
           <!-- 电话号码 -->
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
-              <!-- 图标 -->
               <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fas fa-phone-alt text-xl"></i>
               </div>
-              <!-- 字段名 -->
               <div class="w-24 flex-shrink-0">
                 <h3 class="font-semibold text-dark-800 text-lg">电话咨询</h3>
               </div>
-              <!-- 文本信息 -->
               <div class="flex-1">
                 <div class="space-y-1">
-                  <p class="text-dark-600 text-lg">{{ contactInfo.phone1 }}</p>
-                  <p class="text-dark-600 text-lg">{{ contactInfo.phone2 }}</p>
+                  <p v-for="phone in contact.phones" :key="phone" class="text-dark-600 text-lg">
+                    {{ phone }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -173,17 +168,14 @@ const contactInfo = {
           <!-- 邮箱 -->
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
-              <!-- 图标 -->
               <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fas fa-envelope text-xl"></i>
               </div>
-              <!-- 字段名 -->
               <div class="w-24 flex-shrink-0">
                 <h3 class="font-semibold text-dark-800 text-lg">邮箱</h3>
               </div>
-              <!-- 文本信息 -->
               <div class="flex-1">
-                <p class="text-dark-600 text-lg">{{ contactInfo.email }}</p>
+                <p class="text-dark-600 text-lg">{{ contact.email }}</p>
               </div>
             </div>
           </div>
@@ -191,18 +183,15 @@ const contactInfo = {
           <!-- 微信 -->
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
-              <!-- 图标 -->
               <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fab fa-weixin text-xl"></i>
               </div>
-              <!-- 字段名 -->
               <div class="w-24 flex-shrink-0">
                 <h3 class="font-semibold text-dark-800 text-lg">微信客服</h3>
               </div>
-              <!-- 图片 -->
               <div class="flex-1 flex items-center">
                 <img
-                  :src="contactInfo.wechatQrcode"
+                  :src="contact.wechatQrcode"
                   alt="微信二维码"
                   class="w-20 h-20 object-contain border border-gray-200 rounded-lg p-1 bg-white"
                 />
@@ -213,17 +202,14 @@ const contactInfo = {
           <!-- 公司地址 -->
           <div class="card-base p-6">
             <div class="flex items-center gap-6">
-              <!-- 图标 -->
               <div class="w-16 h-16 rounded-xl bg-gradient-100 text-gradient-600 flex items-center justify-center flex-shrink-0">
                 <i class="fas fa-map-marker-alt text-xl"></i>
               </div>
-              <!-- 字段名 -->
               <div class="w-24 flex-shrink-0">
                 <h3 class="font-semibold text-dark-800 text-lg">公司地址</h3>
               </div>
-              <!-- 文本信息 -->
               <div class="flex-1">
-                <p class="text-dark-600 text-lg">{{ contactInfo.address }}</p>
+                <p class="text-dark-600 text-lg">{{ contact.address }}</p>
               </div>
             </div>
           </div>

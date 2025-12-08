@@ -1,19 +1,19 @@
 <template>
   <!-- 右侧悬浮面板 -->
-  <div class="floating-panel" v-if="floatingPanel">
+  <div class="floating-panel" v-if="panelData">
     <div
       class="floating-item phone"
       @mouseenter="showTooltip('phone')"
       @mouseleave="hideTooltip"
     >
-      {{ floatingPanel.phone.emoji }}
+      {{ panelData.phone.emoji }}
       <div
         class="floating-tooltip"
         :class="{ visible: tooltipVisible === 'phone' }"
       >
-        <div class="tooltip-title">{{ floatingPanel.phone.title }}</div>
+        <div class="tooltip-title">{{ panelData.phone.title }}</div>
         <div class="tooltip-content">
-          <div v-for="(phone, index) in floatingPanel.phone.phones" :key="index" class="phone-item">
+          <div v-for="(phone, index) in panelData.phone.phones" :key="index" class="phone-item">
             <span class="phone-label">{{ phone.label }}：</span>
             <span class="phone-number">{{ phone.number }}</span>
           </div>
@@ -26,14 +26,14 @@
       @mouseenter="showTooltip('email')"
       @mouseleave="hideTooltip"
     >
-      {{ floatingPanel.email.emoji }}
+      {{ panelData.email.emoji }}
       <div
         class="floating-tooltip"
         :class="{ visible: tooltipVisible === 'email' }"
       >
-        <div class="tooltip-title">{{ floatingPanel.email.title }}</div>
+        <div class="tooltip-title">{{ panelData.email.title }}</div>
         <div class="tooltip-content">
-          {{ floatingPanel.email.content }}
+          {{ panelData.email.content }}
         </div>
       </div>
     </div>
@@ -43,18 +43,18 @@
       @mouseenter="showTooltip('social')"
       @mouseleave="hideTooltip"
     >
-      {{ floatingPanel.social.emoji }}
+      {{ panelData.social.emoji }}
       <div
         class="floating-tooltip social-tooltip"
         :class="{ visible: tooltipVisible === 'social' }"
       >
-        <div class="tooltip-title">{{ floatingPanel.social.title }}</div>
+        <div class="tooltip-title">{{ panelData.social.title }}</div>
         <div class="tooltip-content">
           <div class="social-container">
             <div class="social-column">
-              <div class="social-label">{{ floatingPanel.social.wechat.label }}</div>
+              <div class="social-label">{{ panelData.social.wechat.label }}</div>
               <div class="qr-code">
-                <img :src="getFullImageUrl(floatingPanel.social.wechat.qrUrl)" alt="微信二维码" class="qr-image" />
+                <img :src="getFullImageUrl(panelData.social.wechat.qrUrl)" alt="微信二维码" class="qr-image" />
               </div>
             </div>
           </div>
@@ -68,63 +68,39 @@
       @mouseenter="showTooltip('top')"
       @mouseleave="hideTooltip"
     >
-      {{ floatingPanel.backToTop.emoji }}
+      {{ panelData.backToTop.emoji }}
       <div
         class="floating-tooltip"
         :class="{ visible: tooltipVisible === 'top' }"
       >
-        <div class="tooltip-title">{{ floatingPanel.backToTop.title }}</div>
-        <div class="tooltip-content">{{ floatingPanel.backToTop.content }}</div>
+        <div class="tooltip-title">{{ panelData.backToTop.title }}</div>
+        <div class="tooltip-content">{{ panelData.backToTop.content }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue"
+import { useSiteStore } from '@/stores/siteStore'
 
-// 本地悬浮面板配置数据
-const floatingPanel = ref({
-  phone: {
-    emoji: '📞',
-    title: '联系电话',
-    phones: [
-      { label: '号码 1', number: '15919646073' },
-      { label: '号码 2', number: '13422057239' }
-    ]
-  },
-  email: {
-    emoji: '✉️',
-    title: '邮箱地址',
-    content: '15919646073@139.com'
-  },
-  social: {
-    emoji: '💬',
-    title: '扫码关注',
-    wechat: {
-      label: '微信客服',
-      qrUrl: '/images/common/wx-qrcode-contact.png'
-    }
-  },
-  backToTop: {
-    emoji: '⬆️',
-    title: '返回顶部',
-    content: '点击回到页面顶部'
-  }
-});
+const siteStore = useSiteStore()
+
+// 从 store 获取悬浮面板数据
+const panelData = computed(() => siteStore.floatingPanelData)
 
 // 提示框显示状态
-const tooltipVisible = ref<string | null>(null);
+const tooltipVisible = ref<string | null>(null)
 
 // 显示提示框
 const showTooltip = (type: string) => {
-  tooltipVisible.value = type;
-};
+  tooltipVisible.value = type
+}
 
 // 隐藏提示框
 const hideTooltip = () => {
-  tooltipVisible.value = null;
-};
+  tooltipVisible.value = null
+}
 
 // 获取完整图片URL
 function getFullImageUrl(path: string): string {
@@ -132,7 +108,6 @@ function getFullImageUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path
   }
-  // 确保以 / 开头
   return path.startsWith('/') ? path : `/${path}`
 }
 
@@ -141,8 +116,8 @@ const backToTop = () => {
   window.scrollTo({
     top: 0,
     behavior: "smooth",
-  });
-};
+  })
+}
 </script>
 
 <style scoped>
@@ -308,5 +283,4 @@ const backToTop = () => {
   height: 100%;
   object-fit: cover;
 }
-
 </style>

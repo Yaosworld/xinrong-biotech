@@ -1,0 +1,47 @@
+{
+  "company": {
+    "name": "广州信荣生物科技有限公司",
+    "shortName": "信荣生物",
+    "englishName": "GUANGZHOU XINRONG BIOTECHNOLOGY CO., LTD.",
+    "logo": "/images/common/logo.png"
+  },
+  "contact": {
+    "phones": ["15919646073", "13422057239"],
+    "email": "15919646073@139.com",
+    "address": "广东省广州市黄埔区云埔街道双井东路2号鸫汇商业中心612",
+    "wechatQrcode": "/images/common/wx-qrcode-contact.png",
+    "gzhQrcode": "/images/common/gzh-qrcode.jpg",
+    "workTime": "周一至周五 8:00 - 17:30"
+  },
+  "friendLinks": [
+    { "name": "锐竞平台", "url": "https://www.ringbio.com" },
+    { "name": "喀斯玛平台", "url": "https://www.casmart.com.cn" },
+    { "name": "丁香平台", "url": "https://www.dxy.cn" }
+  ],
+  "footerLinks": [
+    { "name": "产品中心", "path": "/products" },
+    { "name": "资讯中心", "path": "/promotions" },
+    { "name": "品牌中心", "path": "/brands" },
+    { "name": "关于我们", "path": "/about" }
+  ],
+  "floatingPanel": {
+    "phone": {
+      "emoji": "📞",
+      "title": "联系电话"
+    },
+    "email": {
+      "emoji": "✉️",
+      "title": "邮箱地址"
+    },
+    "social": {
+      "emoji": "💬",
+      "title": "扫码关注",
+      "wechatLabel": "微信客服"
+    },
+    "backToTop": {
+      "emoji": "⬆️",
+      "title": "返回顶部",
+      "content": "点击回到页面顶部"
+    }
+  }
+}

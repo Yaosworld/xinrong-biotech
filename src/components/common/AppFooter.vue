@@ -1,35 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useSiteStore } from '@/stores/siteStore'
 
-const currentYear = new Date().getFullYear()
+const siteStore = useSiteStore()
 
 // Logo图片加载状态
 const logoError = ref(false)
 
-const footerLinks = ref([
-  {
-    title: '网站服务',
-    links: [
-      { name: '产品中心', path: '/products' },
-      { name: '资讯中心', path: '/news' },
-      { name: '品牌中心', path: '/brands' },
-      { name: '关于我们', path: '/about' }
-    ]
-  }
-])
-
-const friendLinks = ref([
-  { name: '锐竞平台', url: 'https://www.ringbio.com' },
-  { name: '喀斯玛平台', url: 'https://www.casmart.com.cn' },
-  { name: '丁香平台', url: 'https://www.dxy.cn' }
-])
-
-const contactInfo = ref({
-  phone1: '15919646073',
-  phone2: '13422057239',
-  email: '15919646073@139.com',
-  address: '广东省广州市黄埔区云埔街道双井东路2号鸫汇商业中心612'
-})
+// 从 store 获取数据
+const company = computed(() => siteStore.company)
+const contact = computed(() => siteStore.contact)
+const footerLinks = computed(() => siteStore.footerLinks)
+const friendLinks = computed(() => siteStore.friendLinks)
+const copyright = computed(() => siteStore.copyright)
 </script>
 
 <template>
@@ -43,8 +26,8 @@ const contactInfo = ref({
             <div class="w-11 h-11 overflow-hidden bg-white flex items-center justify-center transition-transform">
               <img
                 v-if="!logoError"
-                src="/images/common/logo.png"
-                alt="信荣生物"
+                :src="company.logo"
+                :alt="company.shortName"
                 class="w-full h-full object-contain"
                 @error="logoError = true"
               />
@@ -52,8 +35,8 @@ const contactInfo = ref({
             </div>
             <!-- 公司名称 -->
             <div>
-              <div class="text-lg font-bold text-white">广州信荣生物科技有限公司</div>
-              <div class="text-[10px] text-dark-400 tracking-wide">GUANGZHOU XINRONG BIOTECHNOLOGY CO., LTD.</div>
+              <div class="text-lg font-bold text-white">{{ company.name }}</div>
+              <div class="text-[10px] text-dark-400 tracking-wide">{{ company.englishName }}</div>
             </div>
           </div>
 
@@ -63,7 +46,7 @@ const contactInfo = ref({
             <div class="flex flex-col items-center">
               <div class="w-16 h-16 bg-white rounded-lg p-0.5 shadow-sm">
                 <img
-                  src="/images/common/wx-qrcode-contact.png"
+                  :src="contact.wechatQrcode"
                   alt="微信客服"
                   class="w-full h-full object-contain"
                 />
@@ -75,7 +58,7 @@ const contactInfo = ref({
             <div class="flex flex-col items-center">
               <div class="w-16 h-16 bg-white rounded-lg p-0.5 shadow-sm">
                 <img
-                  src="/images/common/gzh-qrcode.jpg"
+                  :src="contact.gzhQrcode"
                   alt="微信公众号"
                   class="w-full h-full object-contain"
                 />
@@ -89,7 +72,7 @@ const contactInfo = ref({
         <div>
           <h3 class="font-semibold mb-4">网站服务</h3>
           <ul class="space-y-2">
-            <li v-for="link in footerLinks[0].links" :key="link.name">
+            <li v-for="link in footerLinks" :key="link.name">
               <router-link
                 :to="link.path"
                 class="text-dark-400 hover:text-white transition-colors text-sm"
@@ -123,38 +106,36 @@ const contactInfo = ref({
           <div class="space-y-3">
             <!-- 手机号码 -->
             <div class="space-y-1">
-              <div class="flex items-center gap-2 text-sm text-dark-400">
+              <div 
+                v-for="phone in contact.phones" 
+                :key="phone"
+                class="flex items-center gap-2 text-sm text-dark-400"
+              >
                 <i class="fas fa-phone-alt"></i>
-                <span>{{ contactInfo.phone1 }}</span>
-              </div>
-              <div class="flex items-center gap-2 text-sm text-dark-400">
-                <i class="fas fa-phone-alt"></i>
-                <span>{{ contactInfo.phone2 }}</span>
+                <span>{{ phone }}</span>
               </div>
             </div>
 
             <!-- 邮箱 -->
             <div class="flex items-center gap-2 text-sm text-dark-400">
               <i class="fas fa-envelope"></i>
-              <span>{{ contactInfo.email }}</span>
+              <span>{{ contact.email }}</span>
             </div>
 
             <!-- 地址 -->
             <div class="flex items-start gap-2 text-sm text-dark-400">
               <i class="fas fa-map-marker-alt mt-1"></i>
-              <span class="leading-tight">{{ contactInfo.address }}</span>
+              <span class="leading-tight">{{ contact.address }}</span>
             </div>
-
-            </div>
+          </div>
         </div>
       </div>
-
-      </div>
+    </div>
 
     <!-- 版权信息 -->
     <div class="bg-dark-900 py-4">
       <div class="container-base text-center text-sm text-dark-500">
-        <p>© {{ currentYear }} 广州信荣生物科技有限公司 版权所有</p>
+        <p>{{ copyright }}</p>
       </div>
     </div>
   </footer>
