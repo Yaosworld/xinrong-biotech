@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
+import { useBannerStore } from '@/stores/bannerStore'
 import { CATEGORIES } from '@/hooks/useCategoryImage'
 import { usePagination } from '@/hooks/usePagination'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
@@ -12,19 +13,13 @@ import EmptyState from '@/components/common/EmptyState.vue'
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
+const bannerStore = useBannerStore()
 
-// 本地横幅标语
-const productSlogans = [
-  '探索我们的产品世界',
-  '为您提供最优质的试剂耗材与仪器设备'
-]
+// 从 store 获取横幅标语
+const productSlogans = computed(() => bannerStore.getSlogans('products'))
 
-// 默认统计数据
-const defaultStats = [
-  { key: 'categories', number: '10+', label: '产品分类' },
-  { key: 'brands', number: '50+', label: '知名品牌' },
-  { key: 'products', number: '500+', label: '优质产品' }
-]
+// 从 store 获取默认统计数据
+const defaultStats = computed(() => bannerStore.getDefaultStats('products'))
 
 // 动态统计数据
 const dynamicStats = computed(() => [
@@ -40,7 +35,7 @@ const stats = computed(() => {
     return dynamicStats.value
   }
   // 否则使用默认统计数据
-  return defaultStats
+  return defaultStats.value
 })
 
 // 搜索关键词

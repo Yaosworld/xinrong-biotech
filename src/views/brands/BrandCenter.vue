@@ -1,24 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useBrandStore } from '@/stores/brandStore'
+import { useBannerStore } from '@/stores/bannerStore'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import BrandCard from '@/components/business/BrandCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const brandStore = useBrandStore()
+const bannerStore = useBannerStore()
 
-// 本地横幅标语
-const brandSlogans = [
-  '拥有自主品牌，提供高品质产品与专业解决方案',
-  '代理全球知名品牌，满足您多样化以及个性化的实验需求'
-]
+// 从 store 获取横幅标语
+const brandSlogans = computed(() => bannerStore.getSlogans('brands'))
 
-// 默认统计数据
-const defaultStats = [
-  { key: 'domesticCount', number: '30+', label: '国内品牌' },
-  { key: 'internationalCount', number: '20+', label: '国际品牌' }
-]
+// 从 store 获取默认统计数据
+const defaultStats = computed(() => bannerStore.getDefaultStats('brands'))
 
 // 动态统计数据
 const dynamicStats = computed(() => [
@@ -33,7 +29,7 @@ const stats = computed(() => {
     return dynamicStats.value
   }
   // 否则使用默认统计数据
-  return defaultStats
+  return defaultStats.value
 })
 
 // 使用store中的computed属性

@@ -5,17 +5,6 @@ import { ref, computed } from 'vue'
 // 类型定义
 // ========================================
 
-export interface StatItem {
-  key: string
-  number: string
-  label: string
-}
-
-export interface BannerConfig {
-  slogans: string[]
-  stats: StatItem[]
-}
-
 export interface SectionConfig {
   badge: string
   title: string
@@ -36,7 +25,6 @@ export interface Advantage {
 export interface AboutPageData {
   id: string
   title: string
-  banner: BannerConfig
   sections: {
     intro: SectionConfig
     advantages: SectionConfig
@@ -62,12 +50,6 @@ export const useAboutStore = defineStore('about', () => {
   // ========================================
   // Getters
   // ========================================
-  
-  // 横幅配置
-  const banner = computed(() => pageData.value?.banner || {
-    slogans: [],
-    stats: []
-  })
 
   // 区块标题配置
   const sections = computed(() => pageData.value?.sections || {
@@ -87,12 +69,6 @@ export const useAboutStore = defineStore('about', () => {
 
   // 是否有优势数据
   const hasAdvantages = computed(() => advantages.value.length > 0)
-
-  // 是否有横幅标语
-  const hasBannerSlogans = computed(() => banner.value.slogans.length > 0)
-
-  // 是否有统计数据
-  const hasBannerStats = computed(() => banner.value.stats.length > 0)
 
   // ========================================
   // Actions
@@ -147,14 +123,11 @@ export const useAboutStore = defineStore('about', () => {
     error,
     
     // Getters
-    banner,
     sections,
     introCards,
     advantages,
     hasIntroCards,
     hasAdvantages,
-    hasBannerSlogans,
-    hasBannerStats,
     
     // Actions
     loadAboutData,

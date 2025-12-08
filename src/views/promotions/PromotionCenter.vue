@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { usePromotionStore } from '@/stores/promotionStore'
+import { useBannerStore } from '@/stores/bannerStore'
 import { usePagination } from '@/hooks/usePagination'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import NewsCard from '@/components/business/NewsCard.vue'
@@ -8,25 +9,17 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const promotionStore = usePromotionStore()
+const bannerStore = useBannerStore()
 
-// 本地横幅标语
-const promotionSlogans = [
-  '最新优惠活动',
-  '第一时间了解我们的产品优惠与促销信息'
-]
+// 从 store 获取横幅标语
+const promotionSlogans = computed(() => bannerStore.getSlogans('promotions'))
 
-// 默认统计数据
-const defaultStats = [
-  { key: 'active', number: '10+', label: '进行中活动' },
-  { key: 'categories', number: '5+', label: '活动分类' },
-  { key: 'views', number: '10K+', label: '浏览次数' }
-]
+// 从 store 获取默认统计数据
+const defaultStats = computed(() => bannerStore.getDefaultStats('promotions'))
 
 // 动态统计数据
 const dynamicStats = computed(() => {
-  // 使用处理后的活动数据，包含status字段
   const activePromotions = promotionStore.activePromotions.length
-  const totalPromotions = promotionStore.processedPromotions.length
 
   return [
     { key: 'active', number: `${activePromotions}+`, label: '进行中活动' },
@@ -42,7 +35,7 @@ const stats = computed(() => {
     return dynamicStats.value
   }
   // 否则使用默认统计数据
-  return defaultStats
+  return defaultStats.value
 })
 
 // 搜索关键词

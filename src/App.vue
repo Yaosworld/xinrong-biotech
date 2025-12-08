@@ -5,9 +5,11 @@ import AppHeader from '@/components/common/AppHeader.vue'
 import AppFooter from '@/components/common/AppFooter.vue'
 import FloatingPanel from '@/components/common/FloatingPanel.vue'
 import { useSiteStore } from '@/stores/siteStore'
+import { useBannerStore } from '@/stores/bannerStore'
 
 const route = useRoute()
 const siteStore = useSiteStore()
+const bannerStore = useBannerStore()
 
 // 判断是否为管理页面
 const isAdminRoute = computed(() => route.path.startsWith('/admin'))
@@ -15,6 +17,7 @@ const isAdminRoute = computed(() => route.path.startsWith('/admin'))
 // 应用启动时加载网站配置
 onMounted(() => {
   siteStore.loadSiteConfig()
+  bannerStore.loadBanners()
 })
 </script>
 

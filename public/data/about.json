@@ -1,17 +1,6 @@
 {
   "id": "about",
   "title": "关于我们",
-  "banner": {
-    "slogans": [
-      "专注生命科学领域的生物科技企业",
-      "为科研工作者提供优质的产品和专业的服务"
-    ],
-    "stats": [
-      { "key": "years", "number": "8+", "label": "年行业经验" },
-      { "key": "customers", "number": "1000+", "label": "合作客户" },
-      { "key": "brands", "number": "50+", "label": "知名品牌" }
-    ]
-  },
   "sections": {
     "intro": {
       "badge": "公司简介",

@@ -3,13 +3,18 @@ import { computed, onMounted } from 'vue'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import { useSiteStore } from '@/stores/siteStore'
 import { useAboutStore } from '@/stores/aboutStore'
+import { useBannerStore } from '@/stores/bannerStore'
 
 const siteStore = useSiteStore()
 const aboutStore = useAboutStore()
+const bannerStore = useBannerStore()
 
-// 从 store 获取数据
+// 从 bannerStore 获取横幅数据
+const bannerSlogans = computed(() => bannerStore.getSlogans('about'))
+const bannerStats = computed(() => bannerStore.getDefaultStats('about'))
+
+// 从 aboutStore 获取页面数据
 const contact = computed(() => siteStore.contact)
-const banner = computed(() => aboutStore.banner)
 const sections = computed(() => aboutStore.sections)
 const introCards = computed(() => aboutStore.introCards)
 const advantages = computed(() => aboutStore.advantages)
@@ -17,8 +22,8 @@ const advantages = computed(() => aboutStore.advantages)
 // 响应式判断
 const hasIntroCards = computed(() => aboutStore.hasIntroCards)
 const hasAdvantages = computed(() => aboutStore.hasAdvantages)
-const hasBannerSlogans = computed(() => aboutStore.hasBannerSlogans)
-const hasBannerStats = computed(() => aboutStore.hasBannerStats)
+const hasBannerSlogans = computed(() => bannerSlogans.value.length > 0)
+const hasBannerStats = computed(() => bannerStats.value.length > 0)
 
 // 加载数据
 onMounted(async () => {
@@ -31,8 +36,8 @@ onMounted(async () => {
     <!-- 展示区 - 只在有数据时显示 -->
     <ShowcaseBanner
       v-if="hasBannerSlogans || hasBannerStats"
-      :slogans="banner.slogans"
-      :stats="banner.stats"
+      :slogans="bannerSlogans"
+      :stats="bannerStats"
     />
     
     <!-- 公司简介 - 只在有介绍卡片时显示 -->
