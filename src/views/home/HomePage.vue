@@ -56,8 +56,8 @@ const featuredBrands = computed(() => {
     combinedBrands.push(...domesticAgentBrands)
   }
 
-  // 按优先级排序
-  combinedBrands.sort((a, b) => (a.priority || 999) - (b.priority || 999))
+  // 按排序顺序排序
+  combinedBrands.sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
 
   // 返回前10个
   return combinedBrands.slice(0, 10)

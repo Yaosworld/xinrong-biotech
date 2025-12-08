@@ -16,22 +16,22 @@ const products = computed(() =>
   }))
 )
 
-// 列配置 - 产品名称更窄，品牌更宽
+// 列配置
 const columns = computed(() => [
   { key: 'id', label: 'ID', width: 70, editable: false, sortable: true, fixed: 'left' as const },
-  { key: 'categoryImage', label: '分类图', width: 70, type: 'image' as const, editable: false, imageStyle: 'contain' as const },
+  { key: 'categoryImage', label: '分类图', width: 75, type: 'image' as const, editable: false, imageStyle: 'contain' as const },
   { key: 'name', label: '产品名称', width: 150, required: true },
   { key: 'sku', label: '货号', minWidth: 120 },
-  { key: 'brand', label: '品牌', width: 170 },
+  { key: 'brand', label: '品牌', width: 150 },
   { 
     key: 'categoryId', 
     label: '分类', 
-    width: 120,
+    width: 110,
     type: 'select' as const,
     options: CATEGORIES.map(c => ({ label: c.name, value: c.id }))
   },
-  { key: 'specs', label: '规格', width: 100, truncate: 15 },
-  { key: 'unit', label: '单位', width: 70 },
+  { key: 'specs', label: '规格', width: 80, truncate: 12 },
+  { key: 'unit', label: '单位', width: 60 },
   { key: 'desc', label: '描述', minWidth: 180, type: 'textarea' as const, truncate: 35 }
 ])
 

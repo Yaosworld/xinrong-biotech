@@ -449,7 +449,14 @@ onMounted(() => {
           >
             <!-- 不可编辑字段 -->
             <template v-if="col.editable === false">
-              <el-input v-model="editFormData[col.key]" disabled />
+              <!-- 不可编辑的图片字段显示预览 -->
+              <template v-if="col.type === 'image'">
+                <div v-if="editFormData[col.key]" class="image-preview">
+                  <img :src="getImageUrl(editFormData[col.key])" alt="预览" />
+                </div>
+                <span v-else class="no-image">暂无图片</span>
+              </template>
+              <el-input v-else v-model="editFormData[col.key]" disabled />
             </template>
             
             <!-- 选择类型 -->

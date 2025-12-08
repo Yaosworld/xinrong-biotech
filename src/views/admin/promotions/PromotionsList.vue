@@ -12,15 +12,15 @@ const promotions = computed(() => promotionStore.promotions)
 
 // 列配置
 const columns = computed(() => [
-  { key: 'id', label: 'ID', width: 60, editable: false, sortable: true, fixed: 'left' as const },
-  { key: 'cover_url', label: '封面', width: 80, type: 'image' as const, imageStyle: 'contain' as const },
-  { key: 'poster_url', label: '海报', width: 80, type: 'image' as const, imageStyle: 'contain' as const },
-  { key: 'title', label: '活动标题', minWidth: 180, required: true },
-  { key: 'summary', label: '摘要', minWidth: 160, truncate: 30 },
-  { key: 'description', label: '详情', minWidth: 160, type: 'textarea' as const, truncate: 30 },
-  { key: 'start_date', label: '开始', width: 100, type: 'date' as const, sortable: true },
-  { key: 'end_date', label: '结束', width: 100, type: 'date' as const, sortable: true },
-  { key: 'tags', label: '标签', minWidth: 120, truncate: 20 },
+  { key: 'id', label: 'ID', width: 70, editable: false, sortable: true, fixed: 'left' as const },
+  { key: 'cover_url', label: '封面', width: 70, type: 'image' as const, imageStyle: 'contain' as const },
+  { key: 'poster_url', label: '海报', width: 70, type: 'image' as const, imageStyle: 'contain' as const },
+  { key: 'title', label: '标题', minWidth: 140, required: true },
+  { key: 'summary', label: '摘要', minWidth: 130, truncate: 22 },
+  { key: 'description', label: '详情', minWidth: 130, type: 'textarea' as const, truncate: 22 },
+  { key: 'start_date', label: '开始日期', width: 105, type: 'date' as const, sortable: true },
+  { key: 'end_date', label: '结束日期', width: 105, type: 'date' as const, sortable: true },
+  { key: 'tags', label: '标签', minWidth: 100, truncate: 15 },
   // 以下字段在表格中不显示，但在编辑面板中可编辑
   { key: 'icon_class', label: '图标类名', showInTable: false, required: false },
   { key: 'publish_date', label: '发布日期', type: 'date' as const, showInTable: false }

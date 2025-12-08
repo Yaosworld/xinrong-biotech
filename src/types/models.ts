@@ -43,9 +43,8 @@ export interface Brand {
   // 扩展字段
   description?: string      // 品牌描述
   country?: string          // 品牌国家/地区
-  is_featured?: boolean     // 是否推荐品牌
   product_count?: number    // 关联产品数量
-  priority?: number         // 显示优先级
+  sort_order?: number       // 排序顺序（越小越靠前）
   website_url?: string      // 官网链接
   certificate_url?: string  // 品牌证书图片路径
 }
