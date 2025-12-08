@@ -72,10 +72,7 @@ export interface Promotion {
   discount_badge?: string  // 折扣标签 (e.g., "8折")
   
   // 扩展信息
-  category?: string        // 活动分类
   tags?: string[]          // 标签数组
-  is_featured?: boolean    // 是否为推荐活动
-  priority?: number        // 显示优先级
   applicable_products?: string  // 适用产品描述
   
   // 状态信息 (动态计算)

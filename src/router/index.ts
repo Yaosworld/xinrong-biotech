@@ -62,8 +62,8 @@ const routes: RouteRecordRaw[] = [
     name: 'Admin',
     component: () => import('@/views/admin/AdminLayout.vue'),
     meta: {
-      hidden: true,       // 不在前台导航中显示
-      requiresAuth: false // 暂不需要认证
+      hidden: true,
+      requiresAuth: false
     },
     redirect: '/admin/dashboard',
     children: [
@@ -73,17 +73,47 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/Dashboard.vue'),
         meta: { title: '管理仪表板' }
       },
+      // 横幅设置（统一管理所有页面的Banner）
       {
-        path: 'excel',
-        name: 'ExcelManager',
-        component: () => import('@/views/admin/ExcelManager.vue'),
-        meta: { title: 'Excel管理' }
+        path: 'banners',
+        name: 'AdminBanners',
+        component: () => import('@/views/admin/banners/BannerManagement.vue'),
+        meta: { title: '横幅设置' }
       },
+      // 产品管理
       {
-        path: 'config',
-        name: 'ConfigManager',
-        component: () => import('@/views/admin/ConfigManager.vue'),
-        meta: { title: '配置管理' }
+        path: 'products/list',
+        name: 'AdminProductsList',
+        component: () => import('@/views/admin/products/ProductsList.vue'),
+        meta: { title: '产品列表' }
+      },
+      // 品牌管理
+      {
+        path: 'brands/list',
+        name: 'AdminBrandsList',
+        component: () => import('@/views/admin/brands/BrandsList.vue'),
+        meta: { title: '品牌列表' }
+      },
+      // 促销管理
+      {
+        path: 'promotions/list',
+        name: 'AdminPromotionsList',
+        component: () => import('@/views/admin/promotions/PromotionsList.vue'),
+        meta: { title: '活动列表' }
+      },
+      // 关于我们
+      {
+        path: 'about/content',
+        name: 'AdminAboutContent',
+        component: () => import('@/views/admin/about/AboutContent.vue'),
+        meta: { title: '关于我们 - 内容管理' }
+      },
+      // 网站设置（统一管理）
+      {
+        path: 'site/settings',
+        name: 'AdminSiteSettings',
+        component: () => import('@/views/admin/site/SiteSettings.vue'),
+        meta: { title: '网站设置' }
       }
     ]
   },

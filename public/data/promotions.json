@@ -10,14 +10,11 @@
     "publish_date": "2025-11-10",
     "start_date": "2025-11-15",
     "end_date": "2025-11-30",
-    "category": "化学试剂",
     "tags": [
       "Sigma-Aldrich",
       "黑五大促",
       "全场折扣"
-    ],
-    "is_featured": true,
-    "priority": 1
+    ]
   },
   {
     "id": 2,
@@ -30,14 +27,11 @@
     "publish_date": "2025-11-28",
     "start_date": "2025-12-01",
     "end_date": "2025-12-31",
-    "category": "生物试剂",
     "tags": [
       "Thermo Fisher",
       "年终特惠",
       "买三送二"
-    ],
-    "is_featured": true,
-    "priority": 2
+    ]
   },
   {
     "id": 3,
@@ -50,14 +44,11 @@
     "publish_date": "2025-11-01",
     "start_date": "2025-11-05",
     "end_date": "2025-11-25",
-    "category": "免疫学",
     "tags": [
       "Proteintech",
       "新品首发",
       "抗体"
-    ],
-    "is_featured": true,
-    "priority": 3
+    ]
   },
   {
     "id": 4,
@@ -70,14 +61,11 @@
     "publish_date": "2025-11-25",
     "start_date": "2025-12-01",
     "end_date": "2026-01-31",
-    "category": "安全设备",
     "tags": [
       "安全设备",
       "以旧换新",
       "实验室升级"
-    ],
-    "is_featured": false,
-    "priority": 4
+    ]
   },
   {
     "id": 5,
@@ -90,14 +78,11 @@
     "publish_date": "2025-12-05",
     "start_date": "2025-12-10",
     "end_date": "2025-12-25",
-    "category": "细胞研究",
     "tags": [
       "MCE",
       "品牌日",
       "细胞研究"
-    ],
-    "is_featured": false,
-    "priority": 5
+    ]
   },
   {
     "id": 6,
@@ -110,14 +95,11 @@
     "publish_date": "2025-12-15",
     "start_date": "2025-12-20",
     "end_date": "2026-01-10",
-    "category": "实验耗材",
     "tags": [
       "实验耗材",
       "第二件半价",
       "跨年促销"
-    ],
-    "is_featured": true,
-    "priority": 6
+    ]
   },
   {
     "id": 7,
@@ -130,14 +112,11 @@
     "publish_date": "2024-12-25",
     "start_date": "2025-01-01",
     "end_date": "2025-01-31",
-    "category": "蛋白研究",
     "tags": [
       "Beyotime",
       "新年特惠",
       "蛋白研究套装"
-    ],
-    "is_featured": false,
-    "priority": 7
+    ]
   },
   {
     "id": 8,
@@ -150,14 +129,11 @@
     "publish_date": "2026-01-10",
     "start_date": "2026-01-15",
     "end_date": "2026-02-28",
-    "category": "纯化设备",
     "tags": [
       "Cytiva",
       "分期免息",
       "纯化设备"
-    ],
-    "is_featured": false,
-    "priority": 8
+    ]
   },
   {
     "id": 9,
@@ -170,14 +146,11 @@
     "publish_date": "2026-01-25",
     "start_date": "2026-02-01",
     "end_date": "2026-03-15",
-    "category": "教学实验",
     "tags": [
       "Solarbio",
       "开学季",
       "教学实验"
-    ],
-    "is_featured": false,
-    "priority": 9
+    ]
   },
   {
     "id": 10,
@@ -190,14 +163,11 @@
     "publish_date": "2026-02-25",
     "start_date": "2026-03-01",
     "end_date": "2026-03-31",
-    "category": "新品发布",
     "tags": [
       "Takara",
       "新品发布",
       "预订优惠"
-    ],
-    "is_featured": true,
-    "priority": 10
+    ]
   },
   {
     "id": 11,
@@ -210,14 +180,11 @@
     "publish_date": "2026-03-28",
     "start_date": "2026-04-01",
     "end_date": "2026-04-30",
-    "category": "环保产品",
     "tags": [
       "环保周",
       "绿色试剂",
       "可持续科研"
-    ],
-    "is_featured": false,
-    "priority": 11
+    ]
   },
   {
     "id": 12,
@@ -230,14 +197,11 @@
     "publish_date": "2026-04-28",
     "start_date": "2026-05-01",
     "end_date": "2026-05-31",
-    "category": "会员专享",
     "tags": [
       "Macklin",
       "会员专享",
       "积分翻倍"
-    ],
-    "is_featured": false,
-    "priority": 12
+    ]
   },
   {
     "id": 13,
@@ -250,14 +214,11 @@
     "publish_date": "2026-05-25",
     "start_date": "2026-06-01",
     "end_date": "2026-06-30",
-    "category": "设备维护",
     "tags": [
       "Thermo Fisher",
       "设备维护",
       "季度促销"
-    ],
-    "is_featured": false,
-    "priority": 13
+    ]
   },
   {
     "id": 14,
@@ -270,14 +231,11 @@
     "publish_date": "2026-06-25",
     "start_date": "2026-07-01",
     "end_date": "2026-07-31",
-    "category": "抗体蛋白",
     "tags": [
       "Proteintech",
       "冰点价",
       "夏季特惠"
-    ],
-    "is_featured": true,
-    "priority": 14
+    ]
   },
   {
     "id": 15,
@@ -290,14 +248,11 @@
     "publish_date": "2026-07-28",
     "start_date": "2026-08-01",
     "end_date": "2026-09-30",
-    "category": "实验室建设",
     "tags": [
       "实验室装修",
       "整体方案",
       "一站式服务"
-    ],
-    "is_featured": false,
-    "priority": 15
+    ]
   },
   {
     "id": 16,
@@ -310,14 +265,11 @@
     "publish_date": "2025-11-20",
     "start_date": "2025-11-25",
     "end_date": "2025-12-05",
-    "category": "抗体蛋白",
     "tags": [
       "Abcam",
       "限时清仓",
       "抗体"
-    ],
-    "is_featured": true,
-    "priority": 16
+    ]
   },
   {
     "id": 17,
@@ -330,14 +282,11 @@
     "publish_date": "2025-11-28",
     "start_date": "2025-11-20",
     "end_date": "2025-12-05",
-    "category": "分子生物学",
     "tags": [
       "Qiagen",
       "闪电促销",
       "分子试剂"
-    ],
-    "is_featured": true,
-    "priority": 17
+    ]
   },
   {
     "id": 18,
@@ -350,14 +299,11 @@
     "publish_date": "2025-11-25",
     "start_date": "2025-11-15",
     "end_date": "2025-12-05",
-    "category": "实验耗材",
     "tags": [
       "Eppendorf",
       "耗材特卖",
       "买二送一"
-    ],
-    "is_featured": true,
-    "priority": 18
+    ]
   },
   {
     "id": 19,
@@ -370,14 +316,11 @@
     "publish_date": "2025-12-01",
     "start_date": "2025-11-01",
     "end_date": "2025-12-04",
-    "category": "诊断试剂",
     "tags": [
       "Roche",
       "季末冲刺",
       "诊断试剂"
-    ],
-    "is_featured": true,
-    "priority": 19
+    ]
   },
   {
     "id": 20,
@@ -390,13 +333,10 @@
     "publish_date": "2025-11-15",
     "start_date": "2025-10-15",
     "end_date": "2025-12-06",
-    "category": "色谱耗材",
     "tags": [
       "Agilent",
       "年末清仓",
       "色谱柱"
-    ],
-    "is_featured": true,
-    "priority": 20
+    ]
   }
 ]

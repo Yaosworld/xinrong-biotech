@@ -164,10 +164,7 @@ export const usePromotionStore = defineStore('promotion', () => {
     return processedPromotions.value.filter(p => p.status === 'ended')
   })
 
-  // 推荐活动
-  const featuredPromotions = computed(() => {
-    return processedPromotions.value.filter(p => p.is_featured)
-  })
+
 
   
   
@@ -258,7 +255,6 @@ export const usePromotionStore = defineStore('promotion', () => {
     activePromotions,
     comingPromotions,
     endedPromotions,
-    featuredPromotions,
 
     // Actions
     loadPromotions,
