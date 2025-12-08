@@ -1,89 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import { useSiteStore } from '@/stores/siteStore'
+import { useAboutStore } from '@/stores/aboutStore'
 
 const siteStore = useSiteStore()
+const aboutStore = useAboutStore()
 
-// 从 store 获取联系信息
+// 从 store 获取数据
 const contact = computed(() => siteStore.contact)
+const banner = computed(() => aboutStore.banner)
+const sections = computed(() => aboutStore.sections)
+const introCards = computed(() => aboutStore.introCards)
+const advantages = computed(() => aboutStore.advantages)
 
-// 本地横幅标语
-const aboutSlogans = [
-  '专注生命科学领域的生物科技企业',
-  '为科研工作者提供优质的产品和专业的服务'
-]
+// 响应式判断
+const hasIntroCards = computed(() => aboutStore.hasIntroCards)
+const hasAdvantages = computed(() => aboutStore.hasAdvantages)
+const hasBannerSlogans = computed(() => aboutStore.hasBannerSlogans)
+const hasBannerStats = computed(() => aboutStore.hasBannerStats)
 
-// 本地统计数据
-const stats = [
-  { key: 'years', number: '8+', label: '年行业经验' },
-  { key: 'customers', number: '1000+', label: '合作客户' },
-  { key: 'brands', number: '50+', label: '知名品牌' }
-]
-
-// 固定的介绍卡片数据
-const introCards = [
-  {
-    icon: 'fas fa-building',
-    title: '企业背景',
-    content: '广州信荣生物科技有限公司成立于 2015 年，总部位于广州。作为一家专注于生命科学领域的生物科技企业，我们在医疗仪器、医疗材料、科研院校的生物试剂产品等领域拥有丰富的经验。我们致力于为科研工作者提供优质的产品和专业的服务。'
-  },
-  {
-    icon: 'fas fa-shopping-cart',
-    title: '产品优势',
-    content: '公司代理的产品涵盖生命科学研究的多个方向，从先进仪器设备、到科学实验室的分子生物学、细胞生物学类的耗材，均为国际知名品牌，经过严格检测，确保产品质量卓越。'
-  },
-  {
-    icon: 'fas fa-headset',
-    title: '专业服务',
-    content: '我们拥有专业的技术团队，能够为客户提供产品咨询、选型指导、技术培训及售后维护一体化服务。助力客户在生命科学研究领域取得卓越成果。'
-  }
-]
-
-// 固定的核心优势数据
-const advantages = [
-  {
-    icon: 'fas fa-check-circle',
-    title: '正规授权代理',
-    content: '多个知名品牌官方授权代理，确保产品质量和售后服务'
-  },
-  {
-    icon: 'fas fa-th-large',
-    title: '品类齐全',
-    content: '提供从基础试剂到高端仪器设备的全品类产品，满足一站式采购需求'
-  },
-  {
-    icon: 'fas fa-bolt',
-    title: '快速响应',
-    content: '高效的订单处理流程，资深产品专家，准确且速达'
-  },
-  {
-    icon: 'fas fa-warehouse',
-    title: '专业仓储',
-    content: '符合国际标准的仓储条件，保证产品质量稳定性和有效性'
-  },
-  {
-    icon: 'fas fa-tags',
-    title: '价格优势',
-    content: '直接对接品牌方，减少中间环节，为客户提供更具竞争力的价格'
-  }
-]
+// 加载数据
+onMounted(async () => {
+  await aboutStore.loadAboutData()
+})
 </script>
 
 <template>
   <div class="about-page pt-[72px]">
-    <!-- 展示区 -->
+    <!-- 展示区 - 只在有数据时显示 -->
     <ShowcaseBanner
-      :slogans="aboutSlogans"
-      :stats="stats"
+      v-if="hasBannerSlogans || hasBannerStats"
+      :slogans="banner.slogans"
+      :stats="banner.stats"
     />
     
-    <!-- 公司简介 -->
-    <section class="py-16">
+    <!-- 公司简介 - 只在有介绍卡片时显示 -->
+    <section v-if="hasIntroCards" class="py-16">
       <div class="container-base">
         <div class="text-center mb-10">
-          <span class="section-badge">公司简介</span>
-          <h2 class="section-title">值得信赖的科研合作伙伴</h2>
+          <span class="section-badge">{{ sections.intro.badge }}</span>
+          <h2 class="section-title">{{ sections.intro.title }}</h2>
         </div>
 
         <div class="space-y-6">
@@ -106,12 +63,12 @@ const advantages = [
       </div>
     </section>
     
-    <!-- 核心优势 -->
-    <section class="py-16 bg-dark-50">
+    <!-- 核心优势 - 只在有优势数据时显示 -->
+    <section v-if="hasAdvantages" class="py-16 bg-dark-50">
       <div class="container-base">
         <div class="text-center mb-10">
-          <span class="section-badge">核心优势</span>
-          <h2 class="section-title">为什么选择我们</h2>
+          <span class="section-badge">{{ sections.advantages.badge }}</span>
+          <h2 class="section-title">{{ sections.advantages.title }}</h2>
         </div>
         
         <div class="max-w-3xl mx-auto advantage-timeline">
@@ -137,12 +94,12 @@ const advantages = [
       </div>
     </section>
     
-    <!-- 联系方式 -->
+    <!-- 联系方式 - 始终显示 -->
     <section class="py-16">
       <div class="container-base">
         <div class="text-center mb-10">
-          <span class="section-badge">联系我们</span>
-          <h2 class="section-title">期待与您的合作</h2>
+          <span class="section-badge">{{ sections.contact.badge }}</span>
+          <h2 class="section-title">{{ sections.contact.title }}</h2>
         </div>
 
         <div class="max-w-4xl mx-auto space-y-6">
@@ -218,3 +175,82 @@ const advantages = [
     </section>
   </div>
 </template>
+
+<style scoped>
+/* 介绍卡片样式 */
+.intro-card {
+  @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100;
+  @apply transition-all duration-300 hover:shadow-md hover:border-gradient-200;
+}
+
+.intro-card-icon {
+  @apply w-14 h-14 rounded-xl bg-gradient-100 text-gradient-600;
+  @apply flex items-center justify-center text-2xl flex-shrink-0;
+}
+
+.intro-card-title {
+  @apply text-xl font-semibold text-dark-800 mb-2;
+}
+
+.intro-card-content {
+  @apply text-dark-600 leading-relaxed;
+}
+
+/* 优势时间线样式 */
+.advantage-timeline {
+  @apply relative;
+}
+
+.advantage-timeline::before {
+  content: '';
+  @apply absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-200;
+}
+
+.advantage-item {
+  @apply relative flex gap-6 mb-8 last:mb-0;
+}
+
+.advantage-number {
+  @apply w-16 h-16 rounded-full bg-gradient-600 text-white;
+  @apply flex items-center justify-center font-bold text-lg;
+  @apply flex-shrink-0 relative z-10;
+  @apply shadow-lg;
+}
+
+.advantage-content {
+  @apply flex-1 bg-white rounded-xl p-6 shadow-sm border border-gray-100;
+  @apply transition-all duration-300 hover:shadow-md hover:border-gradient-200;
+}
+
+.advantage-icon {
+  @apply w-10 h-10 rounded-lg bg-gradient-100 text-gradient-600;
+  @apply flex items-center justify-center text-lg;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .advantage-timeline::before {
+    @apply left-6;
+  }
+
+  .advantage-number {
+    @apply w-12 h-12 text-base;
+  }
+
+  .advantage-item {
+    @apply gap-4;
+  }
+
+  .card-base {
+    @apply flex-col items-start !important;
+  }
+
+  .card-base > div {
+    @apply flex-col items-start w-full !important;
+  }
+
+  .card-base .w-24 {
+    @apply w-full mb-2;
+  }
+}
+</style>
