@@ -25,15 +25,47 @@ const formData = ref({
 // 原始数据
 const originalData = ref<typeof formData.value | null>(null)
 
-// 加载数据
+// 加载数据（从 Admin API 加载，包含草稿）
 const loadData = async () => {
-  await siteStore.loadSiteConfig()
-  
-  formData.value = {
-    name: siteStore.company.name,
-    shortName: siteStore.company.shortName,
-    englishName: siteStore.company.englishName,
-    logo: siteStore.company.logo
+  try {
+    // 从 Admin API 加载（优先使用草稿数据）
+    const content = await adminApi.getOne('site_config', 'main')
+    const data = (content.draftData || content.publishedData || {}) as any
+    
+    formData.value = {
+      name: data.company?.name || '',
+      shortName: data.company?.shortName || '',
+      englishName: data.company?.englishName || '',
+      logo: data.company?.logo || ''
+    }
+    
+    // 检查是否有未发布的更改
+    hasUnpublishedChanges.value = content.draftData !== null && 
+      JSON.stringify(content.draftData) !== JSON.stringify(content.publishedData)
+    
+    // 同步到 store（用于构建完整配置）
+    if (data.company) {
+      siteStore.company.name = data.company.name || ''
+      siteStore.company.shortName = data.company.shortName || ''
+      siteStore.company.englishName = data.company.englishName || ''
+      siteStore.company.logo = data.company.logo || ''
+    }
+    if (data.contact) siteStore.contact = data.contact
+    if (data.friendLinks) siteStore.friendLinks = data.friendLinks
+    if (data.footerLinks) siteStore.footerLinks = data.footerLinks
+    if (data.floatingPanel) siteStore.floatingPanel = data.floatingPanel
+  } catch (e) {
+    console.warn('Admin API 加载失败，降级到前台 Store:', e)
+    // 降级到前台 Store
+    await siteStore.loadSiteConfig()
+    
+    formData.value = {
+      name: siteStore.company.name,
+      shortName: siteStore.company.shortName,
+      englishName: siteStore.company.englishName,
+      logo: siteStore.company.logo
+    }
+    hasUnpublishedChanges.value = false
   }
   
   originalData.value = { ...formData.value }

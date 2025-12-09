@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useBrandStore } from '@/stores/brandStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
+import { adminApi } from '@/api/contentApi'
 
 const brandStore = useBrandStore()
 const adminStore = useAdminStore()
 
+// 本地数据（从 Admin API 加载，包含草稿）
+const localBrands = ref<any[]>([])
+const loading = ref(false)
+
 // 品牌数据
-const brands = computed(() => brandStore.brands)
+const brands = computed(() => localBrands.value)
 
 // 国家选项
 const countryOptions = [
@@ -51,7 +56,8 @@ const generateBrandId = () => {
 
 // 保存数据
 const handleSave = (data: any[]) => {
-  brandStore.brands.splice(0, brandStore.brands.length, ...data)
+  // 更新本地数据
+  localBrands.value = [...data]
   adminStore.addActivity({
     type: 'modify',
     target: 'brands',
@@ -64,8 +70,25 @@ const handlePublish = () => {
   brandStore.clearCache()
 }
 
+// 从 Admin API 加载数据（包含草稿）
+const loadAdminData = async () => {
+  loading.value = true
+  try {
+    // 从 Admin API 加载（优先使用草稿数据）
+    const result = await adminApi.getList('brand', { pageSize: 9999 })
+    localBrands.value = result.data.map(item => item.draftData || item.publishedData)
+  } catch (e) {
+    console.warn('Admin API 加载失败，降级到前台 Store:', e)
+    // 降级到前台 Store
+    await brandStore.loadBrands()
+    localBrands.value = [...brandStore.brands]
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
-  await brandStore.loadBrands()
+  await loadAdminData()
 })
 </script>
 

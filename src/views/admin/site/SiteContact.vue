@@ -27,17 +27,46 @@ const formData = ref({
 // 原始数据
 const originalData = ref<typeof formData.value | null>(null)
 
-// 加载数据
+// 加载数据（从 Admin API 加载，包含草稿）
 const loadData = async () => {
-  await siteStore.loadSiteConfig()
-  
-  formData.value = {
-    phones: [...siteStore.contact.phones],
-    email: siteStore.contact.email,
-    address: siteStore.contact.address,
-    wechatQrcode: siteStore.contact.wechatQrcode,
-    gzhQrcode: siteStore.contact.gzhQrcode,
-    workTime: siteStore.contact.workTime
+  try {
+    // 从 Admin API 加载（优先使用草稿数据）
+    const content = await adminApi.getOne('site_config', 'main')
+    const data = (content.draftData || content.publishedData || {}) as any
+    
+    formData.value = {
+      phones: data.contact?.phones ? [...data.contact.phones] : ['', ''],
+      email: data.contact?.email || '',
+      address: data.contact?.address || '',
+      wechatQrcode: data.contact?.wechatQrcode || '',
+      gzhQrcode: data.contact?.gzhQrcode || '',
+      workTime: data.contact?.workTime || ''
+    }
+    
+    // 检查是否有未发布的更改
+    hasUnpublishedChanges.value = content.draftData !== null && 
+      JSON.stringify(content.draftData) !== JSON.stringify(content.publishedData)
+    
+    // 同步到 store（用于构建完整配置）
+    if (data.company) siteStore.company = data.company
+    if (data.contact) siteStore.contact = data.contact
+    if (data.friendLinks) siteStore.friendLinks = data.friendLinks
+    if (data.footerLinks) siteStore.footerLinks = data.footerLinks
+    if (data.floatingPanel) siteStore.floatingPanel = data.floatingPanel
+  } catch (e) {
+    console.warn('Admin API 加载失败，降级到前台 Store:', e)
+    // 降级到前台 Store
+    await siteStore.loadSiteConfig()
+    
+    formData.value = {
+      phones: [...siteStore.contact.phones],
+      email: siteStore.contact.email,
+      address: siteStore.contact.address,
+      wechatQrcode: siteStore.contact.wechatQrcode,
+      gzhQrcode: siteStore.contact.gzhQrcode,
+      workTime: siteStore.contact.workTime
+    }
+    hasUnpublishedChanges.value = false
   }
   
   // 确保至少有两个电话号码字段

@@ -41,21 +41,43 @@ const currentPageConfig = computed(() =>
   pageConfigs.find(p => p.id === activeTab.value)
 )
 
-// 从 store 加载数据
-const loadData = () => {
-  const banner = bannerStore.getBanner(activeTab.value)
-  if (banner) {
+// 从 Admin API 加载数据（包含草稿）
+const loadData = async () => {
+  try {
+    // 从 Admin API 加载（优先使用草稿数据）
+    const content = await adminApi.getOne('banner', activeTab.value)
+    const data = (content.draftData || content.publishedData || {}) as { slogans?: string[]; defaultStats?: StatItem[] }
+    
     formData.value = {
-      slogans: [...banner.slogans],
-      defaultStats: banner.defaultStats.map(s => ({ ...s }))
+      slogans: data.slogans ? [...data.slogans] : [],
+      defaultStats: data.defaultStats ? data.defaultStats.map((s) => ({ ...s })) : []
     }
     originalData.value = {
-      slogans: [...banner.slogans],
-      defaultStats: banner.defaultStats.map(s => ({ ...s }))
+      slogans: data.slogans ? [...data.slogans] : [],
+      defaultStats: data.defaultStats ? data.defaultStats.map((s) => ({ ...s })) : []
     }
-  } else {
-    formData.value = { slogans: [], defaultStats: [] }
-    originalData.value = { slogans: [], defaultStats: [] }
+    
+    // 检查是否有未发布的更改
+    hasUnpublishedChanges.value = content.draftData !== null && 
+      JSON.stringify(content.draftData) !== JSON.stringify(content.publishedData)
+  } catch (e) {
+    console.warn('Admin API 加载失败，降级到前台 Store:', e)
+    // 降级到前台 Store
+    const banner = bannerStore.getBanner(activeTab.value)
+    if (banner) {
+      formData.value = {
+        slogans: [...banner.slogans],
+        defaultStats: banner.defaultStats.map(s => ({ ...s }))
+      }
+      originalData.value = {
+        slogans: [...banner.slogans],
+        defaultStats: banner.defaultStats.map(s => ({ ...s }))
+      }
+    } else {
+      formData.value = { slogans: [], defaultStats: [] }
+      originalData.value = { slogans: [], defaultStats: [] }
+    }
+    hasUnpublishedChanges.value = false
   }
 }
 
@@ -234,12 +256,12 @@ const exportAllConfig = () => {
 }
 
 // 切换标签时加载数据
-watch(activeTab, () => {
-  loadData()
+watch(activeTab, async () => {
+  await loadData()
 })
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadData()
 })
 </script>
 

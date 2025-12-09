@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { usePromotionStore } from '@/stores/promotionStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
+import { adminApi } from '@/api/contentApi'
 
 const promotionStore = usePromotionStore()
 const adminStore = useAdminStore()
 
+// 本地数据（从 Admin API 加载，包含草稿）
+const localPromotions = ref<any[]>([])
+const loading = ref(false)
+
 // 活动数据
-const promotions = computed(() => promotionStore.promotions)
+const promotions = computed(() => localPromotions.value)
 
 // 列配置
 // 注意：sortable 列会自动增加24px给排序箭头
@@ -38,7 +43,8 @@ const beforeSave = (data: any[]) => {
 
 // 保存数据
 const handleSave = (data: any[]) => {
-  promotionStore.promotions.splice(0, promotionStore.promotions.length, ...data)
+  // 更新本地数据
+  localPromotions.value = [...data]
   adminStore.addActivity({
     type: 'modify',
     target: 'promotions',
@@ -51,8 +57,25 @@ const handlePublish = () => {
   promotionStore.clearCache()
 }
 
+// 从 Admin API 加载数据（包含草稿）
+const loadAdminData = async () => {
+  loading.value = true
+  try {
+    // 从 Admin API 加载（优先使用草稿数据）
+    const result = await adminApi.getList('promotion', { pageSize: 9999 })
+    localPromotions.value = result.data.map(item => item.draftData || item.publishedData)
+  } catch (e) {
+    console.warn('Admin API 加载失败，降级到前台 Store:', e)
+    // 降级到前台 Store
+    await promotionStore.loadPromotions()
+    localPromotions.value = [...promotionStore.promotions]
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
-  await promotionStore.loadPromotions()
+  await loadAdminData()
 })
 </script>
 

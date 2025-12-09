@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useProductStore } from '@/stores/productStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
 import { CATEGORIES, getCategoryImagePath } from '@/hooks/useCategoryImage'
 import { ExcelProcessor } from '@/utils/excelProcessor'
+import { adminApi } from '@/api/contentApi'
 
 const productStore = useProductStore()
 const adminStore = useAdminStore()
 
+// 本地数据（从 Admin API 加载，包含草稿）
+const localProducts = ref<any[]>([])
+const loading = ref(false)
+
 // 产品数据 - 添加分类图片路径
 const products = computed(() => 
-  productStore.products.map(p => ({
+  localProducts.value.map(p => ({
     ...p,
     categoryImage: getCategoryImagePath(p.categoryId)
   }))
@@ -62,7 +67,8 @@ const generateProductId = () => {
 
 // 保存数据
 const handleSave = (data: any[]) => {
-  productStore.products.splice(0, productStore.products.length, ...data)
+  // 更新本地数据
+  localProducts.value = [...data]
   adminStore.addActivity({
     type: 'modify',
     target: 'products',
@@ -84,8 +90,25 @@ const handlePublish = () => {
   productStore.clearCache()
 }
 
+// 从 Admin API 加载数据（包含草稿）
+const loadAdminData = async () => {
+  loading.value = true
+  try {
+    // 从 Admin API 加载（优先使用草稿数据）
+    const result = await adminApi.getList('product', { pageSize: 9999 })
+    localProducts.value = result.data.map(item => item.draftData || item.publishedData)
+  } catch (e) {
+    console.warn('Admin API 加载失败，降级到前台 Store:', e)
+    // 降级到前台 Store
+    await productStore.loadProducts()
+    localProducts.value = [...productStore.products]
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
-  await productStore.loadProducts()
+  await loadAdminData()
 })
 </script>
 
