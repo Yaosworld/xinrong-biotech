@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { contentApi } from '@/api/contentApi'
 
 // ========================================
 // 类型定义
@@ -85,17 +86,24 @@ export const useAboutStore = defineStore('about', () => {
     error.value = null
 
     try {
-      const response = await fetch('/data/about.json')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      pageData.value = await response.json()
+      // 优先从 API 加载
+      const data = await contentApi.getPublishedOne<AboutPageData>('about', 'main')
+      pageData.value = data
       loaded.value = true
       return pageData.value
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '加载关于我们数据失败'
-      console.error('加载关于我们数据失败:', e)
+      // API 失败时降级到静态 JSON
+      console.warn('API 加载失败，降级到静态 JSON:', e)
+      try {
+        const response = await fetch('/data/about.json')
+        if (response.ok) {
+          pageData.value = await response.json()
+          loaded.value = true
+          return pageData.value
+        }
+      } catch {
+        error.value = '加载关于我们数据失败'
+      }
       return null
     } finally {
       loading.value = false

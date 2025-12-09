@@ -2,7 +2,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useBannerStore, type StatItem } from '@/stores/bannerStore'
 import { useAdminStore } from '@/stores/adminStore'
-import { ElMessage } from 'element-plus'
+import { adminApi } from '@/api/contentApi'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const bannerStore = useBannerStore()
 const adminStore = useAdminStore()
@@ -20,6 +21,8 @@ const activeTab = ref('products')
 
 // 保存状态
 const isSaving = ref(false)
+const isPublishing = ref(false)
+const hasUnpublishedChanges = ref(false)
 
 // 表单数据
 const formData = ref({
@@ -80,7 +83,7 @@ const removeStat = (index: number) => {
   formData.value.defaultStats.splice(index, 1)
 }
 
-// 保存数据
+// 保存数据（草稿）
 const saveData = async () => {
   const validSlogans = formData.value.slogans.filter(s => s.trim())
   if (validSlogans.length === 0) {
@@ -95,6 +98,14 @@ const saveData = async () => {
   try {
     isSaving.value = true
 
+    const bannerData = {
+      slogans: validSlogans,
+      defaultStats: validStats
+    }
+
+    // 保存到后端草稿
+    await adminApi.saveDraft('banner', activeTab.value, bannerData)
+
     if (bannerStore.banners) {
       bannerStore.banners[activeTab.value] = {
         ...bannerStore.banners[activeTab.value],
@@ -106,7 +117,7 @@ const saveData = async () => {
     adminStore.addActivity({
       type: 'modify',
       target: activeTab.value,
-      description: `修改了 ${currentPageConfig.value?.title} 的横幅设置`
+      description: `保存了 ${currentPageConfig.value?.title} 的横幅草稿`
     })
 
     originalData.value = {
@@ -119,12 +130,58 @@ const saveData = async () => {
       defaultStats: validStats.map(s => ({ ...s }))
     }
 
-    ElMessage.success('保存成功')
+    hasUnpublishedChanges.value = true
+    ElMessage.success('草稿保存成功')
   } catch (error) {
     ElMessage.error('保存失败')
     console.error(error)
   } finally {
     isSaving.value = false
+  }
+}
+
+// 发布数据
+const publishData = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要发布吗？发布后前台页面将立即更新。',
+      '确认发布',
+      { confirmButtonText: '确定发布', cancelButtonText: '取消', type: 'warning' }
+    )
+
+    isPublishing.value = true
+
+    // 先保存当前数据
+    const validSlogans = formData.value.slogans.filter(s => s.trim())
+    const validStats = formData.value.defaultStats.filter(s => s.number.trim() && s.label.trim())
+    
+    const bannerData = {
+      slogans: validSlogans,
+      defaultStats: validStats
+    }
+
+    await adminApi.saveDraft('banner', activeTab.value, bannerData)
+    await adminApi.publish('banner', activeTab.value)
+
+    hasUnpublishedChanges.value = false
+    
+    // 刷新 store 缓存
+    bannerStore.clearCache()
+
+    adminStore.addActivity({
+      type: 'modify',
+      target: activeTab.value,
+      description: `发布了 ${currentPageConfig.value?.title} 的横幅设置`
+    })
+
+    ElMessage.success('发布成功！前台页面已更新')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('发布失败')
+      console.error(error)
+    }
+  } finally {
+    isPublishing.value = false
   }
 }
 
@@ -224,14 +281,20 @@ onMounted(() => {
           <span>{{ currentPageConfig?.title }} - 横幅配置</span>
         </div>
         <div class="toolbar-actions">
+          <el-tag v-if="hasUnpublishedChanges" type="warning" size="small" class="status-tag">
+            <i class="fas fa-exclamation-circle mr-1"></i> 有未发布的更改
+          </el-tag>
           <el-button @click="resetData">
             <i class="fas fa-undo mr-1"></i> 重置
           </el-button>
           <el-button @click="exportConfig">
             <i class="fas fa-download mr-1"></i> 导出
           </el-button>
-          <el-button type="primary" :loading="isSaving" @click="saveData">
-            <i class="fas fa-save mr-1"></i> 保存
+          <el-button :loading="isSaving" @click="saveData">
+            <i class="fas fa-save mr-1"></i> 保存草稿
+          </el-button>
+          <el-button type="primary" :loading="isPublishing" @click="publishData">
+            <i class="fas fa-cloud-upload-alt mr-1"></i> 发布
           </el-button>
         </div>
       </div>
@@ -598,6 +661,10 @@ onMounted(() => {
 
 .mr-1 {
   margin-right: 4px;
+}
+
+.status-tag {
+  margin-right: 8px;
 }
 
 @media (max-width: 900px) {

@@ -59,6 +59,11 @@ const handleSave = (data: any[]) => {
   })
 }
 
+// 发布后清除缓存
+const handlePublish = () => {
+  brandStore.clearCache()
+}
+
 onMounted(async () => {
   await brandStore.loadBrands()
 })
@@ -73,9 +78,11 @@ onMounted(async () => {
     :categories="categories"
     default-category="own"
     :sort-config="{ enabled: true, field: 'sort_order' }"
+    :publish-config="{ enabled: true, contentType: 'brand' }"
     :paginated="false"
     search-placeholder="搜索品牌名称、国家..."
     :generate-id="generateBrandId"
     @save="handleSave"
+    @publish="handlePublish"
   />
 </template>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Product, ProductFilters, SortOption } from '@/types'
+import { contentApi } from '@/api/contentApi'
 
 export const useProductStore = defineStore('product', () => {
   // ========================================
@@ -11,6 +12,14 @@ export const useProductStore = defineStore('product', () => {
   const error = ref<string | null>(null)
   const initialized = ref(false)
 
+  // 分页状态（后端分页）
+  const pagination = ref({
+    page: 1,
+    pageSize: 12,
+    total: 0,
+    totalPages: 0
+  })
+
   // 筛选状态
   const filters = ref<ProductFilters>({
     search: '',
@@ -20,6 +29,9 @@ export const useProductStore = defineStore('product', () => {
 
   // 排序状态
   const sortBy = ref<SortOption>('name-asc')
+  
+  // 是否使用后端分页模式
+  const useBackendPagination = ref(true)
 
   // ========================================
   // Getters
@@ -106,28 +118,60 @@ export const useProductStore = defineStore('product', () => {
   // Actions
   // ========================================
   
-  // 加载产品数据
-  async function loadProducts() {
-    if (initialized.value && products.value.length > 0) {
-      return // 已加载，直接返回
-    }
-
+  // 加载产品数据（支持后端分页）
+  async function loadProducts(page: number = 1) {
     loading.value = true
     error.value = null
 
     try {
-      const response = await fetch('/data/products.json')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (useBackendPagination.value) {
+        // 后端分页模式
+        const result = await contentApi.getPublishedList<Product>('product', {
+          page,
+          pageSize: pagination.value.pageSize,
+          search: filters.value.search || undefined,
+          categoryId: filters.value.categoryId || undefined,
+          brand: filters.value.brand || undefined,
+          sortBy: sortBy.value
+        })
+        products.value = result.data
+        pagination.value = result.pagination
+      } else {
+        // 前端分页模式（降级方案）
+        const data = await contentApi.getAllPublished<Product>('product')
+        products.value = data
+        pagination.value.total = data.length
+        pagination.value.totalPages = Math.ceil(data.length / pagination.value.pageSize)
       }
-      products.value = await response.json()
       initialized.value = true
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '加载产品数据失败'
-      console.error('加载产品数据失败:', e)
+      // API 失败时降级到静态 JSON
+      console.warn('API 加载失败，降级到静态 JSON:', e)
+      try {
+        const response = await fetch('/data/products.json')
+        if (response.ok) {
+          products.value = await response.json()
+          useBackendPagination.value = false
+          initialized.value = true
+        }
+      } catch {
+        error.value = e instanceof Error ? e.message : '加载产品数据失败'
+      }
     } finally {
       loading.value = false
     }
+  }
+  
+  // 跳转到指定页
+  function goToPage(page: number) {
+    pagination.value.page = page
+    loadProducts(page)
+  }
+  
+  // 设置每页数量
+  function setPageSize(size: number) {
+    pagination.value.pageSize = size
+    loadProducts(1)
   }
 
   // 根据ID获取产品
@@ -140,9 +184,12 @@ export const useProductStore = defineStore('product', () => {
     return products.value.filter(p => p.categoryId === categoryId)
   }
 
-  // 更新筛选条件
+  // 更新筛选条件（后端分页模式下会重新加载）
   function setFilter<K extends keyof ProductFilters>(key: K, value: ProductFilters[K]) {
     filters.value[key] = value
+    if (useBackendPagination.value) {
+      loadProducts(1) // 筛选变化时重新加载第一页
+    }
   }
 
   // 清空所有筛选
@@ -152,11 +199,24 @@ export const useProductStore = defineStore('product', () => {
       categoryId: '',
       brand: ''
     }
+    if (useBackendPagination.value) {
+      loadProducts(1)
+    }
   }
 
   // 设置排序
   function setSortBy(sort: SortOption) {
     sortBy.value = sort
+    if (useBackendPagination.value) {
+      loadProducts(1)
+    }
+  }
+
+  // 清除缓存（发布后调用）
+  function clearCache() {
+    products.value = []
+    initialized.value = false
+    error.value = null
   }
 
   return {
@@ -167,6 +227,8 @@ export const useProductStore = defineStore('product', () => {
     initialized,
     filters,
     sortBy,
+    pagination,
+    useBackendPagination,
     
     // Getters
     allBrands,
@@ -181,7 +243,10 @@ export const useProductStore = defineStore('product', () => {
     getProductsByCategoryId,
     setFilter,
     clearAllFilters,
-    setSortBy
+    setSortBy,
+    goToPage,
+    setPageSize,
+    clearCache
   }
 })
 

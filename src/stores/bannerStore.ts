@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { contentApi } from '@/api/contentApi'
 
 // ========================================
 // 类型定义
@@ -53,17 +54,38 @@ export const useBannerStore = defineStore('banner', () => {
     error.value = null
 
     try {
-      const response = await fetch('/data/banners.json')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      // 优先从 API 加载（Banner 按 key 存储，需要逐个获取）
+      const bannerKeys = ['products', 'brands', 'promotions', 'about']
+      const result: BannersData = {} as BannersData
+      
+      for (const key of bannerKeys) {
+        try {
+          const data = await contentApi.getPublishedOne<BannerConfig>('banner', key)
+          result[key] = data
+        } catch {
+          // 单个 banner 加载失败不影响其他
+        }
       }
       
-      banners.value = await response.json()
-      loaded.value = true
-      return banners.value
+      if (Object.keys(result).length > 0) {
+        banners.value = result
+        loaded.value = true
+        return banners.value
+      }
+      throw new Error('No banner data loaded')
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '加载 Banner 数据失败'
-      console.error('加载 Banner 数据失败:', e)
+      // API 失败时降级到静态 JSON
+      console.warn('API 加载失败，降级到静态 JSON:', e)
+      try {
+        const response = await fetch('/data/banners.json')
+        if (response.ok) {
+          banners.value = await response.json()
+          loaded.value = true
+          return banners.value
+        }
+      } catch {
+        error.value = '加载 Banner 数据失败'
+      }
       return null
     } finally {
       loading.value = false

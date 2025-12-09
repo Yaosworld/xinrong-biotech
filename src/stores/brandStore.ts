@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Brand } from '@/types'
+import { contentApi } from '@/api/contentApi'
 
 export const useBrandStore = defineStore('brand', () => {
   // ========================================
@@ -101,15 +102,22 @@ export const useBrandStore = defineStore('brand', () => {
     error.value = null
 
     try {
-      const response = await fetch('/data/brands.json')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      brands.value = await response.json()
+      // 优先从 API 加载
+      const data = await contentApi.getAllPublished<Brand>('brand')
+      brands.value = data
       initialized.value = true
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '加载品牌数据失败'
-      console.error('加载品牌数据失败:', e)
+      // API 失败时降级到静态 JSON
+      console.warn('API 加载失败，降级到静态 JSON:', e)
+      try {
+        const response = await fetch('/data/brands.json')
+        if (response.ok) {
+          brands.value = await response.json()
+          initialized.value = true
+        }
+      } catch {
+        error.value = e instanceof Error ? e.message : '加载品牌数据失败'
+      }
     } finally {
       loading.value = false
     }
@@ -123,6 +131,13 @@ export const useBrandStore = defineStore('brand', () => {
   // 根据名称获取品牌
   function getBrandByName(name: string): Brand | undefined {
     return brands.value.find(b => b.name === name)
+  }
+
+  // 清除缓存（发布后调用）
+  function clearCache() {
+    brands.value = []
+    initialized.value = false
+    error.value = null
   }
 
   return {
@@ -144,7 +159,8 @@ export const useBrandStore = defineStore('brand', () => {
     getBrandById,
     getBrandByName,
     moveBrand,
-    recalculateSortOrder
+    recalculateSortOrder,
+    clearCache
   }
 })
 

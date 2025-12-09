@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Promotion, PromotionFilters, PromotionStatus } from '@/types'
+import { contentApi } from '@/api/contentApi'
 
 export const usePromotionStore = defineStore('promotion', () => {
   // ========================================
@@ -182,15 +183,22 @@ export const usePromotionStore = defineStore('promotion', () => {
     error.value = null
 
     try {
-      const response = await fetch('/data/promotions.json')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      promotions.value = await response.json()
+      // 优先从 API 加载
+      const data = await contentApi.getAllPublished<Promotion>('promotion')
+      promotions.value = data
       initialized.value = true
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '加载促销数据失败'
-      console.error('加载促销数据失败:', e)
+      // API 失败时降级到静态 JSON
+      console.warn('API 加载失败，降级到静态 JSON:', e)
+      try {
+        const response = await fetch('/data/promotions.json')
+        if (response.ok) {
+          promotions.value = await response.json()
+          initialized.value = true
+        }
+      } catch {
+        error.value = e instanceof Error ? e.message : '加载促销数据失败'
+      }
     } finally {
       loading.value = false
     }
@@ -240,6 +248,13 @@ export const usePromotionStore = defineStore('promotion', () => {
     }
   }
 
+  // 清除缓存（发布后调用）
+  function clearCache() {
+    promotions.value = []
+    initialized.value = false
+    error.value = null
+  }
+
   return {
     // State
     promotions,
@@ -262,7 +277,8 @@ export const usePromotionStore = defineStore('promotion', () => {
     getPromotionCoverPath,
     getPromotionPosterPath,
     setFilter,
-    clearAllFilters
+    clearAllFilters,
+    clearCache
   }
 })
 

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { contentApi } from '@/api/contentApi'
 
 // ========================================
 // 类型定义
@@ -133,7 +134,7 @@ export const useSiteStore = defineStore('site', () => {
   // Actions
   // ========================================
   
-  // 从 JSON 文件加载网站配置
+  // 从 API 或 JSON 文件加载网站配置
   async function loadSiteConfig() {
     // 如果已经加载过，直接返回
     if (loaded.value) {
@@ -144,12 +145,8 @@ export const useSiteStore = defineStore('site', () => {
     error.value = null
 
     try {
-      const response = await fetch('/data/site-config.json')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
+      // 优先从 API 加载
+      const data = await contentApi.getPublishedOne<any>('site_config', 'main')
       
       // 更新 state
       if (data.company) company.value = data.company
@@ -161,12 +158,33 @@ export const useSiteStore = defineStore('site', () => {
       loaded.value = true
       return true
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '加载网站配置失败'
-      console.error('加载网站配置失败:', e)
+      // API 失败时降级到静态 JSON
+      console.warn('API 加载失败，降级到静态 JSON:', e)
+      try {
+        const response = await fetch('/data/site-config.json')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.company) company.value = data.company
+          if (data.contact) contact.value = data.contact
+          if (data.friendLinks) friendLinks.value = data.friendLinks
+          if (data.footerLinks) footerLinks.value = data.footerLinks
+          if (data.floatingPanel) floatingPanel.value = data.floatingPanel
+          loaded.value = true
+          return true
+        }
+      } catch {
+        error.value = '加载网站配置失败'
+      }
       return false
     } finally {
       loading.value = false
     }
+  }
+
+  // 清除缓存
+  function clearCache() {
+    loaded.value = false
+    error.value = null
   }
 
   // ========================================
@@ -221,6 +239,7 @@ export const useSiteStore = defineStore('site', () => {
     
     // Actions
     loadSiteConfig,
+    clearCache,
     
     // Getters
     primaryPhone,

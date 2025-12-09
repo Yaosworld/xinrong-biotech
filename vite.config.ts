@@ -18,10 +18,14 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
+    port: 5173,
     open: true,
     proxy: {
-      // 确保静态资源不被路由拦截
+      // API 代理到后端服务器
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      }
     }
   },
   // 确保静态资源正确处理

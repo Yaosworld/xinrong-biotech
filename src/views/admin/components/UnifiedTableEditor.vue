@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAdminStore } from '@/stores/adminStore'
+import { adminApi } from '@/api/contentApi'
 
 // ========================================
 // 类型定义
@@ -47,6 +48,12 @@ interface ImportConfig {
   handler?: (file: File) => Promise<any[]>
 }
 
+interface PublishConfig {
+  enabled: boolean
+  contentType: string  // API 内容类型，如 'products', 'brands'
+  getContentKey?: (item: any) => string  // 获取内容 key 的函数
+}
+
 // ========================================
 // Props
 // ========================================
@@ -74,6 +81,8 @@ const props = withDefaults(defineProps<{
   sortConfig?: SortConfig
   // Excel导入
   importConfig?: ImportConfig
+  // 发布配置
+  publishConfig?: PublishConfig
   // 数据处理钩子
   beforeSave?: (data: any[]) => any[]
   beforeAdd?: (item: any) => any
@@ -100,6 +109,7 @@ const emit = defineEmits<{
   update: [item: any]
   delete: [item: any]
   import: [data: any[]]
+  publish: [data: any[]]
 }>()
 
 const adminStore = useAdminStore()
@@ -128,6 +138,10 @@ const previewUrl = ref('')
 
 // 文件上传
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+// 发布状态
+const isPublishing = ref(false)
+const hasUnpublishedChanges = ref(false)
 
 // ========================================
 // 计算属性
@@ -476,7 +490,7 @@ const handleSelectionChange = (rows: any[]) => {
 // 保存和导出
 // ========================================
 
-const saveAll = () => {
+const saveAll = async () => {
   // 重新计算排序值
   recalculateSortOrder()
   
@@ -486,13 +500,89 @@ const saveAll = () => {
     dataToSave = props.beforeSave(dataToSave)
   }
   
+  // 如果启用了发布功能，保存到后端草稿
+  if (props.publishConfig?.enabled) {
+    try {
+      const contentType = props.publishConfig.contentType
+      const getKey = props.publishConfig.getContentKey || ((item: any) => item[props.rowKey])
+      
+      // 批量保存草稿
+      const items = dataToSave.map(item => ({
+        key: String(getKey(item)),
+        data: item
+      }))
+      
+      await adminApi.batchSaveDraft(contentType, items)
+      hasUnpublishedChanges.value = true
+    } catch (error) {
+      console.error('保存草稿失败:', error)
+      ElMessage.error('保存草稿失败')
+      return
+    }
+  }
+  
   emit('save', dataToSave)
   adminStore.addActivity({
     type: 'modify',
     target: props.title,
     description: `保存了 ${props.title} 的数据更改，共 ${dataToSave.length} 条`
   })
-  ElMessage.success('保存成功')
+  ElMessage.success(props.publishConfig?.enabled ? '草稿保存成功' : '保存成功')
+}
+
+// 发布数据
+const publishAll = async () => {
+  if (!props.publishConfig?.enabled) return
+  
+  try {
+    await ElMessageBox.confirm(
+      '确定要发布吗？发布后前台页面将立即更新。',
+      '确认发布',
+      { confirmButtonText: '确定发布', cancelButtonText: '取消', type: 'warning' }
+    )
+    
+    isPublishing.value = true
+    
+    // 先保存当前数据
+    recalculateSortOrder()
+    let dataToSave = [...localData.value]
+    if (props.beforeSave) {
+      dataToSave = props.beforeSave(dataToSave)
+    }
+    
+    const contentType = props.publishConfig.contentType
+    const getKey = props.publishConfig.getContentKey || ((item: any) => item[props.rowKey])
+    
+    // 批量保存草稿
+    const items = dataToSave.map(item => ({
+      key: String(getKey(item)),
+      data: item
+    }))
+    await adminApi.batchSaveDraft(contentType, items)
+    
+    // 批量发布
+    const keys = items.map(item => item.key)
+    await adminApi.batchPublish(contentType, keys)
+    
+    hasUnpublishedChanges.value = false
+    
+    emit('save', dataToSave)
+    emit('publish', dataToSave)
+    adminStore.addActivity({
+      type: 'modify',
+      target: props.title,
+      description: `发布了 ${props.title}，共 ${dataToSave.length} 条`
+    })
+    
+    ElMessage.success('发布成功！前台页面已更新')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('发布失败:', error)
+      ElMessage.error('发布失败')
+    }
+  } finally {
+    isPublishing.value = false
+  }
 }
 
 const exportData = () => {
@@ -634,9 +724,20 @@ onMounted(() => {
         
         <!-- 保存 -->
         <el-button type="success" @click="saveAll">
-          <i class="fas fa-save mr-1"></i> 保存全部
+          <i class="fas fa-save mr-1"></i> {{ publishConfig?.enabled ? '保存草稿' : '保存全部' }}
+        </el-button>
+        
+        <!-- 发布 -->
+        <el-button v-if="publishConfig?.enabled" type="primary" :loading="isPublishing" @click="publishAll">
+          <i class="fas fa-cloud-upload-alt mr-1"></i> 发布
         </el-button>
       </div>
+    </div>
+    
+    <!-- 发布状态提示 -->
+    <div v-if="publishConfig?.enabled && hasUnpublishedChanges" class="publish-tip">
+      <i class="fas fa-exclamation-circle"></i>
+      有未发布的更改，点击"发布"按钮使更改生效
     </div>
 
     <!-- 排序提示 -->
@@ -885,6 +986,16 @@ onMounted(() => {
 }
 
 .sort-tip i { margin-right: 6px; }
+
+.publish-tip {
+  padding: 10px 20px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 13px;
+  border-bottom: 1px solid #fef3c7;
+}
+
+.publish-tip i { margin-right: 6px; }
 
 .sort-buttons {
   display: flex;

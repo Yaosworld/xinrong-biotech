@@ -79,6 +79,11 @@ const handleImport = (data: any[]) => {
   })
 }
 
+// 发布后清除缓存
+const handlePublish = () => {
+  productStore.clearCache()
+}
+
 onMounted(async () => {
   await productStore.loadProducts()
 })
@@ -94,9 +99,11 @@ onMounted(async () => {
     :page-size="12"
     :page-sizes="[12, 24, 48, 100]"
     :import-config="{ enabled: true, accept: '.xlsx,.xls', handler: handleExcelImport }"
+    :publish-config="{ enabled: true, contentType: 'product' }"
     :before-save="beforeSave"
     :generate-id="generateProductId"
     @save="handleSave"
     @import="handleImport"
+    @publish="handlePublish"
   />
 </template>

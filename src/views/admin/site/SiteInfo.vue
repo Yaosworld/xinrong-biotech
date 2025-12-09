@@ -2,7 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useSiteStore } from '@/stores/siteStore'
 import { useAdminStore } from '@/stores/adminStore'
-import { ElMessage } from 'element-plus'
+import { adminApi } from '@/api/contentApi'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const siteStore = useSiteStore()
 const adminStore = useAdminStore()
@@ -10,6 +11,8 @@ const adminStore = useAdminStore()
 // 编辑状态
 const isEditing = ref(false)
 const isSaving = ref(false)
+const isPublishing = ref(false)
+const hasUnpublishedChanges = ref(false)
 
 // 表单数据
 const formData = ref({
@@ -49,10 +52,25 @@ const cancelEdit = () => {
   isEditing.value = false
 }
 
-// 保存数据
+// 构建完整的网站配置数据
+const buildFullSiteConfig = () => {
+  return {
+    company: formData.value,
+    contact: siteStore.contact,
+    friendLinks: siteStore.friendLinks,
+    footerLinks: siteStore.footerLinks,
+    floatingPanel: siteStore.floatingPanel
+  }
+}
+
+// 保存数据（草稿）
 const saveData = async () => {
   try {
     isSaving.value = true
+    
+    // 保存完整配置到后端草稿
+    const fullConfig = buildFullSiteConfig()
+    await adminApi.saveDraft('site_config', 'main', fullConfig)
     
     // 更新 store 中的数据
     siteStore.company.name = formData.value.name
@@ -66,16 +84,55 @@ const saveData = async () => {
     adminStore.addActivity({
       type: 'modify',
       target: 'site-info',
-      description: '修改了网站基本信息'
+      description: '保存了网站基本信息草稿'
     })
     
     isEditing.value = false
-    ElMessage.success('保存成功')
+    hasUnpublishedChanges.value = true
+    ElMessage.success('草稿保存成功')
   } catch (error) {
     ElMessage.error('保存失败')
     console.error(error)
   } finally {
     isSaving.value = false
+  }
+}
+
+// 发布数据
+const publishData = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要发布吗？发布后前台页面将立即更新。',
+      '确认发布',
+      { confirmButtonText: '确定发布', cancelButtonText: '取消', type: 'warning' }
+    )
+    
+    isPublishing.value = true
+    
+    // 保存完整配置并发布
+    const fullConfig = buildFullSiteConfig()
+    await adminApi.saveDraft('site_config', 'main', fullConfig)
+    await adminApi.publish('site_config', 'main')
+    
+    hasUnpublishedChanges.value = false
+    
+    // 刷新 store 缓存
+    siteStore.clearCache()
+    
+    adminStore.addActivity({
+      type: 'modify',
+      target: 'site-info',
+      description: '发布了网站基本信息'
+    })
+    
+    ElMessage.success('发布成功！前台页面已更新')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('发布失败')
+      console.error(error)
+    }
+  } finally {
+    isPublishing.value = false
   }
 }
 
@@ -110,18 +167,24 @@ onMounted(() => {
         <h3>网站设置 - 基本信息</h3>
       </div>
       <div class="toolbar-right">
+        <el-tag v-if="hasUnpublishedChanges" type="warning" size="small" class="status-tag">
+          <i class="fas fa-exclamation-circle mr-1"></i> 有未发布的更改
+        </el-tag>
         <template v-if="!isEditing">
           <el-button @click="exportConfig">
             <i class="fas fa-download mr-1"></i> 导出
           </el-button>
-          <el-button type="primary" @click="startEdit">
+          <el-button @click="startEdit">
             <i class="fas fa-edit mr-1"></i> 编辑
+          </el-button>
+          <el-button type="primary" :loading="isPublishing" @click="publishData">
+            <i class="fas fa-cloud-upload-alt mr-1"></i> 发布
           </el-button>
         </template>
         <template v-else>
           <el-button @click="cancelEdit">取消</el-button>
-          <el-button type="primary" :loading="isSaving" @click="saveData">
-            <i class="fas fa-save mr-1"></i> 保存
+          <el-button :loading="isSaving" @click="saveData">
+            <i class="fas fa-save mr-1"></i> 保存草稿
           </el-button>
         </template>
       </div>
@@ -275,6 +338,10 @@ onMounted(() => {
 
 .mr-1 {
   margin-right: 4px;
+}
+
+.status-tag {
+  margin-right: 8px;
 }
 
 @media (max-width: 768px) {

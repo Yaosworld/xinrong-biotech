@@ -46,6 +46,11 @@ const handleSave = (data: any[]) => {
   })
 }
 
+// 发布后清除缓存
+const handlePublish = () => {
+  promotionStore.clearCache()
+}
+
 onMounted(async () => {
   await promotionStore.loadPromotions()
 })
@@ -60,7 +65,9 @@ onMounted(async () => {
     search-placeholder="搜索活动标题、摘要..."
     :page-size="10"
     :page-sizes="[10, 20, 50]"
+    :publish-config="{ enabled: true, contentType: 'promotion' }"
     :before-save="beforeSave"
     @save="handleSave"
+    @publish="handlePublish"
   />
 </template>

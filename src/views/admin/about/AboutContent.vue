@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAboutStore } from '@/stores/aboutStore'
 import { useAdminStore } from '@/stores/adminStore'
-import { ElMessage } from 'element-plus'
+import { adminApi } from '@/api/contentApi'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const aboutStore = useAboutStore()
 const adminStore = useAdminStore()
 
-// 保存状态
+// 保存和发布状态
 const isSaving = ref(false)
+const isPublishing = ref(false)
+const contentStatus = ref<'draft' | 'published'>('draft')
+const hasUnpublishedChanges = ref(false)
 
 // 当前编辑的 tab
 const activeTab = ref('intro')
@@ -29,15 +33,39 @@ const originalData = ref<typeof formData.value | null>(null)
 
 // 加载数据
 const loadData = async () => {
-  await aboutStore.loadAboutData()
-  
-  formData.value = {
-    sections: JSON.parse(JSON.stringify(aboutStore.sections)),
-    introCards: JSON.parse(JSON.stringify(aboutStore.introCards)),
-    advantages: JSON.parse(JSON.stringify(aboutStore.advantages))
+  try {
+    // 尝试从后台 API 加载（包含草稿数据）
+    const content = await adminApi.getOne('about', 'main')
+    
+    // 优先使用草稿数据，没有则使用已发布数据
+    const data = content.draftData || content.publishedData || {}
+    
+    formData.value = {
+      sections: data.sections || {
+        intro: { badge: '公司简介', title: '值得信赖的科研合作伙伴' },
+        advantages: { badge: '核心优势', title: '为什么选择我们' },
+        contact: { badge: '联系我们', title: '期待与您的合作' }
+      },
+      introCards: data.introCards || [],
+      advantages: data.advantages || []
+    }
+    
+    originalData.value = JSON.parse(JSON.stringify(formData.value))
+    contentStatus.value = content.status as 'draft' | 'published'
+    hasUnpublishedChanges.value = content.hasUnpublishedChanges
+  } catch (e) {
+    // API 失败时降级到 store
+    console.warn('API 加载失败，使用 store 数据:', e)
+    await aboutStore.loadAboutData()
+    
+    formData.value = {
+      sections: JSON.parse(JSON.stringify(aboutStore.sections)),
+      introCards: JSON.parse(JSON.stringify(aboutStore.introCards)),
+      advantages: JSON.parse(JSON.stringify(aboutStore.advantages))
+    }
+    
+    originalData.value = JSON.parse(JSON.stringify(formData.value))
   }
-  
-  originalData.value = JSON.parse(JSON.stringify(formData.value))
 }
 
 // 添加介绍卡片
@@ -78,11 +106,24 @@ const removeAdvantage = (index: number) => {
   formData.value.advantages.splice(index, 1)
 }
 
-// 保存数据
+// 保存草稿
 const saveData = async () => {
   try {
     isSaving.value = true
     
+    // 构建完整的页面数据
+    const pageData = {
+      id: 'about',
+      title: '关于我们',
+      sections: formData.value.sections,
+      introCards: formData.value.introCards,
+      advantages: formData.value.advantages
+    }
+    
+    // 调用 API 保存草稿
+    await adminApi.saveDraft('about', 'main', pageData)
+    
+    // 更新本地 store
     if (aboutStore.pageData) {
       aboutStore.pageData.sections = JSON.parse(JSON.stringify(formData.value.sections))
       aboutStore.pageData.introCards = JSON.parse(JSON.stringify(formData.value.introCards))
@@ -90,19 +131,68 @@ const saveData = async () => {
     }
     
     originalData.value = JSON.parse(JSON.stringify(formData.value))
+    hasUnpublishedChanges.value = true
     
     adminStore.addActivity({
       type: 'modify',
       target: 'about',
-      description: '修改了关于我们页面内容'
+      description: '保存了关于我们页面草稿'
     })
     
-    ElMessage.success('保存成功')
+    ElMessage.success('草稿保存成功')
   } catch (error) {
     ElMessage.error('保存失败')
     console.error(error)
   } finally {
     isSaving.value = false
+  }
+}
+
+// 发布数据
+const publishData = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要发布吗？发布后前台页面将立即更新。',
+      '确认发布',
+      { confirmButtonText: '确定发布', cancelButtonText: '取消', type: 'warning' }
+    )
+    
+    isPublishing.value = true
+    
+    // 先保存当前数据为草稿
+    const pageData = {
+      id: 'about',
+      title: '关于我们',
+      sections: formData.value.sections,
+      introCards: formData.value.introCards,
+      advantages: formData.value.advantages
+    }
+    await adminApi.saveDraft('about', 'main', pageData)
+    
+    // 然后发布
+    await adminApi.publish('about', 'main')
+    
+    // 更新状态
+    contentStatus.value = 'published'
+    hasUnpublishedChanges.value = false
+    
+    // 刷新前台 store 缓存
+    aboutStore.clearCache()
+    
+    adminStore.addActivity({
+      type: 'modify',
+      target: 'about',
+      description: '发布了关于我们页面'
+    })
+    
+    ElMessage.success('发布成功！前台页面已更新')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('发布失败')
+      console.error(error)
+    }
+  } finally {
+    isPublishing.value = false
   }
 }
 
@@ -178,14 +268,25 @@ onMounted(() => {
         <span class="subtitle">管理关于我们页面的内容</span>
       </div>
       <div class="header-right">
+        <!-- 状态标签 -->
+        <el-tag v-if="hasUnpublishedChanges" type="warning" size="small" class="status-tag">
+          <i class="fas fa-exclamation-circle mr-1"></i> 有未发布的更改
+        </el-tag>
+        <el-tag v-else-if="contentStatus === 'published'" type="success" size="small" class="status-tag">
+          <i class="fas fa-check-circle mr-1"></i> 已发布
+        </el-tag>
+        
         <el-button @click="resetData">
           <i class="fas fa-undo mr-1"></i> 重置
         </el-button>
         <el-button @click="exportConfig">
           <i class="fas fa-download mr-1"></i> 导出
         </el-button>
-        <el-button type="primary" :loading="isSaving" @click="saveData">
-          <i class="fas fa-save mr-1"></i> 保存
+        <el-button :loading="isSaving" @click="saveData">
+          <i class="fas fa-save mr-1"></i> 保存草稿
+        </el-button>
+        <el-button type="primary" :loading="isPublishing" @click="publishData">
+          <i class="fas fa-cloud-upload-alt mr-1"></i> 发布
         </el-button>
       </div>
     </div>
@@ -1001,6 +1102,11 @@ onMounted(() => {
 }
 
 .mr-1 { margin-right: 4px; }
+
+/* 状态标签 */
+.status-tag {
+  margin-right: 8px;
+}
 
 /* 垂直布局 - 公司介绍 */
 .vertical-layout {
