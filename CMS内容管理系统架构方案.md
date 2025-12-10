@@ -3348,3 +3348,96 @@ curl -X POST -H "X-API-Key: your-key" \
 ---
 
 如有问题随时沟通！
+
+
+---
+
+## 🔧 架构修复记录 (2025-12-09)
+
+### 发现的核心问题
+
+在实施过程中发现了一个**架构设计缺陷**：后台管理页面错误地复用了前台 Store 来加载数据。
+
+```
+错误的数据流：
+后台页面 → 前台 Store → 前台 API → 只返回 publishedData
+                                    ↓
+                              草稿数据丢失！
+```
+
+### 问题影响
+
+| 场景 | 预期行为 | 实际行为（修复前） |
+|-----|---------|------------------|
+| 保存草稿后刷新页面 | 显示草稿数据 | ❌ 显示已发布数据 |
+| 编辑-保存-稍后继续 | 能继续编辑草稿 | ❌ 草稿丢失 |
+
+### 修复方案
+
+**后台管理页面直接调用 Admin API，不经过前台 Store**
+
+```typescript
+// 修复后的数据加载模式
+const loadAdminData = async () => {
+  try {
+    const result = await adminApi.getList('product', { pageSize: 9999 })
+    localProducts.value = result.data.map(item => 
+      item.draftData || item.publishedData  // 优先使用草稿数据
+    )
+  } catch (e) {
+    // 降级到前台 Store
+    await productStore.loadProducts()
+    localProducts.value = [...productStore.products]
+  }
+}
+```
+
+### 修改的文件
+
+1. `src/views/admin/products/ProductsList.vue`
+2. `src/views/admin/brands/BrandsList.vue`
+3. `src/views/admin/promotions/PromotionsList.vue`
+4. `src/views/admin/banners/BannerManagement.vue`
+5. `src/views/admin/site/SiteInfo.vue`
+6. `src/views/admin/site/SiteContact.vue`
+
+### 测试验证结果
+
+| 模块 | 保存草稿 | 刷新保留草稿 | 发布 | 前台更新 |
+|------|---------|-------------|------|---------|
+| 产品列表 | ✅ | ✅ | ✅ | ✅ |
+| 品牌列表 | ✅ | ✅ | ✅ | ✅ |
+| 活动列表 | ✅ | ✅ | ✅ | ✅ |
+| 横幅设置 | ✅ | ✅ | ✅ | ✅ |
+| 网站配置 | ✅ | ✅ | ✅ | ✅ |
+| 关于我们 | ✅ | ✅ | ✅ | ✅ |
+
+### 最终架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     正确的数据流架构                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  前台展示页面                                                    │
+│       │                                                         │
+│       ▼                                                         │
+│  前台 Store → 前台 API → publishedData                          │
+│                                                                 │
+│  ═══════════════════════════════════════════════════════════   │
+│                                                                 │
+│  后台管理页面                                                    │
+│       │                                                         │
+│       ▼                                                         │
+│  Admin API → draftData || publishedData                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 系统状态
+
+✅ **CMS 系统已完全修复，可正常使用**
+
+详细测试记录见：`CMS发布功能测试记录.md`
+架构修复总结见：`CMS架构修复总结.md`
+
