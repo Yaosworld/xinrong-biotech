@@ -1,143 +1,295 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { useSiteStore } from '@/stores/siteStore'
 import { useAdminStore } from '@/stores/adminStore'
-import { ElMessage } from 'element-plus'
+import { adminApi } from '@/api/contentApi'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import VersionHistoryDialog from '../components/VersionHistoryDialog.vue'
 
 const siteStore = useSiteStore()
 const adminStore = useAdminStore()
 
-// 保存状态
-const isSaving = ref(false)
+// ==================== 状态管理 ====================
+// 编辑状态：'clean' | 'dirty' | 'saving' | 'publishing'
+type EditStatus = 'clean' | 'dirty' | 'saving' | 'publishing'
+const editStatus = ref<EditStatus>('clean')
+
+// 内容状态：'draft' | 'published' | 'unpublished'
+// draft: 有草稿未发布, published: 已发布且无更改, unpublished: 从未发布
+type ContentStatus = 'draft' | 'published' | 'unpublished'
+const contentStatus = ref<ContentStatus>('unpublished')
+
+// 版本历史
+const showVersionHistory = ref(false)
+const currentVersion = ref(1)
+const lastSavedAt = ref<Date | null>(null)
+const lastPublishedAt = ref<Date | null>(null)
 
 // 表单数据 - 公司信息
 const companyForm = ref({
-  name: '',
-  shortName: '',
-  englishName: '',
-  logo: ''
+  name: '', shortName: '', englishName: '', logo: ''
 })
 
 // 表单数据 - 联系信息
 const contactForm = ref({
-  phones: ['', ''],
-  email: '',
-  address: '',
-  wechatQrcode: '',
-  gzhQrcode: '',
-  workTime: ''
+  phones: ['', ''], email: '', address: '',
+  wechatQrcode: '', gzhQrcode: '', workTime: ''
 })
 
-// 表单数据 - 友情链接
+// 表单数据 - 友情链接 & 页脚链接
 const friendLinks = ref<{ name: string; url: string }[]>([])
-
-// 表单数据 - 页脚链接
 const footerLinks = ref<{ name: string; path: string }[]>([])
 
-// 原始数据
-const originalCompany = ref<typeof companyForm.value | null>(null)
-const originalContact = ref<typeof contactForm.value | null>(null)
-const originalFriendLinks = ref<typeof friendLinks.value | null>(null)
-const originalFooterLinks = ref<typeof footerLinks.value | null>(null)
+// 原始数据（用于检测变更和重置）
+const originalData = ref<string>('')
 
 // 预览模式
 const previewMode = ref<'footer' | 'floating' | 'contact'>('footer')
 
-// 加载数据
+// ==================== 计算属性 ====================
+// 当前表单数据的序列化（用于变更检测）
+const currentDataString = computed(() => JSON.stringify({
+  company: companyForm.value,
+  contact: contactForm.value,
+  friendLinks: friendLinks.value,
+  footerLinks: footerLinks.value
+}))
+
+// 是否有未保存的更改
+const hasUnsavedChanges = computed(() => 
+  originalData.value !== '' && currentDataString.value !== originalData.value
+)
+
+// 监听数据变化，自动更新编辑状态
+watch(currentDataString, () => {
+  if (editStatus.value !== 'saving' && editStatus.value !== 'publishing') {
+    editStatus.value = hasUnsavedChanges.value ? 'dirty' : 'clean'
+  }
+})
+
+// 状态标签配置
+const statusConfig = computed(() => {
+  // 优先显示编辑状态
+  if (editStatus.value === 'dirty') {
+    return { type: 'danger' as const, icon: 'fas fa-pen', text: '编辑中 · 未保存', pulse: true }
+  }
+  if (editStatus.value === 'saving') {
+    return { type: 'warning' as const, icon: 'fas fa-spinner fa-spin', text: '保存中...', pulse: false }
+  }
+  if (editStatus.value === 'publishing') {
+    return { type: 'warning' as const, icon: 'fas fa-spinner fa-spin', text: '发布中...', pulse: false }
+  }
+  // 显示内容状态
+  if (contentStatus.value === 'draft') {
+    return { type: 'warning' as const, icon: 'fas fa-file-alt', text: '草稿 · 待发布', pulse: false }
+  }
+  if (contentStatus.value === 'published') {
+    return { type: 'success' as const, icon: 'fas fa-check-circle', text: '已发布', pulse: false }
+  }
+  return { type: 'info' as const, icon: 'fas fa-file', text: '未发布', pulse: false }
+})
+
+const previewPhones = computed(() => contactForm.value.phones.filter(p => p.trim()))
+const validFriendLinks = computed(() => friendLinks.value.filter(l => l.name && l.url))
+
+// ==================== 数据加载 ====================
 const loadData = async () => {
-  await siteStore.loadSiteConfig()
-  
-  companyForm.value = {
-    name: siteStore.company.name,
-    shortName: siteStore.company.shortName,
-    englishName: siteStore.company.englishName,
-    logo: siteStore.company.logo
+  try {
+    const content = await adminApi.getOne('site_config', 'main')
+    const data = (content.draftData || content.publishedData || {}) as any
+    
+    companyForm.value = {
+      name: data.company?.name || '',
+      shortName: data.company?.shortName || '',
+      englishName: data.company?.englishName || '',
+      logo: data.company?.logo || ''
+    }
+    
+    contactForm.value = {
+      phones: data.contact?.phones ? [...data.contact.phones] : ['', ''],
+      email: data.contact?.email || '',
+      address: data.contact?.address || '',
+      wechatQrcode: data.contact?.wechatQrcode || '',
+      gzhQrcode: data.contact?.gzhQrcode || '',
+      workTime: data.contact?.workTime || ''
+    }
+    
+    friendLinks.value = data.friendLinks ? JSON.parse(JSON.stringify(data.friendLinks)) : []
+    footerLinks.value = data.footerLinks ? JSON.parse(JSON.stringify(data.footerLinks)) : []
+    
+    // 确保至少有2个电话字段
+    while (contactForm.value.phones.length < 2) {
+      contactForm.value.phones.push('')
+    }
+    
+    // 设置内容状态
+    const hasDraft = content.draftData !== null
+    const hasPublished = content.publishedData !== null
+    const draftDiffersFromPublished = hasDraft && hasPublished && 
+      JSON.stringify(content.draftData) !== JSON.stringify(content.publishedData)
+    
+    if (draftDiffersFromPublished || (hasDraft && !hasPublished)) {
+      contentStatus.value = 'draft'
+    } else if (hasPublished) {
+      contentStatus.value = 'published'
+    } else {
+      contentStatus.value = 'unpublished'
+    }
+    
+    currentVersion.value = content.version || 1
+    if (content.updatedAt) lastSavedAt.value = new Date(content.updatedAt)
+    
+    // 同步到 store
+    if (data.company) Object.assign(siteStore.company, data.company)
+    if (data.contact) siteStore.contact = data.contact
+    if (data.friendLinks) siteStore.friendLinks = data.friendLinks
+    if (data.footerLinks) siteStore.footerLinks = data.footerLinks
+    
+    // 保存原始数据快照
+    originalData.value = currentDataString.value
+    editStatus.value = 'clean'
+  } catch (e) {
+    console.warn('Admin API 加载失败，降级到前台 Store:', e)
+    await siteStore.loadSiteConfig()
+    
+    companyForm.value = { ...siteStore.company }
+    contactForm.value = {
+      phones: [...siteStore.contact.phones],
+      email: siteStore.contact.email,
+      address: siteStore.contact.address,
+      wechatQrcode: siteStore.contact.wechatQrcode,
+      gzhQrcode: siteStore.contact.gzhQrcode,
+      workTime: siteStore.contact.workTime
+    }
+    friendLinks.value = JSON.parse(JSON.stringify(siteStore.friendLinks))
+    footerLinks.value = JSON.parse(JSON.stringify(siteStore.footerLinks))
+    
+    while (contactForm.value.phones.length < 2) {
+      contactForm.value.phones.push('')
+    }
+    
+    originalData.value = currentDataString.value
+    contentStatus.value = 'unpublished'
+    editStatus.value = 'clean'
   }
-  
-  contactForm.value = {
-    phones: [...siteStore.contact.phones],
-    email: siteStore.contact.email,
-    address: siteStore.contact.address,
-    wechatQrcode: siteStore.contact.wechatQrcode,
-    gzhQrcode: siteStore.contact.gzhQrcode,
-    workTime: siteStore.contact.workTime
-  }
-  
-  friendLinks.value = JSON.parse(JSON.stringify(siteStore.friendLinks))
-  footerLinks.value = JSON.parse(JSON.stringify(siteStore.footerLinks))
-  
-  while (contactForm.value.phones.length < 2) {
-    contactForm.value.phones.push('')
-  }
-  
-  originalCompany.value = { ...companyForm.value }
-  originalContact.value = JSON.parse(JSON.stringify(contactForm.value))
-  originalFriendLinks.value = JSON.parse(JSON.stringify(friendLinks.value))
-  originalFooterLinks.value = JSON.parse(JSON.stringify(footerLinks.value))
 }
 
-// 添加电话
+// ==================== 操作方法 ====================
 const addPhone = () => { contactForm.value.phones.push('') }
 const removePhone = (index: number) => {
   if (contactForm.value.phones.length > 1) contactForm.value.phones.splice(index, 1)
 }
-
-// 添加友情链接
 const addFriendLink = () => { friendLinks.value.push({ name: '', url: '' }) }
 const removeFriendLink = (index: number) => { friendLinks.value.splice(index, 1) }
 
-// 保存数据
+const buildFullSiteConfig = () => {
+  const validPhones = contactForm.value.phones.filter(p => p.trim())
+  return {
+    company: companyForm.value,
+    contact: { ...contactForm.value, phones: validPhones },
+    friendLinks: friendLinks.value.filter(l => l.name && l.url),
+    footerLinks: footerLinks.value,
+    floatingPanel: siteStore.floatingPanel
+  }
+}
+
+// 保存草稿
 const saveData = async () => {
   try {
-    isSaving.value = true
+    editStatus.value = 'saving'
     
-    siteStore.company.name = companyForm.value.name
-    siteStore.company.shortName = companyForm.value.shortName
-    siteStore.company.englishName = companyForm.value.englishName
-    siteStore.company.logo = companyForm.value.logo
+    const fullConfig = buildFullSiteConfig()
+    await adminApi.saveDraft('site_config', 'main', fullConfig)
     
-    const validPhones = contactForm.value.phones.filter(p => p.trim())
-    siteStore.contact.phones = validPhones
-    siteStore.contact.email = contactForm.value.email
-    siteStore.contact.address = contactForm.value.address
-    siteStore.contact.wechatQrcode = contactForm.value.wechatQrcode
-    siteStore.contact.gzhQrcode = contactForm.value.gzhQrcode
-    siteStore.contact.workTime = contactForm.value.workTime
-    
-    siteStore.friendLinks.splice(0, siteStore.friendLinks.length, ...friendLinks.value.filter(l => l.name && l.url))
+    // 更新 store
+    Object.assign(siteStore.company, companyForm.value)
+    Object.assign(siteStore.contact, fullConfig.contact)
+    siteStore.friendLinks.splice(0, siteStore.friendLinks.length, ...fullConfig.friendLinks)
     siteStore.footerLinks.splice(0, siteStore.footerLinks.length, ...footerLinks.value)
     
-    originalCompany.value = { ...companyForm.value }
-    originalContact.value = JSON.parse(JSON.stringify(contactForm.value))
-    originalFriendLinks.value = JSON.parse(JSON.stringify(friendLinks.value))
-    originalFooterLinks.value = JSON.parse(JSON.stringify(footerLinks.value))
+    // 更新状态
+    originalData.value = currentDataString.value
+    lastSavedAt.value = new Date()
+    contentStatus.value = 'draft'
+    editStatus.value = 'clean'
     
-    adminStore.addActivity({ type: 'modify', target: 'site-settings', description: '修改了网站设置' })
-    ElMessage.success('保存成功')
+    adminStore.addActivity({ type: 'modify', target: 'site-settings', description: '保存了网站设置草稿' })
+    ElMessage.success('草稿已保存')
   } catch (error) {
+    editStatus.value = hasUnsavedChanges.value ? 'dirty' : 'clean'
     ElMessage.error('保存失败')
-  } finally {
-    isSaving.value = false
+    console.error(error)
+  }
+}
+
+// 发布数据
+const showPublishDialog = ref(false)
+const publishSummary = ref('')
+
+const openPublishDialog = async () => {
+  // 如果有未保存的更改，先提示保存
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm(
+        '您有未保存的更改，发布前需要先保存。是否继续？',
+        '提示',
+        { confirmButtonText: '保存并发布', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch { return }
+  }
+  
+  publishSummary.value = ''
+  showPublishDialog.value = true
+}
+
+const publishData = async () => {
+  try {
+    editStatus.value = 'publishing'
+    showPublishDialog.value = false
+    
+    const fullConfig = buildFullSiteConfig()
+    await adminApi.saveDraft('site_config', 'main', fullConfig)
+    const result = await adminApi.publish('site_config', 'main', publishSummary.value || undefined)
+    
+    // 更新状态和版本号
+    originalData.value = currentDataString.value
+    lastPublishedAt.value = new Date()
+    currentVersion.value = result.version  // 更新版本号
+    contentStatus.value = 'published'
+    editStatus.value = 'clean'
+    siteStore.clearCache()
+    
+    adminStore.addActivity({ type: 'modify', target: 'site-settings', description: `发布了网站设置 v${result.version}` })
+    ElMessage.success(`发布成功！当前版本 v${result.version}`)
+  } catch (error) {
+    editStatus.value = hasUnsavedChanges.value ? 'dirty' : 'clean'
+    ElMessage.error('发布失败')
+    console.error(error)
   }
 }
 
 // 重置数据
-const resetData = () => {
-  if (originalCompany.value) companyForm.value = { ...originalCompany.value }
-  if (originalContact.value) contactForm.value = JSON.parse(JSON.stringify(originalContact.value))
-  if (originalFriendLinks.value) friendLinks.value = JSON.parse(JSON.stringify(originalFriendLinks.value))
-  if (originalFooterLinks.value) footerLinks.value = JSON.parse(JSON.stringify(originalFooterLinks.value))
-  ElMessage.info('已重置为上次保存的内容')
+const resetData = async () => {
+  if (!hasUnsavedChanges.value) {
+    ElMessage.info('没有需要重置的更改')
+    return
+  }
+  
+  try {
+    await ElMessageBox.confirm(
+      '确定要放弃当前的更改吗？',
+      '确认重置',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+    await loadData()
+    ElMessage.success('已重置为上次保存的内容')
+  } catch {}
 }
 
 // 导出配置
 const exportConfig = () => {
-  const data = JSON.stringify({
-    company: siteStore.company,
-    contact: siteStore.contact,
-    friendLinks: friendLinks.value,
-    footerLinks: footerLinks.value
-  }, null, 2)
+  const data = JSON.stringify(buildFullSiteConfig(), null, 2)
   const blob = new Blob([data], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -148,16 +300,53 @@ const exportConfig = () => {
   adminStore.addActivity({ type: 'download', target: 'site-settings', description: '导出了网站配置' })
 }
 
+// 版本回滚
+const handleVersionRollback = async () => {
+  await loadData()
+  ElMessage.info('数据已回滚，请检查后重新发布')
+}
+
 const getImageUrl = (url: string) => {
   if (!url) return ''
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   return url.startsWith('/') ? url : `/${url}`
 }
 
-const previewPhones = computed(() => contactForm.value.phones.filter(p => p.trim()))
-const validFriendLinks = computed(() => friendLinks.value.filter(l => l.name && l.url))
+// ==================== 离开页面保护 ====================
+// 浏览器关闭/刷新保护
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (hasUnsavedChanges.value) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
 
-onMounted(() => { loadData() })
+// 路由离开保护
+onBeforeRouteLeave(async (_to, _from, next) => {
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm(
+        '您有未保存的更改，确定要离开吗？',
+        '提示',
+        { confirmButtonText: '离开', cancelButtonText: '留下', type: 'warning' }
+      )
+      next()
+    } catch {
+      next(false)
+    }
+  } else {
+    next()
+  }
+})
+
+onMounted(() => {
+  loadData()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
 </script>
 
 <template>
@@ -169,9 +358,36 @@ onMounted(() => { loadData() })
         <span class="subtitle">管理公司信息、联系方式和友情链接</span>
       </div>
       <div class="header-right">
-        <el-button @click="resetData"><i class="fas fa-undo mr-1"></i> 重置</el-button>
-        <el-button @click="exportConfig"><i class="fas fa-download mr-1"></i> 导出</el-button>
-        <el-button type="primary" :loading="isSaving" @click="saveData"><i class="fas fa-save mr-1"></i> 保存</el-button>
+        <!-- 状态标签 -->
+        <el-tag :type="statusConfig.type" size="small" :class="['status-tag', { pulse: statusConfig.pulse }]">
+          <i :class="statusConfig.icon" class="mr-1"></i> {{ statusConfig.text }}
+        </el-tag>
+        <el-tag type="info" size="small" class="version-tag">v{{ currentVersion }}</el-tag>
+        
+        <el-button @click="showVersionHistory = true" :disabled="editStatus === 'saving' || editStatus === 'publishing'">
+          <i class="fas fa-history mr-1"></i> 版本历史
+        </el-button>
+        <el-button @click="resetData" :disabled="!hasUnsavedChanges || editStatus === 'saving' || editStatus === 'publishing'">
+          <i class="fas fa-undo mr-1"></i> 重置
+        </el-button>
+        <el-button @click="exportConfig">
+          <i class="fas fa-download mr-1"></i> 导出
+        </el-button>
+        <el-button 
+          :loading="editStatus === 'saving'" 
+          :disabled="!hasUnsavedChanges || editStatus === 'publishing'"
+          @click="saveData"
+        >
+          <i class="fas fa-save mr-1"></i> 保存草稿
+        </el-button>
+        <el-button 
+          type="primary" 
+          :loading="editStatus === 'publishing'" 
+          :disabled="editStatus === 'saving'"
+          @click="openPublishDialog"
+        >
+          <i class="fas fa-cloud-upload-alt mr-1"></i> 发布
+        </el-button>
       </div>
     </div>
 
@@ -307,11 +523,10 @@ onMounted(() => { loadData() })
           </div>
         </div>
         
-        <!-- 页脚预览 - 匹配 AppFooter -->
+        <!-- 页脚预览 -->
         <div v-if="previewMode === 'footer'" class="preview-content footer-preview">
           <div class="mock-footer">
             <div class="footer-main">
-              <!-- 公司信息 -->
               <div class="footer-company">
                 <div class="company-header">
                   <div class="company-logo">
@@ -340,14 +555,10 @@ onMounted(() => { loadData() })
                   </div>
                 </div>
               </div>
-              <!-- 网站服务 -->
               <div class="footer-links">
                 <h4>网站服务</h4>
-                <ul>
-                  <li v-for="link in footerLinks" :key="link.name">{{ link.name }}</li>
-                </ul>
+                <ul><li v-for="link in footerLinks" :key="link.name">{{ link.name }}</li></ul>
               </div>
-              <!-- 友情链接 -->
               <div class="footer-links">
                 <h4>友情链接</h4>
                 <ul>
@@ -355,28 +566,22 @@ onMounted(() => { loadData() })
                   <li v-if="validFriendLinks.length === 0" class="empty">暂无</li>
                 </ul>
               </div>
-              <!-- 联系我们 -->
               <div class="footer-contact">
                 <h4>联系我们</h4>
                 <div class="contact-item" v-for="phone in previewPhones" :key="phone">
                   <i class="fas fa-phone-alt"></i><span>{{ phone }}</span>
                 </div>
-                <div class="contact-item">
-                  <i class="fas fa-envelope"></i><span>{{ contactForm.email || 'email@example.com' }}</span>
-                </div>
-                <div class="contact-item">
-                  <i class="fas fa-map-marker-alt"></i><span>{{ contactForm.address || '公司地址' }}</span>
-                </div>
+                <div class="contact-item"><i class="fas fa-envelope"></i><span>{{ contactForm.email || 'email@example.com' }}</span></div>
+                <div class="contact-item"><i class="fas fa-map-marker-alt"></i><span>{{ contactForm.address || '公司地址' }}</span></div>
               </div>
             </div>
             <div class="footer-copyright">© {{ new Date().getFullYear() }} {{ companyForm.name || '公司名称' }} 版权所有</div>
           </div>
         </div>
 
-        <!-- 悬浮面板预览 - 横向4个按钮 -->
+        <!-- 悬浮面板预览 -->
         <div v-if="previewMode === 'floating'" class="preview-content floating-preview">
           <div class="floating-panel-row">
-            <!-- 电话 -->
             <div class="float-group">
               <div class="float-item phone">📞</div>
               <div class="float-tooltip">
@@ -387,7 +592,6 @@ onMounted(() => { loadData() })
                 </div>
               </div>
             </div>
-            <!-- 邮箱 -->
             <div class="float-group">
               <div class="float-item email">✉️</div>
               <div class="float-tooltip">
@@ -395,7 +599,6 @@ onMounted(() => { loadData() })
                 <div>{{ contactForm.email || 'email@example.com' }}</div>
               </div>
             </div>
-            <!-- 微信 -->
             <div class="float-group">
               <div class="float-item social">💬</div>
               <div class="float-tooltip">
@@ -406,7 +609,6 @@ onMounted(() => { loadData() })
                 </div>
               </div>
             </div>
-            <!-- 返回顶部 -->
             <div class="float-group">
               <div class="float-item top">⬆️</div>
               <div class="float-tooltip">
@@ -417,48 +619,34 @@ onMounted(() => { loadData() })
           </div>
         </div>
 
-        <!-- 联系弹窗预览 - 匹配 ContactModal -->
+        <!-- 联系弹窗预览 -->
         <div v-if="previewMode === 'contact'" class="preview-content contact-preview">
           <div class="mock-modal">
             <div class="modal-body">
               <div class="contact-cards">
-                <!-- 微信客服 -->
                 <div class="contact-card">
                   <div class="card-header">
                     <div class="card-icon green"><i class="fab fa-weixin"></i></div>
-                    <div class="card-text">
-                      <h4>微信客服</h4>
-                      <p>扫码添加专属客服</p>
-                    </div>
+                    <div class="card-text"><h4>微信客服</h4><p>扫码添加专属客服</p></div>
                   </div>
                   <div class="card-qr">
                     <img v-if="contactForm.wechatQrcode" :src="getImageUrl(contactForm.wechatQrcode)" />
                     <i v-else class="fab fa-weixin"></i>
                   </div>
                 </div>
-                <!-- 电话咨询 -->
                 <div class="contact-card">
                   <div class="card-header">
                     <div class="card-icon blue"><i class="fas fa-phone-alt"></i></div>
-                    <div class="card-text">
-                      <h4>电话咨询</h4>
-                      <p>欢迎致电咨询</p>
-                    </div>
+                    <div class="card-text"><h4>电话咨询</h4><p>欢迎致电咨询</p></div>
                   </div>
                   <div class="card-phones">
-                    <div v-for="phone in previewPhones" :key="phone" class="phone-box">
-                      <i class="fas fa-mobile-alt"></i><span>{{ phone }}</span>
-                    </div>
+                    <div v-for="phone in previewPhones" :key="phone" class="phone-box"><i class="fas fa-mobile-alt"></i><span>{{ phone }}</span></div>
                   </div>
                 </div>
-                <!-- 邮件咨询 -->
                 <div class="contact-card">
                   <div class="card-header">
                     <div class="card-icon orange"><i class="fas fa-envelope"></i></div>
-                    <div class="card-text">
-                      <h4>邮件咨询</h4>
-                      <p>商务合作与建议反馈</p>
-                    </div>
+                    <div class="card-text"><h4>邮件咨询</h4><p>商务合作与建议反馈</p></div>
                   </div>
                   <div class="card-email">
                     <div class="email-box"><i class="fas fa-at"></i><span>{{ contactForm.email || 'email@example.com' }}</span></div>
@@ -470,9 +658,49 @@ onMounted(() => { loadData() })
         </div>
       </div>
     </div>
+    
+    <!-- 版本历史对话框 -->
+    <VersionHistoryDialog
+      v-model:visible="showVersionHistory"
+      content-type="site_config"
+      content-key="main"
+      title="网站配置 - 版本历史"
+      @rollback="handleVersionRollback"
+    />
+    
+    <!-- 发布确认对话框 -->
+    <el-dialog
+      v-model="showPublishDialog"
+      title="发布确认"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div class="publish-dialog-content">
+        <div class="publish-info">
+          <i class="fas fa-info-circle"></i>
+          <span>发布后前台页面将立即更新，当前版本 v{{ currentVersion }} 将升级为 v{{ currentVersion + 1 }}</span>
+        </div>
+        <div class="publish-form">
+          <label>变更说明（可选）</label>
+          <el-input
+            v-model="publishSummary"
+            type="textarea"
+            :rows="3"
+            placeholder="简要描述本次发布的主要变更，方便日后回滚时识别版本..."
+            maxlength="200"
+            show-word-limit
+          />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showPublishDialog = false">取消</el-button>
+        <el-button type="primary" @click="publishData" :loading="editStatus === 'publishing'">
+          <i class="fas fa-cloud-upload-alt mr-1"></i> 确认发布
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
-
 
 <style scoped>
 .site-settings {
@@ -503,7 +731,19 @@ onMounted(() => { loadData() })
 
 .header-left h2 i { color: #667eea; }
 .subtitle { display: block; margin-top: 4px; font-size: 13px; color: #999; }
-.header-right { display: flex; gap: 8px; }
+.header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* 状态标签样式 */
+.status-tag { margin-right: 4px; }
+.status-tag.pulse {
+  animation: pulse-animation 1.5s infinite;
+}
+@keyframes pulse-animation {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.version-tag { margin-right: 8px; }
+
 .content-area { padding: 20px 24px; }
 
 /* 左右分栏布局 */
@@ -514,23 +754,9 @@ onMounted(() => { loadData() })
   margin-bottom: 24px;
 }
 
-.left-panels {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.right-panel {
-  display: flex;
-  flex-direction: column;
-}
-
-.edit-panel {
-  border: 1px solid #e8e8e8;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
+.left-panels { display: flex; flex-direction: column; gap: 16px; }
+.right-panel { display: flex; flex-direction: column; }
+.edit-panel { border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
 .edit-panel.full-height { flex: 1; }
 
 .panel-header {
@@ -620,7 +846,7 @@ onMounted(() => { loadData() })
 .footer-contact .contact-item i { margin-top: 2px; font-size: 9px; }
 .footer-copyright { background: rgba(0,0,0,0.3); padding: 10px; text-align: center; font-size: 10px; color: rgba(255,255,255,0.5); }
 
-/* 悬浮面板预览 - 横向排列 */
+/* 悬浮面板预览 */
 .floating-preview { display: flex; justify-content: center; align-items: center; }
 .floating-panel-row { display: flex; gap: 40px; align-items: flex-start; }
 .float-group { display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -637,16 +863,10 @@ onMounted(() => { loadData() })
 .tooltip-qr img { width: 100%; height: 100%; object-fit: contain; }
 .tooltip-qr i { font-size: 32px; color: #07c160; }
 
-/* 联系弹窗预览 - 匹配 ContactModal */
+/* 联系弹窗预览 */
 .contact-preview { display: flex; justify-content: center; align-items: flex-start; padding: 20px; }
 .mock-modal { background: #fff; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); width: 100%; max-width: 700px; overflow: hidden; }
-.modal-header { text-align: center; padding: 32px 24px 20px; }
-.header-icon { width: 56px; height: 56px; background: #eff6ff; color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px; }
-.modal-header h3 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0 0 8px; }
-.modal-header p { color: #6b7280; font-size: 13px; margin: 0; }
-.work-time-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 16px; background: #f3f4f6; border-radius: 999px; color: #4b5563; font-size: 12px; }
-.work-time-badge i { color: #3b82f6; }
-.modal-body { padding: 16px 24px 32px; }
+.modal-body { padding: 24px; }
 .contact-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .contact-card { background: #fff; border: 1px solid #f3f4f6; border-radius: 16px; padding: 20px 16px; text-align: center; transition: all 0.3s; }
 .contact-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
@@ -658,7 +878,7 @@ onMounted(() => { loadData() })
 .card-text { text-align: left; }
 .card-text h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: #1f2937; }
 .card-text p { margin: 0; font-size: 11px; color: #9ca3af; }
-.card-qr { width: 80px; height: 80px; margin: 0 auto; padding: 4px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
+.card-qr { width: 80px; height: 80px; margin: 0 auto; padding: 4px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; }
 .card-qr img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
 .card-qr i { font-size: 40px; color: #07c160; }
 .card-phones { display: flex; flex-direction: column; gap: 8px; }
@@ -670,6 +890,43 @@ onMounted(() => { loadData() })
 
 .mr-1 { margin-right: 4px; }
 .mt-4 { margin-top: 16px; }
+
+/* 发布对话框 */
+.publish-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.publish-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  color: #0369a1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.publish-info i {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.publish-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.publish-form label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
 
 @media (max-width: 1200px) {
   .edit-area-split { grid-template-columns: 1fr; }

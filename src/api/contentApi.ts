@@ -171,10 +171,13 @@ export const adminApi = {
 
   /**
    * 发布单条
+   * @param changeSummary 变更说明（可选）
    */
-  async publish(contentType: string, contentKey: string): Promise<{ version: number }> {
+  async publish(contentType: string, contentKey: string, changeSummary?: string): Promise<{ version: number }> {
     const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}/publish`, {
-      method: 'POST'
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ changeSummary })
     })
     if (!res.ok) throw new Error('发布失败')
     return res.json()

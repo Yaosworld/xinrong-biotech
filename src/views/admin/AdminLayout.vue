@@ -8,18 +8,50 @@ const router = useRouter()
 // 侧边栏折叠状态
 const sidebarCollapsed = ref(false)
 
-// 菜单配置 - 简化结构，所有页面统一管理
-const menuItems = [
+// 菜单配置 - 支持子菜单
+interface MenuItem {
+  id: string
+  title: string
+  icon: string
+  path?: string
+  children?: { id: string; title: string; path: string }[]
+}
+
+const menuItems: MenuItem[] = [
   { id: 'banners', title: '横幅设置', icon: 'fas fa-image', path: '/admin/banners' },
   { id: 'products', title: '产品管理', icon: 'fas fa-box', path: '/admin/products/list' },
   { id: 'brands', title: '品牌管理', icon: 'fas fa-award', path: '/admin/brands/list' },
   { id: 'promotions', title: '活动管理', icon: 'fas fa-bullhorn', path: '/admin/promotions/list' },
   { id: 'about', title: '关于我们', icon: 'fas fa-info-circle', path: '/admin/about/content' },
-  { id: 'site', title: '网站信息', icon: 'fas fa-cog', path: '/admin/site/settings' }
+  { id: 'site', title: '网站设置', icon: 'fas fa-cog', path: '/admin/site/settings' }
 ]
+
+// 展开的子菜单
+const expandedMenus = ref<string[]>(['site'])
 
 // 判断路由是否激活
 const isActive = (path: string) => route.path === path
+
+// 判断菜单组是否激活
+const isGroupActive = (item: MenuItem) => {
+  if (item.children) {
+    return item.children.some(child => route.path === child.path)
+  }
+  return route.path === item.path
+}
+
+// 切换子菜单展开状态
+const toggleSubmenu = (id: string) => {
+  const index = expandedMenus.value.indexOf(id)
+  if (index > -1) {
+    expandedMenus.value.splice(index, 1)
+  } else {
+    expandedMenus.value.push(id)
+  }
+}
+
+// 判断子菜单是否展开
+const isExpanded = (id: string) => expandedMenus.value.includes(id)
 
 // 导航到指定路由
 const navigateTo = (path: string) => {
@@ -38,8 +70,18 @@ const toggleSidebar = () => {
 
 // 当前页面标题
 const currentPageTitle = computed(() => {
-  const item = menuItems.find(m => m.path === route.path)
-  return item?.title || '后台管理'
+  for (const item of menuItems) {
+    if (item.path === route.path) {
+      return item.title
+    }
+    if (item.children) {
+      const child = item.children.find(c => c.path === route.path)
+      if (child) {
+        return `${item.title} - ${child.title}`
+      }
+    }
+  }
+  return '后台管理'
 })
 </script>
 
@@ -73,16 +115,41 @@ const currentPageTitle = computed(() => {
         </div>
 
         <nav class="sidebar-nav">
-          <div
-            v-for="item in menuItems"
-            :key="item.id"
-            class="nav-item"
-            :class="{ active: isActive(item.path) }"
-            @click="navigateTo(item.path)"
-          >
-            <i :class="item.icon"></i>
-            <span v-if="!sidebarCollapsed">{{ item.title }}</span>
-          </div>
+          <template v-for="item in menuItems" :key="item.id">
+            <!-- 有子菜单的项 -->
+            <template v-if="item.children">
+              <div
+                class="nav-item has-children"
+                :class="{ active: isGroupActive(item), expanded: isExpanded(item.id) }"
+                @click="toggleSubmenu(item.id)"
+              >
+                <i :class="item.icon"></i>
+                <span v-if="!sidebarCollapsed">{{ item.title }}</span>
+                <i v-if="!sidebarCollapsed" class="fas fa-chevron-down arrow"></i>
+              </div>
+              <div v-if="!sidebarCollapsed && isExpanded(item.id)" class="submenu">
+                <div
+                  v-for="child in item.children"
+                  :key="child.id"
+                  class="nav-item submenu-item"
+                  :class="{ active: isActive(child.path) }"
+                  @click.stop="navigateTo(child.path)"
+                >
+                  <span>{{ child.title }}</span>
+                </div>
+              </div>
+            </template>
+            <!-- 无子菜单的项 -->
+            <div
+              v-else
+              class="nav-item"
+              :class="{ active: isActive(item.path!) }"
+              @click="navigateTo(item.path!)"
+            >
+              <i :class="item.icon"></i>
+              <span v-if="!sidebarCollapsed">{{ item.title }}</span>
+            </div>
+          </template>
         </nav>
       </aside>
 
@@ -285,6 +352,47 @@ const currentPageTitle = computed(() => {
 .nav-item.active {
   color: #fff;
   background: #667eea;
+}
+
+/* 有子菜单的项 */
+.nav-item.has-children {
+  position: relative;
+}
+
+.nav-item.has-children .arrow {
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform 0.3s;
+}
+
+.nav-item.has-children.expanded .arrow {
+  transform: rotate(180deg);
+}
+
+/* 子菜单 */
+.submenu {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.submenu-item {
+  padding-left: 52px !important;
+  font-size: 13px;
+}
+
+.submenu-item::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  position: absolute;
+  left: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.submenu-item.active::before {
+  background: #fff;
 }
 
 /* 内容区域 */

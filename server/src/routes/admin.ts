@@ -77,7 +77,8 @@ router.put('/content/:type/batch-draft', (req: Request, res: Response) => {
 router.post('/content/:type/:key/publish', (req: Request, res: Response) => {
   try {
     const { type, key } = req.params
-    const version = contentService.publish(type, key)
+    const { changeSummary } = req.body || {}
+    const version = contentService.publish(type, key, changeSummary)
     res.json({ success: true, version })
   } catch (e) {
     res.status(500).json({ error: (e as Error).message })

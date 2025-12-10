@@ -3356,88 +3356,314 @@ curl -X POST -H "X-API-Key: your-key" \
 
 ### 发现的核心问题
 
-在实施过程中发现了一个**架构设计缺陷**：后台管理页面错误地复用了前台 Store 来加载数据。
+经过完整测试，发现了一个**架构设计缺陷**：后台管理页面错误地复用了前台 Store 来加载数据。
 
 ```
-错误的数据流：
-后台页面 → 前台 Store → 前台 API → 只返回 publishedData
-                                    ↓
-                              草稿数据丢失！
+┌─────────────────────────────────────────────────────────────────┐
+│                     问题：数据加载来源错误                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  错误的数据流（修复前）：                                         │
+│                                                                 │
+│  后台管理页面                                                    │
+│       │                                                         │
+│       ▼                                                         │
+│  前台 Store (productStore, brandStore, etc.)                    │
+│       │                                                         │
+│       ▼                                                         │
+│  前台 API (contentApi.getAllPublished)                          │
+│       │                                                         │
+│       ▼                                                         │
+│  只返回 publishedData ← ❌ 草稿数据丢失！                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### 问题根因分析
+
+1. **后台页面复用了前台 Store**
+   - 前台 Store 设计用于展示已发布数据
+   - 后台页面错误地使用前台 Store 加载数据
+   - 前台 Store 调用的是 `contentApi.getAllPublished()`，只返回已发布数据
+
+2. **架构设计未区分前后台数据源**
+   - 前台需要：已发布数据 (publishedData)
+   - 后台需要：草稿数据优先 (draftData || publishedData)
+   - 两者混用导致问题
 
 ### 问题影响
 
 | 场景 | 预期行为 | 实际行为（修复前） |
 |-----|---------|------------------|
-| 保存草稿后刷新页面 | 显示草稿数据 | ❌ 显示已发布数据 |
-| 编辑-保存-稍后继续 | 能继续编辑草稿 | ❌ 草稿丢失 |
+| 保存草稿后刷新页面 | 显示草稿数据 | ❌ 显示已发布数据，草稿丢失 |
+| 编辑-保存-稍后继续 | 能继续编辑草稿 | ❌ 无法继续，草稿丢失 |
+| 发布后前台更新 | 前台显示新数据 | ✅ 刷新后正常（缓存问题） |
 
 ### 修复方案
 
-**后台管理页面直接调用 Admin API，不经过前台 Store**
-
-```typescript
-// 修复后的数据加载模式
-const loadAdminData = async () => {
-  try {
-    const result = await adminApi.getList('product', { pageSize: 9999 })
-    localProducts.value = result.data.map(item => 
-      item.draftData || item.publishedData  // 优先使用草稿数据
-    )
-  } catch (e) {
-    // 降级到前台 Store
-    await productStore.loadProducts()
-    localProducts.value = [...productStore.products]
-  }
-}
-```
-
-### 修改的文件
-
-1. `src/views/admin/products/ProductsList.vue`
-2. `src/views/admin/brands/BrandsList.vue`
-3. `src/views/admin/promotions/PromotionsList.vue`
-4. `src/views/admin/banners/BannerManagement.vue`
-5. `src/views/admin/site/SiteInfo.vue`
-6. `src/views/admin/site/SiteContact.vue`
-
-### 测试验证结果
-
-| 模块 | 保存草稿 | 刷新保留草稿 | 发布 | 前台更新 |
-|------|---------|-------------|------|---------|
-| 产品列表 | ✅ | ✅ | ✅ | ✅ |
-| 品牌列表 | ✅ | ✅ | ✅ | ✅ |
-| 活动列表 | ✅ | ✅ | ✅ | ✅ |
-| 横幅设置 | ✅ | ✅ | ✅ | ✅ |
-| 网站配置 | ✅ | ✅ | ✅ | ✅ |
-| 关于我们 | ✅ | ✅ | ✅ | ✅ |
-
-### 最终架构
+**核心思路：后台管理页面直接调用 Admin API，不经过前台 Store**
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     正确的数据流架构                             │
+│                     正确的数据流（修复后）                        │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  前台展示页面                                                    │
-│       │                                                         │
-│       ▼                                                         │
-│  前台 Store → 前台 API → publishedData                          │
-│                                                                 │
-│  ═══════════════════════════════════════════════════════════   │
 │                                                                 │
 │  后台管理页面                                                    │
 │       │                                                         │
 │       ▼                                                         │
-│  Admin API → draftData || publishedData                         │
+│  Admin API (adminApi.getList / adminApi.getOne)                 │
+│       │                                                         │
+│       ▼                                                         │
+│  返回 { draftData, publishedData, ... }                         │
+│       │                                                         │
+│       ▼                                                         │
+│  优先使用 draftData || publishedData ← ✅ 草稿数据保留！         │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 系统状态
+### 修复代码模式
 
-✅ **CMS 系统已完全修复，可正常使用**
+```typescript
+// ========================================
+// 修复前（错误）
+// ========================================
+onMounted(async () => {
+  await productStore.loadProducts()  // 从前台 API 加载
+  // productStore 内部调用 contentApi.getAllPublished('product')
+  // 只返回已发布数据，草稿丢失
+})
 
-详细测试记录见：`CMS发布功能测试记录.md`
-架构修复总结见：`CMS架构修复总结.md`
+// ========================================
+// 修复后（正确）
+// ========================================
+const localProducts = ref<Product[]>([])
+
+const loadAdminData = async () => {
+  try {
+    // 直接调用 Admin API
+    const result = await adminApi.getList('product', { pageSize: 9999 })
+    // 优先使用草稿数据
+    localProducts.value = result.data.map(item => 
+      item.draftData || item.publishedData
+    )
+  } catch (e) {
+    // 降级到前台 Store（API 不可用时）
+    await productStore.loadProducts()
+    localProducts.value = [...productStore.products]
+  }
+}
+
+onMounted(async () => {
+  await loadAdminData()
+})
+```
+
+### 修改的文件清单
+
+| 文件 | 修改内容 |
+|------|---------|
+| `src/views/admin/products/ProductsList.vue` | 添加 `localProducts` ref，从 Admin API 加载数据 |
+| `src/views/admin/brands/BrandsList.vue` | 添加 `localBrands` ref，从 Admin API 加载数据 |
+| `src/views/admin/promotions/PromotionsList.vue` | 添加 `localPromotions` ref，从 Admin API 加载数据 |
+| `src/views/admin/banners/BannerManagement.vue` | 修改 `loadData()` 从 Admin API 加载，自动检测未发布更改 |
+| `src/views/admin/site/SiteInfo.vue` | 修改 `loadData()` 从 Admin API 加载，同步数据到 store |
+| `src/views/admin/site/SiteContact.vue` | 修改 `loadData()` 从 Admin API 加载，同步数据到 store |
+| `src/views/admin/about/AboutContent.vue` | **无需修改** - 原本就正确使用 `adminApi.getOne()` |
+
+---
+
+## 📊 功能测试验证结果
+
+### 测试日期：2025-12-09
+
+### 功能测试矩阵
+
+| 模块 | 保存草稿 | 刷新保留草稿 | 发布 | 前台更新 |
+|------|---------|-------------|------|---------|
+| 产品列表 | ✅ | ✅ | ✅ | ✅ (刷新后) |
+| 品牌列表 | ✅ | ✅ | ✅ | ✅ (刷新后) |
+| 活动列表 | ✅ | ✅ | ✅ | ✅ (刷新后) |
+| 横幅设置 | ✅ | ✅ | ✅ | ✅ (刷新后) |
+| 网站基本信息 | ✅ | ✅ | ✅ | ✅ (刷新后) |
+| 联系方式 | ✅ | ✅ | ✅ | ✅ (刷新后) |
+| 关于我们 | ✅ | ✅ | ✅ | ✅ (刷新后) |
+
+### 后端 API 测试结果
+
+| API | 功能 | 状态 |
+|-----|------|------|
+| GET /api/admin/content/:type | 获取后台列表 | ✅ |
+| GET /api/admin/content/:type/:key | 获取单条详情 | ✅ |
+| PUT /api/admin/content/:type/:key/draft | 保存草稿 | ✅ |
+| POST /api/admin/content/:type/:key/publish | 发布 | ✅ |
+| GET /api/content/:type/published | 获取前台列表 | ✅ |
+| GET /api/content/:type/:key/published | 获取前台单条 | ✅ |
+
+### 各模块详细测试记录
+
+#### 横幅设置 (BannerManagement.vue)
+
+| 场景 | 测试结果 |
+|------|---------|
+| 保存草稿 API | ✅ 草稿数据正确保存到 draftData 字段 |
+| 草稿不影响前台 | ✅ 前台 API 返回旧的已发布数据 |
+| 发布 API | ✅ 发布成功，版本号递增 |
+| 发布后前台更新 | ✅ 前台 API 返回新发布的数据 |
+| 刷新后草稿保留 | ✅ 正确显示草稿数据（修复后） |
+
+#### 产品列表 (ProductsList.vue)
+
+| 场景 | 测试结果 |
+|------|---------|
+| 从 Admin API 加载 | ✅ 正确加载包含草稿的数据 |
+| 编辑产品 | ✅ 弹出编辑面板，修改后正常显示 |
+| 保存草稿 | ✅ API 调用成功，显示"有未发布的更改" |
+| 刷新后草稿保留 | ✅ 正确显示草稿数据（修复后） |
+| 发布后前台更新 | ✅ 刷新后显示新数据 |
+| Excel 导入 | ✅ 正常导入 |
+
+#### 品牌列表 (BrandsList.vue)
+
+| 场景 | 测试结果 |
+|------|---------|
+| 分类切换（自主/代理） | ✅ 正确筛选品牌 |
+| 排序功能 | ✅ 上移/下移正常工作 |
+| 保存草稿 | ✅ 排序保存到后端 |
+| 刷新后草稿保留 | ✅ 正确显示草稿数据（修复后） |
+| 发布后前台更新 | ✅ 排序生效 |
+
+#### 网站配置 (SiteInfo.vue / SiteContact.vue)
+
+| 场景 | 测试结果 |
+|------|---------|
+| 从 Admin API 加载 | ✅ 正确加载包含草稿的数据 |
+| 编辑/取消 | ✅ 表单变为可编辑状态，取消恢复原数据 |
+| 保存草稿 | ✅ 草稿不影响前台显示 |
+| 刷新后草稿保留 | ✅ 正确显示草稿数据（修复后） |
+| 发布后前台更新 | ✅ 页脚/悬浮面板显示新数据 |
+
+---
+
+## ⚠️ 已知限制
+
+### 1. 前台缓存问题
+
+**现象**：发布后前台页面不刷新的情况下看不到新数据
+
+**原因**：
+- 前台 Store 有 `loaded` 标志，一旦加载过就不会重新加载
+- 发布后调用 `clearCache()` 只清除当前标签页的 Store
+- 前台页面是独立标签页，有自己的 Store 实例
+
+**解决方案**：
+- 短期：发布成功后提示用户刷新前台页面
+- 长期：使用 BroadcastChannel 或 WebSocket 实现跨标签页通信
+
+### 2. 删除功能
+
+**现状**：当前删除只是从本地数组移除，保存草稿时会同步到后端
+
+**建议**：如需真正删除，应调用 `adminApi.delete()` API
+
+---
+
+## 🏗️ 最终数据流架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           CMS 数据流架构                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                        前台展示页面                              │   │
+│  │  ProductCenter, BrandCenter, PromotionCenter, AboutPage, etc.   │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                        前台 Store                                │   │
+│  │  productStore, brandStore, promotionStore, aboutStore, etc.     │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                        前台 API                                  │   │
+│  │  contentApi.getPublishedList() / contentApi.getPublishedOne()   │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                     后端 - 前台路由                              │   │
+│  │  GET /api/content/:type/published                               │   │
+│  │  → 只返回 publishedData                                         │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ═══════════════════════════════════════════════════════════════════   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                        后台管理页面                              │   │
+│  │  ProductsList, BrandsList, PromotionsList, BannerManagement,    │   │
+│  │  SiteInfo, SiteContact, AboutContent                            │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                        Admin API                                 │   │
+│  │  adminApi.getList() / adminApi.getOne()                         │   │
+│  │  adminApi.saveDraft() / adminApi.publish()                      │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                              │                                          │
+│                              ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                     后端 - 后台路由                              │   │
+│  │  GET /api/admin/content/:type                                   │   │
+│  │  → 返回 { draftData, publishedData, status, version, ... }      │   │
+│  │  PUT /api/admin/content/:type/:key/draft → 保存草稿             │   │
+│  │  POST /api/admin/content/:type/:key/publish → 发布              │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🎯 核心设计原则
+
+### 1. 前后台数据源分离
+
+- **前台页面** → 前台 Store → 前台 API → publishedData
+- **后台页面** → Admin API → draftData || publishedData
+
+### 2. 草稿优先原则
+
+后台加载数据时：`item.draftData || item.publishedData`
+
+确保用户看到的是最新编辑的内容。
+
+### 3. 降级机制
+
+Admin API 不可用时，降级到前台 Store，保证系统可用性。
+
+---
+
+## ✅ 系统状态
+
+**CMS 发布功能已完全修复，系统可正常使用**
+
+- 所有后台管理页面都能正确加载草稿数据
+- 保存草稿后刷新页面，草稿数据正确保留
+- 发布后前台页面（刷新后）显示新数据
+- 后端 API 全部正常工作
+
+### 修复前后对比
+
+| 方面 | 修复前 | 修复后 |
+|-----|-------|-------|
+| 后台数据来源 | 前台 Store (只有已发布数据) | Admin API (包含草稿数据) |
+| 草稿持久化 | ❌ 刷新丢失 | ✅ 正确保留 |
+| 编辑工作流 | ❌ 无法中断继续 | ✅ 可以保存后稍后继续 |
+| 发布机制 | ✅ 正常 | ✅ 正常 |
+
+**修复日期：2025-12-09**
 

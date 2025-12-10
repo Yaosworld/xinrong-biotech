@@ -214,7 +214,7 @@ export const contentService = {
   // ========================================
   
   // 发布单条
-  publish(contentType: string, contentKey: string) {
+  publish(contentType: string, contentKey: string, changeSummary?: string) {
     const content = db.queryOne(`
       SELECT * FROM contents WHERE content_type = ? AND content_key = ?
     `, [contentType, contentKey])
@@ -223,13 +223,14 @@ export const contentService = {
     if (!content.draft_data) throw new Error('No draft data to publish')
     
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+    const newVersion = content.version + 1
     
     return db.transaction(() => {
-      // 创建版本快照
+      // 创建版本快照（包含变更说明）
       db.run(`
-        INSERT INTO content_versions (content_id, version, data, created_at)
-        VALUES (?, ?, ?, ?)
-      `, [content.id, content.version, content.draft_data, now])
+        INSERT INTO content_versions (content_id, version, data, change_summary, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `, [content.id, newVersion, content.draft_data, changeSummary || null, now])
       
       // 发布
       db.run(`
@@ -240,9 +241,9 @@ export const contentService = {
           published_at = ?,
           updated_at = ?
         WHERE id = ?
-      `, [content.draft_data, content.version + 1, now, now, content.id])
+      `, [content.draft_data, newVersion, now, now, content.id])
       
-      return content.version + 1
+      return newVersion
     })
   },
   

@@ -108,7 +108,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/about/AboutContent.vue'),
         meta: { title: '关于我们 - 内容管理' }
       },
-      // 网站设置（统一管理）
+      // 网站设置
       {
         path: 'site/settings',
         name: 'AdminSiteSettings',
