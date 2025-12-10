@@ -6,6 +6,7 @@ import { useAdminStore } from '@/stores/adminStore'
 import { adminApi } from '@/api/contentApi'
 import VersionHistoryDialog from './VersionHistoryDialog.vue'
 import PublishDialog from './PublishDialog.vue'
+import DuplicateReportDialog from './DuplicateReportDialog.vue'
 import { ExcelExporter, type ExportColumn, type ExportMode } from '@/utils/excelExporter'
 import { DuplicateDetector, type DuplicateCheckResult } from '@/utils/duplicateDetector'
 
@@ -158,6 +159,9 @@ const currentVersion = ref(1)
 
 // 发布对话框
 const showPublishDialog = ref(false)
+
+// 已删除的数据 keys（用于保存时同步删除到后端）
+const deletedKeys = ref<string[]>([])
 const publishSummary = ref('')
 
 // 原始数据快照（用于变更检测）
@@ -308,6 +312,8 @@ const initLocalData = () => {
   // 保存原始数据快照
   originalDataString.value = JSON.stringify(localData.value)
   editStatus.value = 'clean'
+  // 清空已删除记录
+  deletedKeys.value = []
 }
 
 // 图片处理
@@ -568,9 +574,14 @@ const deleteItem = async (row: any) => {
     await ElMessageBox.confirm('确定要删除这条数据吗？', '提示', { type: 'warning' })
     const index = localData.value.findIndex(item => item[props.rowKey] === row[props.rowKey])
     if (index > -1) {
+      const key = String(row[props.rowKey])
       localData.value.splice(index, 1)
+      // 记录已删除的 key，保存时同步到后端
+      if (props.publishConfig?.enabled) {
+        deletedKeys.value.push(key)
+      }
       emit('delete', row)
-      ElMessage.success('删除成功')
+      ElMessage.success(props.publishConfig?.enabled ? '删除成功，请点击"保存草稿"同步到服务器' : '删除成功')
     }
   } catch { /* 用户取消 */ }
 }
@@ -582,10 +593,14 @@ const batchDelete = async () => {
   }
   try {
     await ElMessageBox.confirm(`确定要删除选中的 ${selectedRows.value.length} 条数据吗？`, '提示', { type: 'warning' })
-    const ids = selectedRows.value.map(row => row[props.rowKey])
-    localData.value = localData.value.filter(item => !ids.includes(item[props.rowKey]))
+    const keys = selectedRows.value.map(row => String(row[props.rowKey]))
+    localData.value = localData.value.filter(item => !keys.includes(String(item[props.rowKey])))
+    // 记录已删除的 keys
+    if (props.publishConfig?.enabled) {
+      deletedKeys.value.push(...keys)
+    }
     selectedRows.value = []
-    ElMessage.success('批量删除成功')
+    ElMessage.success(props.publishConfig?.enabled ? '批量删除成功，请点击"保存草稿"同步到服务器' : '批量删除成功')
   } catch { /* 用户取消 */ }
 }
 
@@ -614,6 +629,18 @@ const saveAll = async () => {
       editStatus.value = 'saving'
       const contentType = props.publishConfig.contentType
       const getKey = props.publishConfig.getContentKey || ((item: any) => item[props.rowKey])
+      
+      // 先删除已删除的数据
+      if (deletedKeys.value.length > 0) {
+        for (const key of deletedKeys.value) {
+          try {
+            await adminApi.delete(contentType, key)
+          } catch (e) {
+            console.warn(`删除 ${key} 失败:`, e)
+          }
+        }
+        deletedKeys.value = []
+      }
       
       // 批量保存草稿
       const items = dataToSave.map(item => ({
@@ -686,9 +713,9 @@ const publishAll = async () => {
     }))
     await adminApi.batchSaveDraft(contentType, items)
     
-    // 批量发布
+    // 批量发布（传递变更说明）
     const keys = items.map(item => item.key)
-    const result = await adminApi.batchPublish(contentType, keys)
+    const result = await adminApi.batchPublish(contentType, keys, publishSummary.value || undefined)
     
     // 更新状态
     originalDataString.value = currentDataString.value
@@ -850,8 +877,10 @@ const handleFileChange = async (event: Event) => {
     )
 
     if (checkResult.hasDuplicates) {
-      // 有重复，显示处理对话框
-      await showDuplicateDialog(importedData, checkResult)
+      // 有重复，保存数据并显示对话框
+      pendingImportData.value = importedData
+      duplicateCheckResult.value = checkResult
+      showDuplicateDialog.value = true
     } else {
       // 无重复，直接导入
       localData.value.push(...importedData)
@@ -869,55 +898,50 @@ const handleFileChange = async (event: Event) => {
   input.value = '' // 重置
 }
 
-// 显示重复数据处理对话框
-const showDuplicateDialog = async (importedData: any[], checkResult: DuplicateCheckResult) => {
-  const reportColumns = props.columns.slice(0, 4).map(col => ({ key: col.key, label: col.label }))
-  const reportHtml = DuplicateDetector.generateReport(checkResult, reportColumns)
-  
-  try {
-    const action = await ElMessageBox({
-      title: '检测到重复数据',
-      message: `
-        ${reportHtml}
-        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee;">
-          <strong>请选择处理方式：</strong>
-        </div>
-      `,
-      dangerouslyUseHTMLString: true,
-      distinguishCancelAndClose: true,
-      showCancelButton: true,
-      confirmButtonText: `跳过重复，导入 ${checkResult.stats.unique} 条`,
-      cancelButtonText: '全部导入（保留重复）',
-      type: 'warning'
-    })
-    
-    // 点击确认：跳过重复
-    if (action === 'confirm') {
-      if (checkResult.uniqueData.length > 0) {
-        localData.value.push(...checkResult.uniqueData)
-        emit('import', checkResult.uniqueData)
-        ElMessage.success(
-          props.publishConfig?.enabled 
-            ? `已跳过重复，成功导入 ${checkResult.uniqueData.length} 条数据，请点击"保存草稿"保存到服务器` 
-            : `已跳过重复，成功导入 ${checkResult.uniqueData.length} 条数据`
-        )
-      } else {
-        ElMessage.warning('所有数据都是重复的，没有导入任何数据')
-      }
-    }
-  } catch (action) {
-    // 点击取消：全部导入
-    if (action === 'cancel') {
-      localData.value.push(...importedData)
-      emit('import', importedData)
-      ElMessage.success(
-        props.publishConfig?.enabled 
-          ? `成功导入全部 ${importedData.length} 条数据（含重复），请点击"保存草稿"保存到服务器` 
-          : `成功导入全部 ${importedData.length} 条数据（含重复）`
-      )
-    }
-    // 点击关闭：取消导入，不做任何操作
+// 重复检测对话框状态
+const showDuplicateDialog = ref(false)
+const duplicateCheckResult = ref<DuplicateCheckResult | null>(null)
+const pendingImportData = ref<any[]>([])
+const duplicateReportColumns = computed(() => 
+  props.columns.slice(0, 4).map(col => ({ key: col.key, label: col.label }))
+)
+
+// 跳过重复，只导入唯一数据
+const handleSkipDuplicates = () => {
+  if (duplicateCheckResult.value && duplicateCheckResult.value.uniqueData.length > 0) {
+    localData.value.push(...duplicateCheckResult.value.uniqueData)
+    emit('import', duplicateCheckResult.value.uniqueData)
+    ElMessage.success(
+      props.publishConfig?.enabled 
+        ? `已跳过重复，成功导入 ${duplicateCheckResult.value.uniqueData.length} 条数据，请点击"保存草稿"保存到服务器` 
+        : `已跳过重复，成功导入 ${duplicateCheckResult.value.uniqueData.length} 条数据`
+    )
+  } else {
+    ElMessage.warning('所有数据都是重复的，没有导入任何数据')
   }
+  pendingImportData.value = []
+  duplicateCheckResult.value = null
+}
+
+// 全部导入（包含重复）
+const handleImportAll = () => {
+  if (pendingImportData.value.length > 0) {
+    localData.value.push(...pendingImportData.value)
+    emit('import', pendingImportData.value)
+    ElMessage.success(
+      props.publishConfig?.enabled 
+        ? `成功导入全部 ${pendingImportData.value.length} 条数据（含重复），请点击"保存草稿"保存到服务器` 
+        : `成功导入全部 ${pendingImportData.value.length} 条数据（含重复）`
+    )
+  }
+  pendingImportData.value = []
+  duplicateCheckResult.value = null
+}
+
+// 取消导入
+const handleCancelImport = () => {
+  pendingImportData.value = []
+  duplicateCheckResult.value = null
 }
 
 // ========================================
@@ -1271,6 +1295,16 @@ onBeforeUnmount(() => {
       :current-version="currentVersion"
       :is-publishing="editStatus === 'publishing'"
       @confirm="publishAll"
+    />
+    
+    <!-- 重复数据检测对话框 -->
+    <DuplicateReportDialog
+      v-model:visible="showDuplicateDialog"
+      :result="duplicateCheckResult"
+      :columns="duplicateReportColumns"
+      @skip="handleSkipDuplicates"
+      @import-all="handleImportAll"
+      @cancel="handleCancelImport"
     />
   </div>
 </template>

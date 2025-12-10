@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+
+// 修改密码弹窗
+const pwdDialogVisible = ref(false)
+const pwdForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const pwdLoading = ref(false)
 
 // 侧边栏折叠状态
 const sidebarCollapsed = ref(false)
@@ -14,17 +22,27 @@ interface MenuItem {
   title: string
   icon: string
   path?: string
+  requiresSuperAdmin?: boolean
   children?: { id: string; title: string; path: string }[]
 }
 
-const menuItems: MenuItem[] = [
-  { id: 'banners', title: '横幅设置', icon: 'fas fa-image', path: '/admin/banners' },
+const allMenuItems: MenuItem[] = [
   { id: 'products', title: '产品管理', icon: 'fas fa-box', path: '/admin/products/list' },
-  { id: 'brands', title: '品牌管理', icon: 'fas fa-award', path: '/admin/brands/list' },
   { id: 'promotions', title: '活动管理', icon: 'fas fa-bullhorn', path: '/admin/promotions/list' },
+  { id: 'brands', title: '品牌管理', icon: 'fas fa-award', path: '/admin/brands/list' },
   { id: 'about', title: '关于我们', icon: 'fas fa-info-circle', path: '/admin/about/content' },
-  { id: 'site', title: '网站设置', icon: 'fas fa-cog', path: '/admin/site/settings' }
+  { id: 'banners', title: '横幅设置', icon: 'fas fa-image', path: '/admin/banners' },
+  { id: 'site', title: '网站设置', icon: 'fas fa-cog', path: '/admin/site/settings' },
+  { id: 'users', title: '账号管理', icon: 'fas fa-users-cog', path: '/admin/users', requiresSuperAdmin: true }
 ]
+
+// 根据权限过滤菜单
+const menuItems = computed(() => {
+  return allMenuItems.filter(item => {
+    if (item.requiresSuperAdmin) return authStore.isSuperAdmin
+    return true
+  })
+})
 
 // 展开的子菜单
 const expandedMenus = ref<string[]>(['site'])
@@ -70,7 +88,7 @@ const toggleSidebar = () => {
 
 // 当前页面标题
 const currentPageTitle = computed(() => {
-  for (const item of menuItems) {
+  for (const item of menuItems.value) {
     if (item.path === route.path) {
       return item.title
     }
@@ -83,6 +101,50 @@ const currentPageTitle = computed(() => {
   }
   return '后台管理'
 })
+
+// 用户下拉菜单命令
+async function handleUserCommand(command: string) {
+  if (command === 'password') {
+    pwdForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+    pwdDialogVisible.value = true
+  } else if (command === 'logout') {
+    try {
+      await ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning' })
+      await authStore.logout()
+      router.push('/admin/login')
+      ElMessage.success('已退出登录')
+    } catch {}
+  }
+}
+
+// 修改密码
+async function handleChangePwd() {
+  if (!pwdForm.value.oldPassword) {
+    ElMessage.warning('请输入当前密码')
+    return
+  }
+  if (!pwdForm.value.newPassword || pwdForm.value.newPassword.length < 8) {
+    ElMessage.warning('新密码需要8位以上')
+    return
+  }
+  if (pwdForm.value.newPassword !== pwdForm.value.confirmPassword) {
+    ElMessage.warning('两次输入的密码不一致')
+    return
+  }
+  
+  pwdLoading.value = true
+  try {
+    const res = await authStore.changePassword(pwdForm.value.oldPassword, pwdForm.value.newPassword)
+    if (res.success) {
+      ElMessage.success('密码修改成功')
+      pwdDialogVisible.value = false
+    } else {
+      ElMessage.error(res.error?.message || '修改失败')
+    }
+  } finally {
+    pwdLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -100,6 +162,33 @@ const currentPageTitle = computed(() => {
           <i class="fas fa-external-link-alt"></i>
           <span>访问前台</span>
         </button>
+        
+        <!-- 用户信息下拉 -->
+        <el-dropdown trigger="click" @command="handleUserCommand">
+          <div class="user-info">
+            <div class="user-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <span class="user-name">{{ authStore.displayName }}</span>
+            <i class="fas fa-chevron-down user-arrow"></i>
+          </div>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item disabled>
+                <i class="fas fa-id-badge"></i>
+                <span>{{ authStore.isSuperAdmin ? '超级管理员' : '普通管理员' }}</span>
+              </el-dropdown-item>
+              <el-dropdown-item divided command="password">
+                <i class="fas fa-key"></i>
+                <span>修改密码</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="logout">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>退出登录</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </header>
 
@@ -115,7 +204,7 @@ const currentPageTitle = computed(() => {
         </div>
 
         <nav class="sidebar-nav">
-          <template v-for="item in menuItems" :key="item.id">
+          <template v-for="item in menuItems" :key="item.id + '-' + authStore.isSuperAdmin">
             <!-- 有子菜单的项 -->
             <template v-if="item.children">
               <div
@@ -158,6 +247,25 @@ const currentPageTitle = computed(() => {
         <RouterView />
       </main>
     </div>
+    
+    <!-- 修改密码弹窗 -->
+    <el-dialog v-model="pwdDialogVisible" title="修改密码" width="400px">
+      <el-form :model="pwdForm" label-width="90px">
+        <el-form-item label="当前密码" required>
+          <el-input v-model="pwdForm.oldPassword" type="password" placeholder="请输入当前密码" show-password />
+        </el-form-item>
+        <el-form-item label="新密码" required>
+          <el-input v-model="pwdForm.newPassword" type="password" placeholder="8位以上，包含字母和数字" show-password />
+        </el-form-item>
+        <el-form-item label="确认密码" required>
+          <el-input v-model="pwdForm.confirmPassword" type="password" placeholder="请再次输入新密码" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pwdDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleChangePwd" :loading="pwdLoading">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -235,6 +343,47 @@ const currentPageTitle = computed(() => {
 .frontend-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* 用户信息 */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.user-info:hover {
+  background: #f5f5f5;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #333;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-arrow {
+  font-size: 12px;
+  color: #999;
 }
 
 /* 主体区域 */

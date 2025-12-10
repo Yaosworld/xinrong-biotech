@@ -1,6 +1,8 @@
+// @ts-ignore
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js'
 import path from 'path'
 import fs from 'fs'
+import bcrypt from 'bcryptjs'
 
 // 确保 data 目录存在
 const dataDir = path.join(__dirname, '../data')
@@ -78,12 +80,85 @@ async function initDb(): Promise<SqlJsDatabase> {
   db.run(`CREATE INDEX IF NOT EXISTS idx_contents_sort ON contents(content_type, sort_order)`)
   db.run(`CREATE INDEX IF NOT EXISTS idx_versions_content ON content_versions(content_id)`)
   
+  // 创建管理员表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS admins (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      username        TEXT NOT NULL UNIQUE,
+      password_hash   TEXT NOT NULL,
+      role            TEXT NOT NULL DEFAULT 'admin',
+      display_name    TEXT,
+      email           TEXT,
+      phone           TEXT,
+      status          TEXT DEFAULT 'active',
+      login_attempts  INTEGER DEFAULT 0,
+      locked_until    TEXT,
+      last_login_at   TEXT,
+      last_login_ip   TEXT,
+      created_by      INTEGER,
+      created_at      TEXT DEFAULT (datetime('now', 'localtime')),
+      updated_at      TEXT DEFAULT (datetime('now', 'localtime'))
+    )
+  `)
+  
+  // 创建操作日志表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS admin_logs (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id        INTEGER NOT NULL,
+      action          TEXT NOT NULL,
+      target_type     TEXT,
+      target_id       TEXT,
+      detail          TEXT,
+      ip_address      TEXT,
+      user_agent      TEXT,
+      created_at      TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (admin_id) REFERENCES admins(id)
+    )
+  `)
+  
+  // 管理员表索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_admins_username ON admins(username)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_admins_status ON admins(status)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_admin_logs_admin ON admin_logs(admin_id)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_admin_logs_time ON admin_logs(created_at)`)
+  
   // 保存数据库
   saveDb()
+  
+  // 初始化默认超级管理员
+  await initDefaultAdmin()
   
   console.log('📦 Database initialized at:', dbPath)
   
   return db
+}
+
+// 初始化默认超级管理员
+async function initDefaultAdmin() {
+  if (!db) return
+  
+  const stmt = db.prepare('SELECT id FROM admins WHERE username = ?')
+  stmt.bind(['admin'])
+  const exists = stmt.step()
+  stmt.free()
+  
+  if (!exists) {
+    const defaultPassword = 'Admin@123'
+    const passwordHash = await bcrypt.hash(defaultPassword, 10)
+    
+    db.run(
+      `INSERT INTO admins (username, password_hash, role, display_name) VALUES (?, ?, ?, ?)`,
+      ['admin', passwordHash, 'super_admin', '超级管理员']
+    )
+    saveDb()
+    
+    console.log('✅ 默认超级管理员已创建')
+    console.log('   用户名: admin')
+    console.log('   密码: Admin@123')
+    console.log('   ⚠️  请首次登录后立即修改密码！')
+  }
 }
 
 // 保存数据库到文件

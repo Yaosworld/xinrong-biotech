@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { useBannerStore } from '@/stores/bannerStore'
 import { CATEGORIES } from '@/hooks/useCategoryImage'
-import { usePagination } from '@/hooks/usePagination'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import ProductCard from '@/components/business/ProductCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -21,20 +20,18 @@ const productSlogans = computed(() => bannerStore.getSlogans('products'))
 // 从 store 获取默认统计数据
 const defaultStats = computed(() => bannerStore.getDefaultStats('products'))
 
-// 动态统计数据
+// 动态统计数据 - 使用后端返回的总数
 const dynamicStats = computed(() => [
-  { key: 'products', number: `${productStore.products.length}+`, label: '商品种类' },
+  { key: 'products', number: `${productStore.pagination.total}+`, label: '商品种类' },
   { key: 'categories', number: `${CATEGORIES.length}+`, label: '产品类别' },
   { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' }
 ])
 
 // 优先使用动态数据，如果没有数据则使用默认数据
 const stats = computed(() => {
-  // 如果产品数据已加载且有数据，使用动态统计数据
-  if (productStore.products.length > 0 || productStore.allBrands.length > 0) {
+  if (productStore.pagination.total > 0 || productStore.allBrands.length > 0) {
     return dynamicStats.value
   }
-  // 否则使用默认统计数据
   return defaultStats.value
 })
 
@@ -45,12 +42,6 @@ const searchInputValue = ref('')
 // 展示的品牌和分类数量
 const showAllBrands = ref(false)
 const showAllCategories = ref(false)
-
-// 分页功能
-const { currentPageItems, paginationInfo, goToPage, setPageSize } = usePagination(
-  computed(() => productStore.sortedProducts),
-  { initialPageSize: 12, scrollTarget: '.products-section' }
-)
 
 // 展示的品牌列表
 const displayedBrands = computed(() => {
@@ -63,23 +54,30 @@ const displayedCategories = computed(() => {
   return showAllCategories.value ? CATEGORIES : CATEGORIES.slice(0, 10)
 })
 
+// 滚动到产品列表区域
+const scrollToProducts = () => {
+  nextTick(() => {
+    const target = document.querySelector('.products-section')
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  })
+}
+
 // 执行搜索
 const handleSearch = () => {
   productStore.setFilter('search', searchInputValue.value.trim())
   searchQuery.value = searchInputValue.value.trim()
-  goToPage(1)
 }
 
 // 选择品牌（空字符串代表"所有"）
 const selectBrand = (brand: string) => {
   productStore.setFilter('brand', brand)
-  goToPage(1)
 }
 
 // 选择分类（空字符串代表"所有"）
 const selectCategory = (categoryId: string) => {
   productStore.setFilter('categoryId', categoryId)
-  goToPage(1)
 }
 
 // 清空筛选
@@ -87,29 +85,42 @@ const handleClearFilters = () => {
   productStore.clearAllFilters()
   searchInputValue.value = ''
   searchQuery.value = ''
-  goToPage(1)
 }
 
 // 排序变化
 const handleSortChange = (sort: string) => {
   productStore.setSortBy(sort as any)
-  goToPage(1)
+}
+
+// 分页变化
+const handlePageChange = (page: number) => {
+  productStore.goToPage(page)
+  scrollToProducts()
+}
+
+// 每页数量变化
+const handlePageSizeChange = (size: number) => {
+  productStore.setPageSize(size)
+  scrollToProducts()
 }
 
 // 从URL读取筛选条件
 onMounted(async () => {
-  await productStore.loadProducts()
-  
+  // 先设置筛选条件（不触发加载）
   if (route.query.category) {
-    productStore.setFilter('categoryId', route.query.category as string)
+    productStore.filters.categoryId = route.query.category as string
   }
   if (route.query.brand) {
-    productStore.setFilter('brand', route.query.brand as string)
+    productStore.filters.brand = route.query.brand as string
   }
   if (route.query.search) {
+    productStore.filters.search = route.query.search as string
     searchInputValue.value = route.query.search as string
-    handleSearch()
+    searchQuery.value = route.query.search as string
   }
+  
+  // 然后加载数据
+  await productStore.loadProducts()
 })
 
 // 筛选条件变化时更新URL
@@ -240,7 +251,7 @@ watch(
         <!-- 工具栏 -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div class="text-gradient-600 font-medium">
-            共找到 {{ productStore.sortedProducts.length }} 个产品
+            共找到 {{ productStore.pagination.total }} 个产品
           </div>
           
           <div class="flex items-center gap-4">
@@ -264,7 +275,7 @@ watch(
         
         <!-- 空状态 -->
         <EmptyState
-          v-else-if="currentPageItems.length === 0"
+          v-else-if="productStore.products.length === 0"
           icon="fas fa-box-open"
           title="暂无匹配的产品"
           description="尝试调整筛选条件或搜索关键词"
@@ -275,7 +286,7 @@ watch(
         <!-- 产品网格 -->
         <div v-else class="products-grid">
           <ProductCard
-            v-for="product in currentPageItems"
+            v-for="product in productStore.products"
             :key="product.id"
             :product="product"
             :highlight-keyword="searchQuery"
@@ -283,25 +294,25 @@ watch(
         </div>
         
         <!-- 分页 -->
-        <div v-if="paginationInfo.totalPages > 1" class="pagination-wrapper">
-          <span class="text-dark-500 text-sm">共 {{ paginationInfo.totalItems }} 条</span>
+        <div v-if="productStore.pagination.totalPages > 1" class="pagination-wrapper">
+          <span class="text-dark-500 text-sm">共 {{ productStore.pagination.total }} 条</span>
           <el-select
-            :model-value="paginationInfo.pageSize"
+            :model-value="productStore.pagination.pageSize"
             size="default"
             style="width: 110px"
-            @change="setPageSize"
+            @change="handlePageSizeChange"
           >
             <el-option :value="12" label="12条/页" />
             <el-option :value="24" label="24条/页" />
             <el-option :value="48" label="48条/页" />
           </el-select>
           <el-pagination
-            :current-page="paginationInfo.currentPage"
-            :page-size="paginationInfo.pageSize"
-            :total="paginationInfo.totalItems"
+            :current-page="productStore.pagination.page"
+            :page-size="productStore.pagination.pageSize"
+            :total="productStore.pagination.total"
             :pager-count="7"
             layout="prev, pager, next, jumper"
-            @current-change="goToPage"
+            @current-change="handlePageChange"
           />
         </div>
       </div>

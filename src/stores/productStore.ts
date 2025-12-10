@@ -32,13 +32,20 @@ export const useProductStore = defineStore('product', () => {
   
   // 是否使用后端分页模式
   const useBackendPagination = ref(true)
+  
+  // 所有品牌列表（从后端获取）
+  const allBrandsList = ref<string[]>([])
 
   // ========================================
   // Getters
   // ========================================
   
-  // 获取所有品牌列表
+  // 获取所有品牌列表（优先使用后端返回的完整列表）
   const allBrands = computed(() => {
+    if (allBrandsList.value.length > 0) {
+      return allBrandsList.value
+    }
+    // 降级：从当前页产品中提取
     const brands = products.value
       .map(p => p.brand)
       .filter((brand): brand is string => !!brand)
@@ -118,12 +125,27 @@ export const useProductStore = defineStore('product', () => {
   // Actions
   // ========================================
   
+  // 加载筛选选项（品牌列表等）
+  async function loadFilterOptions() {
+    try {
+      const options = await contentApi.getFilterOptions('product')
+      allBrandsList.value = options.brands
+    } catch (e) {
+      console.warn('加载筛选选项失败:', e)
+    }
+  }
+
   // 加载产品数据（支持后端分页）
   async function loadProducts(page: number = 1) {
     loading.value = true
     error.value = null
 
     try {
+      // 首次加载时获取筛选选项
+      if (!initialized.value) {
+        loadFilterOptions()
+      }
+      
       if (useBackendPagination.value) {
         // 后端分页模式
         const result = await contentApi.getPublishedList<Product>('product', {

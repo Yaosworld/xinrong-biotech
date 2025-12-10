@@ -45,9 +45,10 @@ const columns = computed(() => [
   { key: 'website', label: '官方网站', showInTable: false }
 ])
 
-// 生成品牌ID
+// 生成品牌ID - 基于所有数据避免冲突
 const generateBrandId = () => {
-  const maxIdNum = brandStore.brands.reduce((max, item) => {
+  const allBrands = [...localBrands.value, ...brandStore.brands]
+  const maxIdNum = allBrands.reduce((max, item) => {
     const num = parseInt(item.id?.replace('B', '') || '0')
     return Math.max(max, num)
   }, 0)

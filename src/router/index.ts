@@ -1,6 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
+// 延迟导入 authStore 避免循环依赖
+let authStoreInstance: any = null
+async function getAuthStore() {
+  if (!authStoreInstance) {
+    const { useAuthStore } = await import('@/stores/authStore')
+    authStoreInstance = useAuthStore()
+  }
+  return authStoreInstance
+}
+
 const routes: RouteRecordRaw[] = [
   // ========================================
   // 前台路由
@@ -55,7 +65,20 @@ const routes: RouteRecordRaw[] = [
   },
 
   // ========================================
-  // 隐藏管理路由
+  // 登录页面
+  // ========================================
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: () => import('@/views/auth/LoginPage.vue'),
+    meta: { 
+      title: '管理员登录',
+      guest: true
+    }
+  },
+
+  // ========================================
+  // 后台管理路由（需要登录）
   // ========================================
   {
     path: '/admin',
@@ -63,16 +86,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/admin/AdminLayout.vue'),
     meta: {
       hidden: true,
-      requiresAuth: false
+      requiresAuth: true
     },
-    redirect: '/admin/dashboard',
+    redirect: '/admin/products/list',
     children: [
-      {
-        path: 'dashboard',
-        name: 'AdminDashboard',
-        component: () => import('@/views/admin/Dashboard.vue'),
-        meta: { title: '管理仪表板' }
-      },
       // 横幅设置（统一管理所有页面的Banner）
       {
         path: 'banners',
@@ -114,6 +131,16 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminSiteSettings',
         component: () => import('@/views/admin/site/SiteSettings.vue'),
         meta: { title: '网站设置' }
+      },
+      // 账号管理（仅超级管理员）
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: () => import('@/views/admin/users/UserManagement.vue'),
+        meta: { 
+          title: '账号管理',
+          requiresSuperAdmin: true
+        }
       }
     ]
   },
@@ -155,11 +182,38 @@ const router = createRouter({
   }
 })
 
-// 路由守卫 - 设置页面标题
-router.beforeEach((to, _from, next) => {
+// 路由守卫
+router.beforeEach(async (to, _from, next) => {
+  const authStore = await getAuthStore()
+  
+  // 初始化认证状态
+  if (!authStore.initialized) {
+    await authStore.init()
+  }
+  
+  // 设置页面标题
   const baseTitle = '生物科技企业官网'
   const pageTitle = to.meta.title as string
   document.title = pageTitle ? `${pageTitle} - ${baseTitle}` : baseTitle
+  
+  // 检查是否需要登录
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    return next({
+      path: '/admin/login',
+      query: { redirect: to.fullPath }
+    })
+  }
+  
+  // 检查是否需要超级管理员权限
+  if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
+    return next('/admin')
+  }
+  
+  // 已登录用户访问登录页，重定向到后台
+  if (to.meta.guest && authStore.isLoggedIn) {
+    return next('/admin')
+  }
+  
   next()
 })
 

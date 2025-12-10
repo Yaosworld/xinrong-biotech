@@ -130,6 +130,7 @@ export class ExcelExporter {
 
   /**
    * 格式化单元格值
+   * 注意：导出时保持原始值，确保导出的数据能正确导入
    */
   private static formatCellValue(value: any, col: ExportColumn): any {
     if (value == null) return ''
@@ -139,17 +140,13 @@ export class ExcelExporter {
       return value.join(', ')
     }
     
-    // 布尔值
+    // 布尔值 - 使用 true/false 确保导入兼容
     if (col.type === 'boolean') {
-      return value ? '是' : '否'
+      return value ? 'true' : 'false'
     }
     
-    // 选择类型显示标签
-    if (col.type === 'select' && col.options) {
-      const opt = col.options.find(o => o.value === value)
-      return opt ? opt.label : value
-    }
-    
+    // select 类型保持原始 value，不转换为 label
+    // 这样导出的数据可以直接导入
     return value
   }
 

@@ -85,12 +85,12 @@ router.post('/content/:type/:key/publish', (req: Request, res: Response) => {
   }
 })
 
-// 批量发布
+// 批量发布（支持变更说明）
 router.post('/content/:type/batch-publish', (req: Request, res: Response) => {
   try {
     const { type } = req.params
-    const { keys } = req.body
-    const count = contentService.batchPublish(type, keys)
+    const { keys, changeSummary } = req.body
+    const count = contentService.batchPublish(type, keys, changeSummary)
     res.json({ success: true, publishedCount: count })
   } catch (e) {
     res.status(500).json({ error: (e as Error).message })

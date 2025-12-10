@@ -6,7 +6,7 @@
       @mouseenter="showTooltip('phone')"
       @mouseleave="hideTooltip"
     >
-      {{ panelData.phone.emoji }}
+      <i class="fas fa-phone-alt"></i>
       <div
         class="floating-tooltip"
         :class="{ visible: tooltipVisible === 'phone' }"
@@ -26,7 +26,7 @@
       @mouseenter="showTooltip('email')"
       @mouseleave="hideTooltip"
     >
-      {{ panelData.email.emoji }}
+      <i class="fas fa-envelope"></i>
       <div
         class="floating-tooltip"
         :class="{ visible: tooltipVisible === 'email' }"
@@ -43,7 +43,7 @@
       @mouseenter="showTooltip('social')"
       @mouseleave="hideTooltip"
     >
-      {{ panelData.social.emoji }}
+      <i class="fab fa-weixin"></i>
       <div
         class="floating-tooltip social-tooltip"
         :class="{ visible: tooltipVisible === 'social' }"
@@ -68,7 +68,7 @@
       @mouseenter="showTooltip('top')"
       @mouseleave="hideTooltip"
     >
-      {{ panelData.backToTop.emoji }}
+      <i class="fas fa-arrow-up"></i>
       <div
         class="floating-tooltip"
         :class="{ visible: tooltipVisible === 'top' }"

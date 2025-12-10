@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useProductStore } from '@/stores/productStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
@@ -24,6 +25,7 @@ const products = computed(() =>
 
 // 列配置
 // 注意：sortable 列会自动增加24px给排序箭头
+// required 标记与 ExcelProcessor.validateProductData 中的必填字段保持一致
 const columns = computed(() => [
   { key: 'id', label: 'ID', width: 65, editable: false, sortable: true, fixed: 'left' as const },
   { key: 'categoryImage', label: '分类图', width: 70, type: 'image' as const, editable: false, imageStyle: 'contain' as const, showInForm: false },
@@ -35,19 +37,36 @@ const columns = computed(() => [
     label: '分类', 
     width: 120,
     type: 'select' as const,
+    required: true,
     options: CATEGORIES.map(c => ({ label: c.name, value: c.id }))
   },
-  { key: 'specs', label: '规格', width: 75, truncate: 12 },
+  { key: 'specs', label: '规格', width: 75, truncate: 12, required: true },
   { key: 'unit', label: '单位', width: 55 },
-  { key: 'desc', label: '描述', width: { min: 150, flex: 3 }, type: 'textarea' as const, truncate: 40 }
+  { key: 'desc', label: '描述', width: { min: 150, flex: 3 }, type: 'textarea' as const, truncate: 40, required: true }
 ])
 
-// Excel 导入处理
+// Excel 导入处理 - 返回包含 warnings 的结果，并传入已存在的 ID 避免冲突
 const handleExcelImport = async (file: File) => {
-  const result = await ExcelProcessor.processProducts(file)
+  // 收集所有已存在的 ID（本地数据 + productStore）
+  const existingIds = [
+    ...localProducts.value.map(p => p.id),
+    ...productStore.products.map(p => p.id)
+  ].filter(Boolean)
+  
+  const result = await ExcelProcessor.processProducts(file, existingIds)
   if (!result.success) {
     throw new Error(result.validation.errors.join('\n'))
   }
+  
+  // 如果有警告，显示给用户
+  if (result.validation.warnings.length > 0) {
+    ElMessage.warning({
+      message: `导入成功，但有以下警告：\n${result.validation.warnings.slice(0, 3).join('\n')}${result.validation.warnings.length > 3 ? `\n...还有 ${result.validation.warnings.length - 3} 条警告` : ''}`,
+      duration: 5000,
+      showClose: true
+    })
+  }
+  
   return result.data
 }
 
@@ -56,11 +75,14 @@ const beforeSave = (data: any[]) => {
   return data.map(({ categoryImage, ...rest }) => rest)
 }
 
-// 生成产品ID
+// 生成产品ID - 基于当前本地数据，避免与导入数据冲突
 const generateProductId = () => {
-  const maxIdNum = productStore.products.reduce((max, item) => {
-    const num = parseInt(item.id?.replace('P', '') || '0')
-    return Math.max(max, num)
+  // 同时考虑本地数据和 productStore 中的数据，取最大值
+  const allProducts = [...localProducts.value, ...productStore.products]
+  const maxIdNum = allProducts.reduce((max, item) => {
+    const idStr = item.id?.replace(/^P/, '') || '0'
+    const num = parseInt(idStr, 10)
+    return isNaN(num) ? max : Math.max(max, num)
   }, 0)
   return `P${maxIdNum + 1}`
 }

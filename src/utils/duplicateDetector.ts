@@ -174,19 +174,41 @@ export class DuplicateDetector {
 
   /**
    * 生成数据项的哈希值（用于比较）
+   * 优化：确保字段顺序无关，类型统一处理
    */
   private static getItemHash(item: any, rowKey: string, compareFields?: string[]): string {
     // 排除主键，只比较内容字段
     const fieldsToCompare = compareFields || Object.keys(item).filter(k => k !== rowKey)
     
-    const values = fieldsToCompare.map(field => {
+    // 按字段名排序，确保顺序一致
+    const sortedFields = [...fieldsToCompare].sort()
+    
+    const values = sortedFields.map(field => {
       const value = item[field]
-      if (value == null) return ''
-      if (Array.isArray(value)) return value.sort().join(',')
-      return String(value)
+      // 统一处理空值
+      if (value == null || value === '' || value === undefined) return ''
+      // 数组排序后拼接
+      if (Array.isArray(value)) return value.map(v => this.normalizeValue(v)).sort().join(',')
+      // 统一转换为字符串
+      return this.normalizeValue(value)
     })
     
     return values.join('|')
+  }
+
+  /**
+   * 标准化值（统一类型处理）
+   */
+  private static normalizeValue(value: any): string {
+    if (value == null || value === '' || value === undefined) return ''
+    // 布尔值统一为 'true'/'false'
+    if (typeof value === 'boolean') return value ? 'true' : 'false'
+    // 数字统一为字符串（去除小数点后多余的0）
+    if (typeof value === 'number') return String(value)
+    // 字符串去除首尾空格并转小写（可选，根据业务需求）
+    if (typeof value === 'string') return value.trim()
+    // 其他类型转字符串
+    return String(value)
   }
 
   /**
@@ -194,53 +216,51 @@ export class DuplicateDetector {
    */
   static generateReport(result: DuplicateCheckResult, columns: { key: string; label: string }[]): string {
     const { stats, internalDuplicates, existingDuplicates } = result
+    const totalDup = stats.internalDupCount + stats.existingDupCount
     
-    let html = `<div style="max-height: 400px; overflow-y: auto;">`
-    
-    // 统计摘要
-    html += `<div style="margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
-      <strong>检测结果：</strong><br>
-      总计 ${stats.total} 条数据，其中：<br>
-      • 唯一数据：${stats.unique} 条<br>
-      • 文件内重复：${stats.internalDupCount} 条<br>
-      • 与现有数据重复：${stats.existingDupCount} 条
-    </div>`
+    // 极简风格
+    let html = `
+      <div style="text-align: center; padding: 20px 0 24px;">
+        <div style="font-size: 48px; font-weight: 300; color: #409eff; line-height: 1;">${stats.unique}<span style="font-size: 16px; color: #999; font-weight: 400;">/${stats.total}</span></div>
+        <div style="font-size: 13px; color: #666; margin-top: 8px;">可导入数据</div>
+      </div>
+      
+      <div style="display: flex; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">
+        <div style="flex: 1; text-align: center; padding: 12px 0; ${stats.internalDupCount > 0 ? 'color: #e6a23c;' : 'color: #c0c4cc;'}">
+          <div style="font-size: 20px; font-weight: 500;">${stats.internalDupCount}</div>
+          <div style="font-size: 12px; margin-top: 2px;">文件内重复</div>
+        </div>
+        <div style="width: 1px; background: #eee;"></div>
+        <div style="flex: 1; text-align: center; padding: 12px 0; ${stats.existingDupCount > 0 ? 'color: #f56c6c;' : 'color: #c0c4cc;'}">
+          <div style="font-size: 20px; font-weight: 500;">${stats.existingDupCount}</div>
+          <div style="font-size: 12px; margin-top: 2px;">与现有重复</div>
+        </div>
+      </div>`
 
-    // 文件内重复详情
-    if (internalDuplicates.length > 0) {
-      html += `<div style="margin-bottom: 12px;">
-        <strong style="color: #e6a23c;">⚠️ 文件内重复（${internalDuplicates.length} 条）：</strong>
-        <ul style="margin: 8px 0; padding-left: 20px;">`
+    // 重复详情（如果有）
+    if (totalDup > 0) {
+      const allDups = [
+        ...internalDuplicates.map(d => ({ ...d, type: 'internal' })),
+        ...existingDuplicates.map(d => ({ ...d, type: 'existing' }))
+      ].slice(0, 4)
       
-      internalDuplicates.slice(0, 5).forEach(dup => {
+      html += `<div style="padding: 16px 0 8px; font-size: 13px; color: #909399;">`
+      allDups.forEach(dup => {
         const preview = this.getItemPreview(dup.item, columns)
-        html += `<li>第 ${dup.importIndex + 2} 行：${preview}</li>`
+        const color = dup.type === 'internal' ? '#e6a23c' : '#f56c6c'
+        html += `<div style="padding: 6px 0; display: flex; align-items: center;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: ${color}; margin-right: 10px; flex-shrink: 0;"></span>
+          <span style="color: #606266;">第${dup.importIndex + 2}行</span>
+          <span style="color: #c0c4cc; margin: 0 8px;">|</span>
+          <span style="color: #909399; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${preview}</span>
+        </div>`
       })
-      
-      if (internalDuplicates.length > 5) {
-        html += `<li>...还有 ${internalDuplicates.length - 5} 条</li>`
+      if (totalDup > 4) {
+        html += `<div style="text-align: center; color: #c0c4cc; padding-top: 4px;">还有 ${totalDup - 4} 条重复数据</div>`
       }
-      html += `</ul></div>`
+      html += `</div>`
     }
 
-    // 与现有数据重复详情
-    if (existingDuplicates.length > 0) {
-      html += `<div>
-        <strong style="color: #f56c6c;">❌ 与现有数据重复（${existingDuplicates.length} 条）：</strong>
-        <ul style="margin: 8px 0; padding-left: 20px;">`
-      
-      existingDuplicates.slice(0, 5).forEach(dup => {
-        const preview = this.getItemPreview(dup.item, columns)
-        html += `<li>第 ${dup.importIndex + 2} 行：${preview}</li>`
-      })
-      
-      if (existingDuplicates.length > 5) {
-        html += `<li>...还有 ${existingDuplicates.length - 5} 条</li>`
-      }
-      html += `</ul></div>`
-    }
-
-    html += `</div>`
     return html
   }
 
@@ -248,15 +268,9 @@ export class DuplicateDetector {
    * 获取数据项预览文本
    */
   private static getItemPreview(item: any, columns: { key: string; label: string }[]): string {
-    const previewFields = columns.slice(0, 3)
-    return previewFields
-      .map(col => {
-        const value = item[col.key]
-        if (value == null) return ''
-        const str = String(value)
-        return str.length > 20 ? str.substring(0, 20) + '...' : str
-      })
-      .filter(Boolean)
-      .join(' / ')
+    const value = item[columns[1]?.key] || item[columns[0]?.key]
+    if (value == null) return '-'
+    const str = String(value)
+    return str.length > 16 ? str.substring(0, 16) + '...' : str
   }
 }

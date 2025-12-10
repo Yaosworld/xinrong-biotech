@@ -21,14 +21,24 @@ const columns = computed(() => [
   { key: 'cover_url', label: '封面', width: 65, type: 'image' as const, imageStyle: 'contain' as const },
   { key: 'poster_url', label: '海报', width: 65, type: 'image' as const, imageStyle: 'contain' as const },
   { key: 'title', label: '标题', width: { min: 140, flex: 2 }, required: true },
-  { key: 'summary', label: '摘要', width: { min: 120, flex: 3 }, truncate: 30 },
+  { key: 'summary', label: '摘要', width: { min: 120, flex: 3 }, truncate: 30, required: true },
   { key: 'description', label: '详情', width: { min: 120, flex: 4 }, type: 'textarea' as const, truncate: 35 },
-  { key: 'start_date', label: '开始日期', width: 95, type: 'date' as const, sortable: true },
-  { key: 'end_date', label: '结束日期', width: 95, type: 'date' as const, sortable: true },
+  { key: 'start_date', label: '开始日期', width: 95, type: 'date' as const, sortable: true, required: true },
+  { key: 'end_date', label: '结束日期', width: 95, type: 'date' as const, sortable: true, required: true },
   { key: 'tags', label: '标签', width: { min: 100, flex: 1 }, type: 'tags' as const, truncate: 20 },
   { key: 'icon_class', label: '图标类名', showInTable: false, required: false },
   { key: 'publish_date', label: '发布日期', type: 'date' as const, showInTable: false }
 ])
+
+// 生成活动ID
+const generatePromotionId = () => {
+  const allPromotions = [...localPromotions.value, ...promotionStore.promotions]
+  const maxIdNum = allPromotions.reduce((max, item) => {
+    const num = parseInt(item.id?.replace('A', '') || '0')
+    return Math.max(max, num)
+  }, 0)
+  return `A${String(maxIdNum + 1).padStart(3, '0')}`
+}
 
 // 保存前处理 - tags 转换
 const beforeSave = (data: any[]) => {
@@ -91,6 +101,7 @@ onMounted(async () => {
     :page-sizes="[10, 20, 50]"
     :publish-config="{ enabled: true, contentType: 'promotion' }"
     :before-save="beforeSave"
+    :generate-id="generatePromotionId"
     @save="handleSave"
     @publish="handlePublish"
     @reload="handleReload"

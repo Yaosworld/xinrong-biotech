@@ -12,8 +12,8 @@ const logoError = ref(false)
 const navItems = [
   { name: '首页', path: '/', icon: 'fas fa-home' },
   { name: '产品中心', path: '/products', icon: 'fas fa-flask' },
+  { name: '促销中心', path: '/news', icon: 'fas fa-newspaper' },
   { name: '品牌中心', path: '/brands', icon: 'fas fa-award' },
-  { name: '资讯中心', path: '/news', icon: 'fas fa-newspaper' },
   { name: '关于我们', path: '/about', icon: 'fas fa-building' }
 ]
 

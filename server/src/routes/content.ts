@@ -7,6 +7,17 @@ const router = Router()
 // 前台 API
 // ========================================
 
+// 获取筛选选项（品牌列表等）
+router.get('/:type/filter-options', (req: Request, res: Response) => {
+  try {
+    const { type } = req.params
+    const options = contentService.getFilterOptions(type)
+    res.json(options)
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
 // 获取已发布列表
 router.get('/:type/published', (req: Request, res: Response) => {
   try {

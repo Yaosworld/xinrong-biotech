@@ -107,12 +107,37 @@ export const contentApi = {
   async getAllPublished<T>(contentType: string): Promise<T[]> {
     const res = await this.getPublishedList<T>(contentType, { pageSize: 9999 })
     return res.data
+  },
+
+  /**
+   * 获取筛选选项（品牌列表等）
+   */
+  async getFilterOptions(contentType: string): Promise<{ brands: string[]; categories: string[]; total: number }> {
+    const res = await fetch(`${API_BASE}/content/${contentType}/filter-options`)
+    if (!res.ok) throw new Error('获取筛选选项失败')
+    return res.json()
   }
 }
 
 // ========================================
 // 后台管理 API
 // ========================================
+
+// 获取认证 token（与 authApi 保持一致）
+const getAuthToken = () => {
+  return localStorage.getItem('admin_token') || ''
+}
+
+// 获取带认证的请求头
+const getAuthHeaders = (contentType?: string): HeadersInit => {
+  const headers: HeadersInit = {
+    'Authorization': `Bearer ${getAuthToken()}`
+  }
+  if (contentType) {
+    headers['Content-Type'] = contentType
+  }
+  return headers
+}
 
 export const adminApi = {
   /**
@@ -128,7 +153,9 @@ export const adminApi = {
         if (value !== undefined) query.set(key, String(value))
       })
     }
-    const res = await fetch(`${API_BASE}/admin/content/${contentType}?${query}`)
+    const res = await fetch(`${API_BASE}/admin/content/${contentType}?${query}`, {
+      headers: getAuthHeaders()
+    })
     if (!res.ok) throw new Error('获取数据失败')
     return res.json()
   },
@@ -137,7 +164,9 @@ export const adminApi = {
    * 获取单条详情
    */
   async getOne<T>(contentType: string, contentKey: string): Promise<ContentItem<T>> {
-    const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}`)
+    const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}`, {
+      headers: getAuthHeaders()
+    })
     if (!res.ok) throw new Error('获取数据失败')
     return res.json()
   },
@@ -148,7 +177,7 @@ export const adminApi = {
   async saveDraft<T>(contentType: string, contentKey: string, data: T): Promise<void> {
     const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}/draft`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders('application/json'),
       body: JSON.stringify(data)
     })
     if (!res.ok) throw new Error('保存草稿失败')
@@ -163,7 +192,7 @@ export const adminApi = {
   ): Promise<void> {
     const res = await fetch(`${API_BASE}/admin/content/${contentType}/batch-draft`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders('application/json'),
       body: JSON.stringify({ items })
     })
     if (!res.ok) throw new Error('批量保存失败')
@@ -176,7 +205,7 @@ export const adminApi = {
   async publish(contentType: string, contentKey: string, changeSummary?: string): Promise<{ version: number }> {
     const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}/publish`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders('application/json'),
       body: JSON.stringify({ changeSummary })
     })
     if (!res.ok) throw new Error('发布失败')
@@ -184,16 +213,17 @@ export const adminApi = {
   },
 
   /**
-   * 批量发布
+   * 批量发布（支持变更说明）
    */
   async batchPublish(
     contentType: string,
-    contentKeys: string[]
+    contentKeys: string[],
+    changeSummary?: string
   ): Promise<{ publishedCount: number }> {
     const res = await fetch(`${API_BASE}/admin/content/${contentType}/batch-publish`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keys: contentKeys })
+      headers: getAuthHeaders('application/json'),
+      body: JSON.stringify({ keys: contentKeys, changeSummary })
     })
     if (!res.ok) throw new Error('批量发布失败')
     return res.json()
@@ -203,7 +233,9 @@ export const adminApi = {
    * 获取版本历史
    */
   async getVersions(contentType: string, contentKey: string): Promise<VersionInfo[]> {
-    const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}/versions`)
+    const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}/versions`, {
+      headers: getAuthHeaders()
+    })
     if (!res.ok) throw new Error('获取版本历史失败')
     return res.json()
   },
@@ -214,7 +246,7 @@ export const adminApi = {
   async rollback(contentType: string, contentKey: string, version: number): Promise<void> {
     const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}/rollback`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders('application/json'),
       body: JSON.stringify({ version })
     })
     if (!res.ok) throw new Error('回滚失败')
@@ -225,7 +257,8 @@ export const adminApi = {
    */
   async delete(contentType: string, contentKey: string): Promise<void> {
     const res = await fetch(`${API_BASE}/admin/content/${contentType}/${contentKey}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     })
     if (!res.ok) throw new Error('删除失败')
   }
@@ -246,6 +279,7 @@ export const importApi = {
 
     const res = await fetch(`${API_BASE}/admin/import/${contentType}/preview`, {
       method: 'POST',
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` },
       body: formData
     })
     if (!res.ok) throw new Error('预览失败')
@@ -263,7 +297,7 @@ export const importApi = {
   ): Promise<ImportResult> {
     const res = await fetch(`${API_BASE}/admin/import/${contentType}/execute`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders('application/json'),
       body: JSON.stringify({ data, mode, autoPublish })
     })
     if (!res.ok) throw new Error('导入失败')
@@ -274,7 +308,9 @@ export const importApi = {
    * 获取导入历史
    */
   async getLogs(contentType: string): Promise<any[]> {
-    const res = await fetch(`${API_BASE}/admin/import/${contentType}/logs`)
+    const res = await fetch(`${API_BASE}/admin/import/${contentType}/logs`, {
+      headers: getAuthHeaders()
+    })
     if (!res.ok) throw new Error('获取导入历史失败')
     return res.json()
   }

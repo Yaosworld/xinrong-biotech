@@ -134,6 +134,29 @@ export const contentService = {
     }
   },
   
+  // 获取筛选选项（品牌列表等）
+  getFilterOptions(contentType: string) {
+    const rows = db.queryAll(`
+      SELECT published_data FROM contents 
+      WHERE content_type = ? AND status = 'published' AND published_data IS NOT NULL
+    `, [contentType])
+    
+    const brands = new Set<string>()
+    const categories = new Set<string>()
+    
+    rows.forEach(row => {
+      const data = JSON.parse(row.published_data)
+      if (data.brand) brands.add(data.brand)
+      if (data.categoryId) categories.add(data.categoryId)
+    })
+    
+    return {
+      brands: Array.from(brands).sort((a, b) => a.localeCompare(b, 'zh-CN')),
+      categories: Array.from(categories).sort(),
+      total: rows.length
+    }
+  },
+
   // 获取版本历史
   getVersions(contentType: string, contentKey: string) {
     const content = db.queryOne(`
@@ -247,10 +270,12 @@ export const contentService = {
     })
   },
   
-  // 批量发布
-  batchPublish(contentType: string, contentKeys: string[]) {
+  // 批量发布（支持变更说明）
+  batchPublish(contentType: string, contentKeys: string[], changeSummary?: string) {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
     let publishedCount = 0
+    // 自动生成变更说明（如果未提供）
+    const summary = changeSummary || `批量发布 ${contentKeys.length} 条 ${contentType} 数据`
     
     db.transaction(() => {
       for (const key of contentKeys) {
@@ -259,11 +284,13 @@ export const contentService = {
         `, [contentType, key])
         
         if (content && content.draft_data) {
-          // 创建版本快照
+          const newVersion = content.version + 1
+          
+          // 创建版本快照（包含变更说明）
           db.run(`
-            INSERT INTO content_versions (content_id, version, data, created_at)
-            VALUES (?, ?, ?, ?)
-          `, [content.id, content.version, content.draft_data, now])
+            INSERT INTO content_versions (content_id, version, data, change_summary, created_at)
+            VALUES (?, ?, ?, ?, ?)
+          `, [content.id, newVersion, content.draft_data, summary, now])
           
           // 发布
           db.run(`
@@ -274,7 +301,7 @@ export const contentService = {
               published_at = ?,
               updated_at = ?
             WHERE id = ?
-          `, [content.draft_data, content.version + 1, now, now, content.id])
+          `, [content.draft_data, newVersion, now, now, content.id])
           
           publishedCount++
         }
