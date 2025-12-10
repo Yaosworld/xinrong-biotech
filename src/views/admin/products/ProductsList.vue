@@ -90,6 +90,11 @@ const handlePublish = () => {
   productStore.clearCache()
 }
 
+// 重新加载数据（版本回滚后调用）
+const handleReload = async () => {
+  await loadAdminData()
+}
+
 // 从 Admin API 加载数据（包含草稿）
 const loadAdminData = async () => {
   loading.value = true
@@ -128,5 +133,6 @@ onMounted(async () => {
     @save="handleSave"
     @import="handleImport"
     @publish="handlePublish"
+    @reload="handleReload"
   />
 </template>

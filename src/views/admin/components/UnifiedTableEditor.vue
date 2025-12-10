@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAdminStore } from '@/stores/adminStore'
 import { adminApi } from '@/api/contentApi'
+import VersionHistoryDialog from './VersionHistoryDialog.vue'
+import PublishDialog from './PublishDialog.vue'
+import { ExcelExporter, type ExportColumn, type ExportMode } from '@/utils/excelExporter'
+import { DuplicateDetector, type DuplicateCheckResult } from '@/utils/duplicateDetector'
 
 // ========================================
 // 类型定义
@@ -110,6 +115,7 @@ const emit = defineEmits<{
   delete: [item: any]
   import: [data: any[]]
   publish: [data: any[]]
+  reload: []
 }>()
 
 const adminStore = useAdminStore()
@@ -139,9 +145,63 @@ const previewUrl = ref('')
 // 文件上传
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-// 发布状态
-const isPublishing = ref(false)
-const hasUnpublishedChanges = ref(false)
+// ==================== 状态管理 ====================
+type EditStatus = 'clean' | 'dirty' | 'saving' | 'publishing'
+const editStatus = ref<EditStatus>('clean')
+
+type ContentStatus = 'draft' | 'published' | 'unpublished'
+const contentStatus = ref<ContentStatus>('unpublished')
+
+// 版本历史
+const showVersionHistory = ref(false)
+const currentVersion = ref(1)
+
+// 发布对话框
+const showPublishDialog = ref(false)
+const publishSummary = ref('')
+
+// 原始数据快照（用于变更检测）
+const originalDataString = ref<string>('')
+
+// 当前数据字符串
+const currentDataString = computed(() => JSON.stringify(localData.value))
+
+// 是否有未保存的更改
+const hasUnsavedChanges = computed(() => 
+  originalDataString.value !== '' && currentDataString.value !== originalDataString.value
+)
+
+// 是否正在操作中
+const isOperating = computed(() => 
+  editStatus.value === 'saving' || editStatus.value === 'publishing'
+)
+
+// 监听数据变化，自动更新编辑状态
+watch(currentDataString, () => {
+  if (!isOperating.value) {
+    editStatus.value = hasUnsavedChanges.value ? 'dirty' : 'clean'
+  }
+})
+
+// 状态标签配置
+const statusConfig = computed(() => {
+  if (editStatus.value === 'dirty') {
+    return { type: 'danger' as const, icon: 'fas fa-pen', text: '编辑中 · 未保存', pulse: true }
+  }
+  if (editStatus.value === 'saving') {
+    return { type: 'warning' as const, icon: 'fas fa-spinner fa-spin', text: '保存中...', pulse: false }
+  }
+  if (editStatus.value === 'publishing') {
+    return { type: 'warning' as const, icon: 'fas fa-spinner fa-spin', text: '发布中...', pulse: false }
+  }
+  if (contentStatus.value === 'draft') {
+    return { type: 'warning' as const, icon: 'fas fa-file-alt', text: '草稿 · 待发布', pulse: false }
+  }
+  if (contentStatus.value === 'published') {
+    return { type: 'success' as const, icon: 'fas fa-check-circle', text: '已发布', pulse: false }
+  }
+  return { type: 'info' as const, icon: 'fas fa-file', text: '未发布', pulse: false }
+})
 
 // ========================================
 // 计算属性
@@ -245,6 +305,9 @@ const categoryCounts = computed(() => {
 
 const initLocalData = () => {
   localData.value = JSON.parse(JSON.stringify(props.data))
+  // 保存原始数据快照
+  originalDataString.value = JSON.stringify(localData.value)
+  editStatus.value = 'clean'
 }
 
 // 图片处理
@@ -421,12 +484,57 @@ const saveEditForm = () => {
   })
   
   if (isAddMode.value) {
+    // 检测新增数据是否与现有数据重复
+    const compareFields = props.columns
+      .filter(col => col.editable !== false && col.showInForm !== false)
+      .map(col => col.key)
+    
+    const { isDuplicate, duplicateItem } = DuplicateDetector.checkSingle(
+      processedData,
+      localData.value,
+      props.rowKey,
+      compareFields
+    )
+    
+    if (isDuplicate) {
+      const previewFields = props.columns.slice(0, 3)
+      const preview = previewFields
+        .map(col => duplicateItem?.[col.key])
+        .filter(Boolean)
+        .join(' / ')
+      ElMessage.warning(`数据重复！已存在相同内容的条目：${preview}`)
+      return
+    }
+    
     localData.value.push(processedData)
     emit('add', processedData)
-    ElMessage.success('添加成功')
+    ElMessage.success(props.publishConfig?.enabled ? '添加成功，请点击"保存草稿"保存到服务器' : '添加成功')
   } else {
     const index = localData.value.findIndex(item => item[props.rowKey] === editingItem.value[props.rowKey])
     if (index > -1) {
+      // 检测编辑后的数据是否与其他数据重复（排除自身）
+      const compareFields = props.columns
+        .filter(col => col.editable !== false && col.showInForm !== false)
+        .map(col => col.key)
+      
+      const { isDuplicate, duplicateItem } = DuplicateDetector.checkSingle(
+        processedData,
+        localData.value,
+        props.rowKey,
+        compareFields,
+        index // 排除当前编辑项
+      )
+      
+      if (isDuplicate) {
+        const previewFields = props.columns.slice(0, 3)
+        const preview = previewFields
+          .map(col => duplicateItem?.[col.key])
+          .filter(Boolean)
+          .join(' / ')
+        ElMessage.warning(`数据重复！已存在相同内容的条目：${preview}`)
+        return
+      }
+      
       // 处理分类变更时的排序
       if (props.sortConfig?.enabled && props.categories) {
         const oldItem = localData.value[index]
@@ -448,7 +556,7 @@ const saveEditForm = () => {
       }
       localData.value[index] = processedData
       emit('update', processedData)
-      ElMessage.success('保存成功')
+      ElMessage.success(props.publishConfig?.enabled ? '修改成功，请点击"保存草稿"保存到服务器' : '保存成功')
     }
   }
   
@@ -503,6 +611,7 @@ const saveAll = async () => {
   // 如果启用了发布功能，保存到后端草稿
   if (props.publishConfig?.enabled) {
     try {
+      editStatus.value = 'saving'
       const contentType = props.publishConfig.contentType
       const getKey = props.publishConfig.getContentKey || ((item: any) => item[props.rowKey])
       
@@ -513,8 +622,13 @@ const saveAll = async () => {
       }))
       
       await adminApi.batchSaveDraft(contentType, items)
-      hasUnpublishedChanges.value = true
+      
+      // 更新状态
+      originalDataString.value = currentDataString.value
+      contentStatus.value = 'draft'
+      editStatus.value = 'clean'
     } catch (error) {
+      editStatus.value = hasUnsavedChanges.value ? 'dirty' : 'clean'
       console.error('保存草稿失败:', error)
       ElMessage.error('保存草稿失败')
       return
@@ -527,7 +641,24 @@ const saveAll = async () => {
     target: props.title,
     description: `保存了 ${props.title} 的数据更改，共 ${dataToSave.length} 条`
   })
-  ElMessage.success(props.publishConfig?.enabled ? '草稿保存成功' : '保存成功')
+  ElMessage.success(props.publishConfig?.enabled ? '草稿已保存' : '保存成功')
+}
+
+// 打开发布对话框
+const openPublishDialog = async () => {
+  if (!props.publishConfig?.enabled) return
+  
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm(
+        '您有未保存的更改，发布前需要先保存。是否继续？',
+        '提示',
+        { confirmButtonText: '保存并发布', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch { return }
+  }
+  publishSummary.value = ''
+  showPublishDialog.value = true
 }
 
 // 发布数据
@@ -535,13 +666,8 @@ const publishAll = async () => {
   if (!props.publishConfig?.enabled) return
   
   try {
-    await ElMessageBox.confirm(
-      '确定要发布吗？发布后前台页面将立即更新。',
-      '确认发布',
-      { confirmButtonText: '确定发布', cancelButtonText: '取消', type: 'warning' }
-    )
-    
-    isPublishing.value = true
+    editStatus.value = 'publishing'
+    showPublishDialog.value = false
     
     // 先保存当前数据
     recalculateSortOrder()
@@ -562,44 +688,131 @@ const publishAll = async () => {
     
     // 批量发布
     const keys = items.map(item => item.key)
-    await adminApi.batchPublish(contentType, keys)
+    const result = await adminApi.batchPublish(contentType, keys)
     
-    hasUnpublishedChanges.value = false
+    // 更新状态
+    originalDataString.value = currentDataString.value
+    currentVersion.value += 1
+    contentStatus.value = 'published'
+    editStatus.value = 'clean'
     
     emit('save', dataToSave)
     emit('publish', dataToSave)
     adminStore.addActivity({
       type: 'modify',
       target: props.title,
-      description: `发布了 ${props.title}，共 ${dataToSave.length} 条`
+      description: `发布了 ${props.title} v${currentVersion.value}，共 ${result.publishedCount} 条`
     })
     
-    ElMessage.success('发布成功！前台页面已更新')
+    ElMessage.success(`发布成功！当前版本 v${currentVersion.value}`)
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('发布失败:', error)
-      ElMessage.error('发布失败')
-    }
-  } finally {
-    isPublishing.value = false
+    editStatus.value = hasUnsavedChanges.value ? 'dirty' : 'clean'
+    console.error('发布失败:', error)
+    ElMessage.error('发布失败')
   }
 }
 
-const exportData = () => {
-  const data = JSON.stringify(localData.value, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `${props.title}-${new Date().toISOString().split('T')[0]}.json`
-  link.click()
-  URL.revokeObjectURL(url)
+// 重置数据
+const resetData = async () => {
+  if (!hasUnsavedChanges.value) {
+    ElMessage.info('没有需要重置的更改')
+    return
+  }
+  try {
+    await ElMessageBox.confirm('确定要放弃当前的更改吗？', '确认重置',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+    initLocalData()
+    ElMessage.success('已重置为上次保存的内容')
+  } catch {}
+}
+
+// 版本回滚
+const handleVersionRollback = async () => {
+  // 重新加载数据
+  emit('reload')
+  ElMessage.info('数据已回滚，请检查后重新发布')
+}
+
+// ==================== 离开页面保护 ====================
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (hasUnsavedChanges.value) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+
+onBeforeRouteLeave(async (_to, _from, next) => {
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm('您有未保存的更改，确定要离开吗？', '提示',
+        { confirmButtonText: '离开', cancelButtonText: '留下', type: 'warning' })
+      next()
+    } catch { next(false) }
+  } else { next() }
+})
+
+// ========================================
+// Excel 导出
+// ========================================
+
+// 获取可导出的列配置
+const exportColumns = computed<ExportColumn[]>(() => {
+  return props.columns
+    .filter(col => col.editable !== false || col.key === props.rowKey) // 包含ID和可编辑列
+    .filter(col => col.showInForm !== false) // 排除仅显示列
+    .map(col => ({
+      key: col.key,
+      label: col.label,
+      type: col.type,
+      required: col.required,
+      options: col.options,
+      description: col.placeholder
+    }))
+})
+
+// 导出处理
+const handleExport = async (mode: ExportMode) => {
+  const dateStr = new Date().toISOString().split('T')[0]
+  const baseFilename = props.title.replace('列表', '')
   
-  adminStore.addActivity({
-    type: 'download',
-    target: props.title,
-    description: `导出了 ${props.title} 的数据`
-  })
+  let filename: string
+  let description: string
+  
+  switch (mode) {
+    case 'data':
+      filename = `${baseFilename}-数据-${dateStr}`
+      description = `导出了 ${props.title} 的数据（${localData.value.length} 条）`
+      break
+    case 'template':
+      filename = `${baseFilename}-导入模板（带示例）`
+      description = `导出了 ${props.title} 的导入模板（带示例）`
+      break
+    case 'blank':
+      filename = `${baseFilename}-空白模板`
+      description = `导出了 ${props.title} 的空白模板`
+      break
+  }
+  
+  try {
+    await ExcelExporter.export({
+      mode,
+      filename,
+      columns: exportColumns.value,
+      data: mode === 'data' ? localData.value : undefined,
+      sheetName: mode === 'data' ? props.title : undefined
+    })
+    
+    adminStore.addActivity({
+      type: 'download',
+      target: props.title,
+      description
+    })
+    
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败')
+  }
 }
 
 // ========================================
@@ -617,16 +830,94 @@ const handleFileChange = async (event: Event) => {
   
   try {
     const importedData = await props.importConfig.handler(file)
-    if (importedData && importedData.length > 0) {
+    if (!importedData || importedData.length === 0) {
+      ElMessage.warning('导入文件中没有有效数据')
+      input.value = ''
+      return
+    }
+
+    // 获取用于比较的字段（排除不可编辑的字段如分类图片）
+    const compareFields = props.columns
+      .filter(col => col.editable !== false && col.showInForm !== false)
+      .map(col => col.key)
+
+    // 检测重复
+    const checkResult = DuplicateDetector.check(
+      importedData,
+      localData.value,
+      props.rowKey,
+      compareFields
+    )
+
+    if (checkResult.hasDuplicates) {
+      // 有重复，显示处理对话框
+      await showDuplicateDialog(importedData, checkResult)
+    } else {
+      // 无重复，直接导入
       localData.value.push(...importedData)
       emit('import', importedData)
-      ElMessage.success(`成功导入 ${importedData.length} 条数据`)
+      ElMessage.success(
+        props.publishConfig?.enabled 
+          ? `成功导入 ${importedData.length} 条数据，请点击"保存草稿"保存到服务器` 
+          : `成功导入 ${importedData.length} 条数据`
+      )
     }
   } catch (error) {
     ElMessage.error('导入失败：' + (error as Error).message)
   }
   
   input.value = '' // 重置
+}
+
+// 显示重复数据处理对话框
+const showDuplicateDialog = async (importedData: any[], checkResult: DuplicateCheckResult) => {
+  const reportColumns = props.columns.slice(0, 4).map(col => ({ key: col.key, label: col.label }))
+  const reportHtml = DuplicateDetector.generateReport(checkResult, reportColumns)
+  
+  try {
+    const action = await ElMessageBox({
+      title: '检测到重复数据',
+      message: `
+        ${reportHtml}
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee;">
+          <strong>请选择处理方式：</strong>
+        </div>
+      `,
+      dangerouslyUseHTMLString: true,
+      distinguishCancelAndClose: true,
+      showCancelButton: true,
+      confirmButtonText: `跳过重复，导入 ${checkResult.stats.unique} 条`,
+      cancelButtonText: '全部导入（保留重复）',
+      type: 'warning'
+    })
+    
+    // 点击确认：跳过重复
+    if (action === 'confirm') {
+      if (checkResult.uniqueData.length > 0) {
+        localData.value.push(...checkResult.uniqueData)
+        emit('import', checkResult.uniqueData)
+        ElMessage.success(
+          props.publishConfig?.enabled 
+            ? `已跳过重复，成功导入 ${checkResult.uniqueData.length} 条数据，请点击"保存草稿"保存到服务器` 
+            : `已跳过重复，成功导入 ${checkResult.uniqueData.length} 条数据`
+        )
+      } else {
+        ElMessage.warning('所有数据都是重复的，没有导入任何数据')
+      }
+    }
+  } catch (action) {
+    // 点击取消：全部导入
+    if (action === 'cancel') {
+      localData.value.push(...importedData)
+      emit('import', importedData)
+      ElMessage.success(
+        props.publishConfig?.enabled 
+          ? `成功导入全部 ${importedData.length} 条数据（含重复），请点击"保存草稿"保存到服务器` 
+          : `成功导入全部 ${importedData.length} 条数据（含重复）`
+      )
+    }
+    // 点击关闭：取消导入，不做任何操作
+  }
 }
 
 // ========================================
@@ -661,6 +952,11 @@ watch(() => props.data, () => {
 
 onMounted(() => {
   initLocalData()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 
@@ -679,20 +975,31 @@ onMounted(() => {
           </el-radio-button>
         </el-radio-group>
         
-        <span v-else class="data-count">共 {{ total }} 条数据</span>
-      </div>
-      
-      <div class="toolbar-right">
+        <span v-if="!categories" class="data-count">共 {{ total }} 条数据</span>
+        
         <!-- 搜索 -->
         <el-input
           v-if="searchable"
           v-model="searchQuery"
           :placeholder="searchPlaceholder || '搜索...'"
           clearable
-          style="width: 200px"
+          class="search-input"
         >
           <template #prefix><i class="fas fa-search"></i></template>
         </el-input>
+      </div>
+      
+      <div class="toolbar-right">
+        <!-- 状态标签 -->
+        <el-tag v-if="publishConfig?.enabled" :type="statusConfig.type" size="small" :class="['status-tag', { pulse: statusConfig.pulse }]">
+          <i :class="statusConfig.icon" class="mr-1"></i> {{ statusConfig.text }}
+        </el-tag>
+        <el-tag v-if="publishConfig?.enabled" type="info" size="small" class="version-tag">v{{ currentVersion }}</el-tag>
+        
+        <!-- 版本历史 -->
+        <el-button v-if="publishConfig?.enabled" @click="showVersionHistory = true" :disabled="isOperating">
+          <i class="fas fa-history mr-1"></i> 版本历史
+        </el-button>
         
         <!-- 新增 -->
         <el-button v-if="addable" type="primary" @click="openAddPanel">
@@ -717,27 +1024,41 @@ onMounted(() => {
           <i class="fas fa-trash mr-1"></i> 批量删除 ({{ selectedRows.length }})
         </el-button>
         
-        <!-- 导出 -->
-        <el-button v-if="exportable" @click="exportData">
-          <i class="fas fa-download mr-1"></i> 导出
+        <!-- 重置 -->
+        <el-button v-if="publishConfig?.enabled" @click="resetData" :disabled="!hasUnsavedChanges || isOperating">
+          <i class="fas fa-undo mr-1"></i> 重置
         </el-button>
         
+        <!-- 导出下拉菜单 -->
+        <el-dropdown v-if="exportable" trigger="click" @command="handleExport">
+          <el-button>
+            <i class="fas fa-download mr-1"></i> 导出 <i class="fas fa-caret-down ml-1"></i>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="data">
+                <i class="fas fa-table mr-2"></i> 导出当前数据
+              </el-dropdown-item>
+              <el-dropdown-item command="template" divided>
+                <i class="fas fa-file-excel mr-2"></i> 导出模板（带示例）
+              </el-dropdown-item>
+              <el-dropdown-item command="blank">
+                <i class="fas fa-file mr-2"></i> 导出空白模板
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        
         <!-- 保存 -->
-        <el-button type="success" @click="saveAll">
+        <el-button :loading="editStatus === 'saving'" :disabled="publishConfig?.enabled && (!hasUnsavedChanges || editStatus === 'publishing')" @click="saveAll">
           <i class="fas fa-save mr-1"></i> {{ publishConfig?.enabled ? '保存草稿' : '保存全部' }}
         </el-button>
         
         <!-- 发布 -->
-        <el-button v-if="publishConfig?.enabled" type="primary" :loading="isPublishing" @click="publishAll">
+        <el-button v-if="publishConfig?.enabled" type="primary" :loading="editStatus === 'publishing'" :disabled="editStatus === 'saving'" @click="openPublishDialog">
           <i class="fas fa-cloud-upload-alt mr-1"></i> 发布
         </el-button>
       </div>
-    </div>
-    
-    <!-- 发布状态提示 -->
-    <div v-if="publishConfig?.enabled && hasUnpublishedChanges" class="publish-tip">
-      <i class="fas fa-exclamation-circle"></i>
-      有未发布的更改，点击"发布"按钮使更改生效
     </div>
 
     <!-- 排序提示 -->
@@ -931,6 +1252,26 @@ onMounted(() => {
         <img :src="previewUrl" alt="预览" />
       </div>
     </el-dialog>
+    
+    <!-- 版本历史对话框 -->
+    <VersionHistoryDialog
+      v-if="publishConfig?.enabled"
+      v-model:visible="showVersionHistory"
+      :content-type="publishConfig.contentType"
+      content-key="list"
+      :title="`${title} - 版本历史`"
+      @rollback="handleVersionRollback"
+    />
+    
+    <!-- 发布对话框 -->
+    <PublishDialog
+      v-if="publishConfig?.enabled"
+      v-model:visible="showPublishDialog"
+      v-model:publish-summary="publishSummary"
+      :current-version="currentVersion"
+      :is-publishing="editStatus === 'publishing'"
+      @confirm="publishAll"
+    />
   </div>
 </template>
 
@@ -969,6 +1310,16 @@ onMounted(() => {
   font-size: 13px;
   color: #999;
 }
+
+.search-input {
+  width: 200px;
+  margin-left: 12px;
+}
+
+.status-tag { margin-right: 4px; }
+.status-tag.pulse { animation: pulse-animation 1.5s infinite; }
+@keyframes pulse-animation { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.version-tag { margin-right: 8px; }
 
 .toolbar-right {
   display: flex;
@@ -1117,4 +1468,6 @@ onMounted(() => {
 }
 
 .mr-1 { margin-right: 4px; }
+.mr-2 { margin-right: 8px; }
+.ml-1 { margin-left: 4px; }
 </style>

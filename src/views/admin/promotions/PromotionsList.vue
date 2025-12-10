@@ -16,7 +16,6 @@ const loading = ref(false)
 const promotions = computed(() => localPromotions.value)
 
 // 列配置
-// 注意：sortable 列会自动增加24px给排序箭头
 const columns = computed(() => [
   { key: 'id', label: 'ID', width: 60, editable: false, sortable: true, fixed: 'left' as const },
   { key: 'cover_url', label: '封面', width: 65, type: 'image' as const, imageStyle: 'contain' as const },
@@ -43,7 +42,6 @@ const beforeSave = (data: any[]) => {
 
 // 保存数据
 const handleSave = (data: any[]) => {
-  // 更新本地数据
   localPromotions.value = [...data]
   adminStore.addActivity({
     type: 'modify',
@@ -61,17 +59,20 @@ const handlePublish = () => {
 const loadAdminData = async () => {
   loading.value = true
   try {
-    // 从 Admin API 加载（优先使用草稿数据）
     const result = await adminApi.getList('promotion', { pageSize: 9999 })
     localPromotions.value = result.data.map(item => item.draftData || item.publishedData)
   } catch (e) {
     console.warn('Admin API 加载失败，降级到前台 Store:', e)
-    // 降级到前台 Store
     await promotionStore.loadPromotions()
     localPromotions.value = [...promotionStore.promotions]
   } finally {
     loading.value = false
   }
+}
+
+// 重新加载数据（版本回滚后调用）
+const handleReload = async () => {
+  await loadAdminData()
 }
 
 onMounted(async () => {
@@ -92,5 +93,6 @@ onMounted(async () => {
     :before-save="beforeSave"
     @save="handleSave"
     @publish="handlePublish"
+    @reload="handleReload"
   />
 </template>
