@@ -25,6 +25,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true
+      },
+      // 上传的图片代理到后端（开发环境）
+      '/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
       }
     }
   },

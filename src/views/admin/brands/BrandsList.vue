@@ -37,8 +37,24 @@ const categories = [
 const columns = computed(() => [
   { key: 'id', label: 'ID', width: 70, editable: false, fixed: 'left' as const },
   { key: 'name', label: '品牌名称', width: 120, required: true },
-  { key: 'logo_url', label: 'Logo', width: 70, type: 'image' as const, imageStyle: 'contain' as const },
-  { key: 'certificate_url', label: '授权证书', width: 90, type: 'image' as const, imageStyle: 'contain' as const },
+  { 
+    key: 'logo_url', 
+    label: 'Logo', 
+    width: 70, 
+    type: 'image' as const, 
+    imageStyle: 'contain' as const,
+    uploadCategory: 'brand-logo' as const,
+    placeholder: '上传品牌 Logo 图片'
+  },
+  { 
+    key: 'certificate_url', 
+    label: '授权证书', 
+    width: 90, 
+    type: 'image' as const, 
+    imageStyle: 'contain' as const,
+    uploadCategory: 'brand-cert' as const,
+    placeholder: '上传品牌授权证书'
+  },
   { key: 'is_own_brand', label: '自有', width: 55, type: 'boolean' as const, placeholder: '切换后品牌将移动到对应分类' },
   { key: 'country', label: '国家', width: 65, type: 'select' as const, options: countryOptions },
   { key: 'description', label: '品牌简介', width: { min: 200, flex: 1 }, type: 'textarea' as const, truncate: 80 },

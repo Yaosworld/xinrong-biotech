@@ -4,9 +4,11 @@ import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAdminStore } from '@/stores/adminStore'
 import { adminApi } from '@/api/contentApi'
+import { uploadApi, type UploadCategory } from '@/api/uploadApi'
 import VersionHistoryDialog from './VersionHistoryDialog.vue'
 import PublishDialog from './PublishDialog.vue'
 import DuplicateReportDialog from './DuplicateReportDialog.vue'
+import ImageUploader from '@/components/admin/ImageUploader.vue'
 import { ExcelExporter, type ExportColumn, type ExportMode } from '@/utils/excelExporter'
 import { DuplicateDetector, type DuplicateCheckResult } from '@/utils/duplicateDetector'
 
@@ -35,6 +37,7 @@ interface ColumnConfig {
   required?: boolean
   imageStyle?: 'cover' | 'contain'
   placeholder?: string
+  uploadCategory?: UploadCategory  // 图片上传分类
 }
 
 interface CategoryConfig {
@@ -321,6 +324,11 @@ const getImageUrl = (url: string) => {
   if (!url) return ''
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   return url.startsWith('/') ? url : `/${url}`
+}
+
+// 从 URL 中提取文件名
+const getFilenameFromUrl = (url: string) => {
+  return uploadApi.getFilenameFromUrl(url)
 }
 
 const handlePreviewImage = (url: string) => {
@@ -1244,12 +1252,31 @@ onBeforeUnmount(() => {
               <el-input v-model="editFormData[col.key]" :placeholder="col.placeholder || '多个标签用逗号分隔'" />
             </template>
             
-            <!-- 图片 -->
+            <!-- 图片（支持上传） -->
             <template v-else-if="col.type === 'image'">
-              <div class="image-input-wrapper">
-                <el-input v-model="editFormData[col.key]" :placeholder="col.placeholder || '输入图片路径'" />
-                <div v-if="editFormData[col.key]" class="image-preview">
-                  <img :src="getImageUrl(editFormData[col.key])" alt="预览" />
+              <div class="image-upload-wrapper">
+                <!-- 有上传分类时使用上传组件 -->
+                <ImageUploader
+                  v-if="col.uploadCategory"
+                  v-model="editFormData[col.key]"
+                  :category="col.uploadCategory"
+                  :placeholder="col.placeholder || '点击或拖拽上传图片'"
+                />
+                <!-- 无上传分类时显示只读信息 -->
+                <div v-else class="image-readonly">
+                  <div v-if="editFormData[col.key]" class="image-info">
+                    <div class="image-preview-small">
+                      <img :src="getImageUrl(editFormData[col.key])" alt="预览" />
+                    </div>
+                    <div class="image-filename">
+                      <i class="fas fa-image"></i>
+                      <span>{{ getFilenameFromUrl(editFormData[col.key]) }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="no-image-tip">
+                    <i class="fas fa-image"></i>
+                    <span>暂无图片</span>
+                  </div>
                 </div>
               </div>
             </template>
@@ -1466,6 +1493,78 @@ onBeforeUnmount(() => {
 }
 
 .image-input-wrapper { width: 100%; }
+
+.image-upload-wrapper { width: 100%; }
+
+.image-readonly {
+  width: 100%;
+}
+
+.image-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-preview-small {
+  width: 100%;
+  max-height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+  background: #f9f9f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-small img {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+}
+
+.image-filename {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.image-filename i {
+  color: #909399;
+}
+
+.image-filename span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-image-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  background: #fafafa;
+  border: 1px dashed #dcdfe6;
+  border-radius: 8px;
+  color: #c0c4cc;
+}
+
+.no-image-tip i {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.no-image-tip span {
+  font-size: 13px;
+}
 
 .image-preview {
   margin-top: 10px;
