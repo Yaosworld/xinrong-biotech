@@ -104,6 +104,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/products/ProductsList.vue'),
         meta: { title: '产品列表' }
       },
+      // 分类管理
+      {
+        path: 'products/categories',
+        name: 'AdminCategoryList',
+        component: () => import('@/views/admin/products/CategoryList.vue'),
+        meta: { title: '分类管理' }
+      },
       // 品牌管理
       {
         path: 'brands/list',

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { contentService } from '../services/contentService'
 import { importService, ImportMode } from '../services/importService'
+import { categoryService } from '../services/categoryService'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -113,8 +114,75 @@ router.post('/content/:type/:key/rollback', (req: Request, res: Response) => {
 router.delete('/content/:type/:key', (req: Request, res: Response) => {
   try {
     const { type, key } = req.params
+    
+    // 分类删除需要检查是否有关联产品
+    if (type === 'category') {
+      const { canDelete, productCount } = categoryService.canDelete(key)
+      if (!canDelete) {
+        res.status(400).json({ 
+          error: `无法删除该分类，该分类下有 ${productCount} 个产品`,
+          productCount 
+        })
+        return
+      }
+    }
+    
     contentService.delete(type, key)
     res.json({ success: true })
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// ========================================
+// 分类管理
+// ========================================
+
+// 获取分类列表（含产品数量）
+router.get('/category/with-count', (req: Request, res: Response) => {
+  try {
+    const categories = categoryService.getCategoriesWithCount()
+    res.json({ data: categories })
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// 检测未定义的分类
+router.post('/category/detect-undefined', (req: Request, res: Response) => {
+  try {
+    const { categoryValues } = req.body
+    if (!Array.isArray(categoryValues)) {
+      res.status(400).json({ error: 'categoryValues must be an array' })
+      return
+    }
+    const undefinedCategories = categoryService.detectUndefinedCategories(categoryValues)
+    res.json({ undefinedCategories })
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// 批量创建分类
+router.post('/category/batch-create', (req: Request, res: Response) => {
+  try {
+    const { categories } = req.body
+    if (!Array.isArray(categories)) {
+      res.status(400).json({ error: 'categories must be an array' })
+      return
+    }
+    const created = categoryService.batchCreateCategories(categories)
+    res.json({ success: true, data: created })
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// 生成新的分类ID
+router.get('/category/generate-id', (req: Request, res: Response) => {
+  try {
+    const id = categoryService.generateCategoryId()
+    res.json({ id })
   } catch (e) {
     res.status(500).json({ error: (e as Error).message })
   }

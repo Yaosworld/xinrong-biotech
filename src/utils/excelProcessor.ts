@@ -3,6 +3,8 @@
  * 用于前端解析Excel文件并转换为JSON
  */
 
+import { useCategoryStore } from '@/stores/categoryStore'
+
 export interface ValidationResult {
   isValid: boolean
   errors: string[]
@@ -14,6 +16,8 @@ export interface ProcessResult<T> {
   data: T[]
   validation: ValidationResult
   message: string
+  /** 检测到的未定义分类列表 */
+  undefinedCategories?: string[]
 }
 
 /**
@@ -24,30 +28,52 @@ export class ExcelProcessor {
    * 处理产品数据Excel
    * @param file Excel 文件
    * @param existingIds 已存在的 ID 列表（用于避免 ID 冲突）
+   * @param options 选项
    */
-  static async processProducts(file: File, existingIds?: string[]): Promise<ProcessResult<any>> {
+  static async processProducts(
+    file: File, 
+    existingIds?: string[],
+    options?: { skipCategoryValidation?: boolean; newCategoryMap?: Map<string, string> }
+  ): Promise<ProcessResult<any>> {
     try {
       const XLSX = await import('xlsx')
       const arrayBuffer = await file.arrayBuffer()
       const workbook = XLSX.read(arrayBuffer)
       const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]])
 
-      const validation = this.validateProductData(data)
-      const formattedData = this.formatProductsData(data, existingIds)
+      const validation = this.validateProductData(data, options?.skipCategoryValidation)
+      const formattedData = this.formatProductsData(data, existingIds, options?.newCategoryMap)
 
       return {
         success: validation.isValid,
         data: formattedData,
         validation,
-        message: validation.isValid ? '产品数据处理成功' : '产品数据存在错误'
+        message: validation.isValid ? '产品数据处理成功' : '产品数据存在错误',
+        undefinedCategories: validation.undefinedCategories
       }
     } catch (error) {
       return {
         success: false,
         data: [],
-        validation: { isValid: false, errors: [(error as Error).message], warnings: [] },
-        message: '文件处理失败'
+        validation: { isValid: false, errors: [(error as Error).message], warnings: [], undefinedCategories: [] },
+        message: '文件处理失败',
+        undefinedCategories: []
       }
+    }
+  }
+
+  /**
+   * 仅解析Excel文件，不进行格式化（用于预检测）
+   */
+  static async parseExcelFile(file: File): Promise<{ success: boolean; data: any[]; error?: string }> {
+    try {
+      const XLSX = await import('xlsx')
+      const arrayBuffer = await file.arrayBuffer()
+      const workbook = XLSX.read(arrayBuffer)
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]])
+      return { success: true, data }
+    } catch (error) {
+      return { success: false, data: [], error: (error as Error).message }
     }
   }
 
@@ -135,24 +161,42 @@ export class ExcelProcessor {
     }
   }
 
-  // 分类映射表：ID -> 名称，名称 -> ID（支持双向查找）
-  static readonly CATEGORY_MAP: Record<string, string> = {
-    // ID -> 名称
-    'C01': '仪器设备',
-    'C02': '实验耗材',
-    'C03': '实验试剂',
-    'C04': '细胞相关产品',
-    'C05': '分子生物实验产品',
-    // 名称 -> ID（反向映射）
-    '仪器设备': 'C01',
-    '实验耗材': 'C02',
-    '实验试剂': 'C03',
-    '细胞相关产品': 'C04',
-    '分子生物实验产品': 'C05'
+  // 默认分类映射表（用于降级）
+  static readonly DEFAULT_CATEGORY_MAP: Record<string, string> = {
+    'C01': '仪器设备', 'C02': '实验耗材', 'C03': '实验试剂',
+    'C04': '细胞相关产品', 'C05': '分子生物实验产品',
+    '仪器设备': 'C01', '实验耗材': 'C02', '实验试剂': 'C03',
+    '细胞相关产品': 'C04', '分子生物实验产品': 'C05'
   }
 
-  // 有效的产品分类 ID 列表
-  static readonly VALID_CATEGORY_IDS = ['C01', 'C02', 'C03', 'C04', 'C05']
+  // 默认有效分类 ID 列表
+  static readonly DEFAULT_CATEGORY_IDS = ['C01', 'C02', 'C03', 'C04', 'C05']
+
+  /**
+   * 动态获取分类映射表（从 categoryStore）
+   */
+  static getCategoryMap(): { idToName: Map<string, string>; nameToId: Map<string, string>; validIds: Set<string> } {
+    try {
+      const store = useCategoryStore()
+      if (store.initialized && store.categories.length > 0) {
+        const idToName = new Map(store.categories.map(c => [c.id, c.name]))
+        const nameToId = new Map(store.categories.map(c => [c.name, c.id]))
+        const validIds = new Set(store.categories.map(c => c.id))
+        return { idToName, nameToId, validIds }
+      }
+    } catch {
+      // store 未初始化
+    }
+    // 降级到默认值
+    const idToName = new Map<string, string>()
+    const nameToId = new Map<string, string>()
+    this.DEFAULT_CATEGORY_IDS.forEach(id => {
+      const name = this.DEFAULT_CATEGORY_MAP[id]
+      idToName.set(id, name)
+      nameToId.set(name, id)
+    })
+    return { idToName, nameToId, validIds: new Set(this.DEFAULT_CATEGORY_IDS) }
+  }
 
   /**
    * 将分类名称或ID转换为标准ID
@@ -160,23 +204,61 @@ export class ExcelProcessor {
   static normalizeCategoryId(value: string): string | null {
     if (!value) return null
     const trimmed = value.trim()
+    const { validIds, nameToId } = this.getCategoryMap()
     // 如果已经是有效ID，直接返回
-    if (this.VALID_CATEGORY_IDS.includes(trimmed)) {
+    if (validIds.has(trimmed)) {
       return trimmed
     }
     // 尝试通过名称查找ID
-    const id = this.CATEGORY_MAP[trimmed]
-    return id && this.VALID_CATEGORY_IDS.includes(id) ? id : null
+    const id = nameToId.get(trimmed)
+    return id || null
+  }
+
+  /**
+   * 从数据中提取所有分类值
+   */
+  static extractCategoryValues(data: any[]): string[] {
+    const values = new Set<string>()
+    data.forEach(row => {
+      if (row.categoryId) {
+        values.add(String(row.categoryId).trim())
+      }
+    })
+    return Array.from(values)
+  }
+
+  /**
+   * 检测未定义的分类
+   */
+  static detectUndefinedCategories(categoryValues: string[]): string[] {
+    const { validIds, nameToId } = this.getCategoryMap()
+    const undefined_: string[] = []
+    const seen = new Set<string>()
+    
+    for (const value of categoryValues) {
+      if (!value || seen.has(value)) continue
+      seen.add(value)
+      const trimmed = value.trim()
+      // 检查是否是有效的ID或名称
+      if (!validIds.has(trimmed) && !nameToId.has(trimmed)) {
+        undefined_.push(trimmed)
+      }
+    }
+    return undefined_
   }
 
   /**
    * 验证产品数据
+   * @param data 原始数据
+   * @param skipCategoryValidation 是否跳过分类验证（用于检测新分类场景）
    */
-  static validateProductData(data: any[]): ValidationResult {
+  static validateProductData(data: any[], skipCategoryValidation = false): ValidationResult & { undefinedCategories: string[] } {
     const requiredFields = ['name', 'categoryId', 'specs', 'desc']
     const errors: string[] = []
     const warnings: string[] = []
-    const validNames = Object.keys(this.CATEGORY_MAP).filter(k => !this.VALID_CATEGORY_IDS.includes(k))
+    const { validIds, idToName } = this.getCategoryMap()
+    const validNames = Array.from(idToName.values())
+    const undefinedCategories: string[] = []
 
     data.forEach((row, index) => {
       // 检查必填字段
@@ -187,10 +269,14 @@ export class ExcelProcessor {
       })
 
       // 检查 categoryId 有效性（支持ID或名称）
-      if (row.categoryId) {
+      if (row.categoryId && !skipCategoryValidation) {
         const normalizedId = this.normalizeCategoryId(row.categoryId)
         if (!normalizedId) {
-          errors.push(`第${index + 2}行: 分类 "${row.categoryId}" 无效，有效值: ${this.VALID_CATEGORY_IDS.join(', ')} 或 ${validNames.join(', ')}`)
+          // 收集未定义分类而不是直接报错
+          const trimmed = String(row.categoryId).trim()
+          if (!undefinedCategories.includes(trimmed)) {
+            undefinedCategories.push(trimmed)
+          }
         }
       }
 
@@ -200,10 +286,16 @@ export class ExcelProcessor {
       }
     })
 
+    // 如果有未定义分类，添加警告而不是错误（让调用方决定如何处理）
+    if (undefinedCategories.length > 0 && !skipCategoryValidation) {
+      warnings.push(`检测到 ${undefinedCategories.length} 个未定义分类: ${undefinedCategories.join(', ')}`)
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
-      warnings
+      warnings,
+      undefinedCategories
     }
   }
 
@@ -319,12 +411,16 @@ export class ExcelProcessor {
     return false
   }
 
+  /** 未分类的特殊ID */
+  static readonly UNCATEGORIZED_ID = 'C00'
+
   /**
    * 格式化产品数据
    * @param data 原始数据
    * @param existingIds 已存在的 ID 列表（用于避免冲突）
+   * @param newCategoryMap 新分类映射（名称 -> ID），用于处理新定义的分类
    */
-  static formatProductsData(data: any[], existingIds?: string[]): any[] {
+  static formatProductsData(data: any[], existingIds?: string[], newCategoryMap?: Map<string, string>): any[] {
     // 收集已使用的 ID（包括已存在的和本次导入中已分配的）
     const usedIds = new Set<string>(existingIds || [])
     
@@ -345,11 +441,22 @@ export class ExcelProcessor {
       }
       usedIds.add(id)
       
+      // 处理分类ID
+      let categoryId = this.normalizeCategoryId(row.categoryId)
+      if (!categoryId && row.categoryId) {
+        // 尝试从新分类映射中查找
+        const trimmed = String(row.categoryId).trim()
+        categoryId = newCategoryMap?.get(trimmed) || null
+      }
+      // 如果仍然没有找到，设为未分类
+      if (!categoryId) {
+        categoryId = this.UNCATEGORIZED_ID
+      }
+      
       return {
         id,
         name: row.name || '',
-        // 将分类名称转换为ID（支持名称或ID输入）
-        categoryId: this.normalizeCategoryId(row.categoryId) || row.categoryId || '',
+        categoryId,
         brand: row.brand || undefined,
         sku: row.sku || undefined,
         specs: row.specs || '',

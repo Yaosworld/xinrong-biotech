@@ -27,7 +27,15 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { id: 'products', title: '产品管理', icon: 'fas fa-box', path: '/admin/products/list' },
+  { 
+    id: 'products', 
+    title: '产品管理', 
+    icon: 'fas fa-box',
+    children: [
+      { id: 'products-list', title: '产品列表', path: '/admin/products/list' },
+      { id: 'products-categories', title: '分类管理', path: '/admin/products/categories' }
+    ]
+  },
   { id: 'promotions', title: '活动管理', icon: 'fas fa-bullhorn', path: '/admin/promotions/list' },
   { id: 'brands', title: '品牌管理', icon: 'fas fa-award', path: '/admin/brands/list' },
   { id: 'about', title: '关于我们', icon: 'fas fa-info-circle', path: '/admin/about/content' },
@@ -45,7 +53,7 @@ const menuItems = computed(() => {
 })
 
 // 展开的子菜单
-const expandedMenus = ref<string[]>(['site'])
+const expandedMenus = ref<string[]>(['products'])
 
 // 判断路由是否激活
 const isActive = (path: string) => route.path === path

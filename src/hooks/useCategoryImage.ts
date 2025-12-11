@@ -1,10 +1,11 @@
 import { computed, type Ref, type ComputedRef } from 'vue'
 import type { Category } from '@/types'
+import { useCategoryStore } from '@/stores/categoryStore'
 
 // ========================================
-// 分类数据常量（静态配置）
+// 默认分类数据（用于降级和初始化）
 // ========================================
-export const CATEGORIES: Category[] = [
+const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'C01',
     name: '仪器设备',
@@ -38,15 +39,48 @@ export const CATEGORIES: Category[] = [
 ]
 
 // ========================================
-// 分类查询映射表（懒加载）
+// 动态分类数据（从 store 获取）
 // ========================================
-let categoryMapCache: Map<string, Category> | null = null
 
-function getCategoryMap(): Map<string, Category> {
-  if (!categoryMapCache) {
-    categoryMapCache = new Map(CATEGORIES.map(cat => [cat.id, cat]))
+/**
+ * 获取分类列表（优先从 store，降级到默认值）
+ */
+export function getCategories(): Category[] {
+  try {
+    const store = useCategoryStore()
+    if (store.initialized && store.categories.length > 0) {
+      return store.categories
+    }
+  } catch {
+    // store 未初始化时使用默认值
   }
-  return categoryMapCache
+  return DEFAULT_CATEGORIES
+}
+
+/**
+ * 导出 CATEGORIES 作为计算属性的替代（向后兼容）
+ * 注意：这是一个 getter，每次访问都会获取最新数据
+ */
+export const CATEGORIES = new Proxy(DEFAULT_CATEGORIES, {
+  get(target, prop) {
+    const categories = getCategories()
+    if (prop === 'length') return categories.length
+    if (prop === Symbol.iterator) return categories[Symbol.iterator].bind(categories)
+    if (typeof prop === 'string' && !isNaN(Number(prop))) {
+      return categories[Number(prop)]
+    }
+    if (typeof prop === 'string' && prop in Array.prototype) {
+      return (categories as any)[prop]
+    }
+    return (target as any)[prop]
+  }
+}) as Category[]
+
+// ========================================
+// 分类查询映射表
+// ========================================
+function getCategoryMap(): Map<string, Category> {
+  return new Map(getCategories().map(cat => [cat.id, cat]))
 }
 
 // ========================================

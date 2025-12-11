@@ -3,17 +3,26 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useProductStore } from '@/stores/productStore'
 import { useAdminStore } from '@/stores/adminStore'
+import { useCategoryStore } from '@/stores/categoryStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
-import { CATEGORIES, getCategoryImagePath } from '@/hooks/useCategoryImage'
+import NewCategoryDialog from './NewCategoryDialog.vue'
+import { getCategoryImagePath } from '@/hooks/useCategoryImage'
 import { ExcelProcessor } from '@/utils/excelProcessor'
 import { adminApi } from '@/api/contentApi'
 
 const productStore = useProductStore()
 const adminStore = useAdminStore()
+const categoryStore = useCategoryStore()
 
 // 本地数据（从 Admin API 加载，包含草稿）
 const localProducts = ref<any[]>([])
 const loading = ref(false)
+
+// 新分类弹窗状态
+const newCategoryDialogVisible = ref(false)
+const pendingUndefinedCategories = ref<string[]>([])
+const pendingImportFile = ref<File | null>(null)
+const tableEditorRef = ref<InstanceType<typeof UnifiedTableEditor> | null>(null)
 
 // 产品数据 - 添加分类图片路径
 const products = computed(() => 
@@ -22,6 +31,21 @@ const products = computed(() =>
     categoryImage: getCategoryImagePath(p.categoryId)
   }))
 )
+
+// 分类选项（从 store 动态获取）
+const categoryOptions = computed(() => {
+  if (categoryStore.initialized && categoryStore.categories.length > 0) {
+    return categoryStore.categories.map(c => ({ label: c.name, value: c.id }))
+  }
+  // 降级到默认值
+  return [
+    { label: '仪器设备', value: 'C01' },
+    { label: '实验耗材', value: 'C02' },
+    { label: '实验试剂', value: 'C03' },
+    { label: '细胞相关产品', value: 'C04' },
+    { label: '分子生物实验产品', value: 'C05' }
+  ]
+})
 
 // 列配置
 // 注意：sortable 列会自动增加24px给排序箭头
@@ -38,7 +62,7 @@ const columns = computed(() => [
     width: 120,
     type: 'select' as const,
     required: true,
-    options: CATEGORIES.map(c => ({ label: c.name, value: c.id }))
+    options: categoryOptions.value
   },
   { key: 'specs', label: '规格', width: 75, truncate: 12, required: true },
   { key: 'unit', label: '单位', width: 55 },
@@ -47,13 +71,41 @@ const columns = computed(() => [
 
 // Excel 导入处理 - 返回包含 warnings 的结果，并传入已存在的 ID 避免冲突
 const handleExcelImport = async (file: File) => {
-  // 收集所有已存在的 ID（本地数据 + productStore）
+  // 先解析文件检测未定义分类
+  const parseResult = await ExcelProcessor.parseExcelFile(file)
+  if (!parseResult.success) {
+    throw new Error(parseResult.error || '文件解析失败')
+  }
+  
+  // 提取分类值并检测未定义分类
+  const categoryValues = ExcelProcessor.extractCategoryValues(parseResult.data)
+  const undefinedCategories = ExcelProcessor.detectUndefinedCategories(categoryValues)
+  
+  // 如果有未定义分类，显示弹窗让用户处理
+  if (undefinedCategories.length > 0) {
+    pendingUndefinedCategories.value = undefinedCategories
+    pendingImportFile.value = file
+    newCategoryDialogVisible.value = true
+    // 返回空数组，等待用户处理后再继续
+    throw new Error('__PENDING_CATEGORY_DEFINITION__')
+  }
+  
+  // 没有未定义分类，正常处理
+  return await processImportFile(file)
+}
+
+// 实际处理导入文件
+const processImportFile = async (file: File, newCategoryMap?: Map<string, string>) => {
   const existingIds = [
     ...localProducts.value.map(p => p.id),
     ...productStore.products.map(p => p.id)
   ].filter(Boolean)
   
-  const result = await ExcelProcessor.processProducts(file, existingIds)
+  const result = await ExcelProcessor.processProducts(file, existingIds, { 
+    skipCategoryValidation: !!newCategoryMap,
+    newCategoryMap 
+  })
+  
   if (!result.success) {
     throw new Error(result.validation.errors.join('\n'))
   }
@@ -68,6 +120,84 @@ const handleExcelImport = async (file: File) => {
   }
   
   return result.data
+}
+
+// 处理新分类确认
+const handleNewCategoryConfirm = async (categories: Array<{ originalName: string; name: string; imageName: string; description: string }>) => {
+  if (!pendingImportFile.value) return
+  
+  try {
+    // 创建新分类
+    const token = localStorage.getItem('admin_token') || ''
+    const newCategoryMap = new Map<string, string>()
+    
+    for (const cat of categories) {
+      // 调用后端创建分类
+      const res = await fetch('/api/admin/content/category/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: cat.name,
+          imageName: cat.imageName || 'placeholder.png',
+          description: cat.description
+        })
+      })
+      
+      if (res.ok) {
+        const result = await res.json()
+        // 记录原始名称到新ID的映射
+        newCategoryMap.set(cat.originalName, result.data?.id || result.id)
+      }
+    }
+    
+    // 刷新分类数据
+    await categoryStore.loadCategories()
+    
+    // 继续处理导入
+    const importedData = await processImportFile(pendingImportFile.value, newCategoryMap)
+    
+    // 手动触发导入完成
+    if (tableEditorRef.value && importedData.length > 0) {
+      // 合并到本地数据
+      localProducts.value = [...localProducts.value, ...importedData]
+      ElMessage.success(`成功创建 ${categories.length} 个分类，导入 ${importedData.length} 条产品`)
+    }
+  } catch (e) {
+    ElMessage.error('创建分类失败: ' + (e as Error).message)
+  } finally {
+    pendingImportFile.value = null
+    pendingUndefinedCategories.value = []
+  }
+}
+
+// 处理跳过新分类
+const handleNewCategorySkip = async () => {
+  if (!pendingImportFile.value) return
+  
+  try {
+    // 跳过时，未定义分类的产品将被设为"未分类"(C00)
+    const importedData = await processImportFile(pendingImportFile.value)
+    
+    if (tableEditorRef.value && importedData.length > 0) {
+      localProducts.value = [...localProducts.value, ...importedData]
+      ElMessage.success(`导入 ${importedData.length} 条产品，未定义分类已设为"未分类"`)
+    }
+  } catch (e) {
+    ElMessage.error('导入失败: ' + (e as Error).message)
+  } finally {
+    pendingImportFile.value = null
+    pendingUndefinedCategories.value = []
+  }
+}
+
+// 处理取消导入
+const handleNewCategoryCancel = () => {
+  pendingImportFile.value = null
+  pendingUndefinedCategories.value = []
+  ElMessage.info('已取消导入')
 }
 
 // 保存前处理 - 移除 categoryImage
@@ -135,26 +265,40 @@ const loadAdminData = async () => {
 }
 
 onMounted(async () => {
+  // 确保分类数据已加载
+  await categoryStore.ensureLoaded()
   await loadAdminData()
 })
 </script>
 
 <template>
-  <UnifiedTableEditor
-    title="产品列表"
-    :data="products"
-    :columns="columns"
-    row-key="id"
-    search-placeholder="搜索产品名称、货号、品牌..."
-    :page-size="12"
-    :page-sizes="[12, 24, 48, 100]"
-    :import-config="{ enabled: true, accept: '.xlsx,.xls', handler: handleExcelImport }"
-    :publish-config="{ enabled: true, contentType: 'product' }"
-    :before-save="beforeSave"
-    :generate-id="generateProductId"
-    @save="handleSave"
-    @import="handleImport"
-    @publish="handlePublish"
-    @reload="handleReload"
-  />
+  <div>
+    <UnifiedTableEditor
+      ref="tableEditorRef"
+      title="产品列表"
+      :data="products"
+      :columns="columns"
+      row-key="id"
+      search-placeholder="搜索产品名称、货号、品牌..."
+      :page-size="12"
+      :page-sizes="[12, 24, 48, 100]"
+      :import-config="{ enabled: true, accept: '.xlsx,.xls', handler: handleExcelImport }"
+      :publish-config="{ enabled: true, contentType: 'product' }"
+      :before-save="beforeSave"
+      :generate-id="generateProductId"
+      @save="handleSave"
+      @import="handleImport"
+      @publish="handlePublish"
+      @reload="handleReload"
+    />
+    
+    <!-- 新分类定义弹窗 -->
+    <NewCategoryDialog
+      v-model:visible="newCategoryDialogVisible"
+      :undefined-categories="pendingUndefinedCategories"
+      @confirm="handleNewCategoryConfirm"
+      @skip="handleNewCategorySkip"
+      @cancel="handleNewCategoryCancel"
+    />
+  </div>
 </template>

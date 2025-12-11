@@ -8,6 +8,7 @@ import authRouter from './routes/auth'
 import adminUsersRouter from './routes/adminUsers'
 import uploadRouter from './routes/upload'
 import { authenticate } from './middleware/auth'
+import { categoryService } from './services/categoryService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -38,6 +39,9 @@ app.get('/api/health', (req, res) => {
 async function start() {
   try {
     await initDb()
+    
+    // 初始化默认分类数据
+    categoryService.initDefaultCategories()
     
     app.listen(PORT, () => {
       console.log(`\n🚀 CMS API Server running on http://localhost:${PORT}`)

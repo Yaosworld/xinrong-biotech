@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { useBannerStore } from '@/stores/bannerStore'
-import { CATEGORIES } from '@/hooks/useCategoryImage'
+import { useCategoryStore } from '@/stores/categoryStore'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import ProductCard from '@/components/business/ProductCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -13,6 +13,10 @@ const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
 const bannerStore = useBannerStore()
+const categoryStore = useCategoryStore()
+
+// 从 store 获取分类列表
+const categories = computed(() => categoryStore.categories)
 
 // 从 store 获取横幅标语
 const productSlogans = computed(() => bannerStore.getSlogans('products'))
@@ -23,7 +27,7 @@ const defaultStats = computed(() => bannerStore.getDefaultStats('products'))
 // 动态统计数据 - 使用后端返回的总数
 const dynamicStats = computed(() => [
   { key: 'products', number: `${productStore.pagination.total}+`, label: '商品种类' },
-  { key: 'categories', number: `${CATEGORIES.length}+`, label: '产品类别' },
+  { key: 'categories', number: `${categories.value.length}+`, label: '产品类别' },
   { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' }
 ])
 
@@ -51,7 +55,7 @@ const displayedBrands = computed(() => {
 
 // 展示的分类列表
 const displayedCategories = computed(() => {
-  return showAllCategories.value ? CATEGORIES : CATEGORIES.slice(0, 10)
+  return showAllCategories.value ? categories.value : categories.value.slice(0, 10)
 })
 
 // 滚动到产品列表区域
@@ -106,6 +110,9 @@ const handlePageSizeChange = (size: number) => {
 
 // 从URL读取筛选条件
 onMounted(async () => {
+  // 确保分类数据已加载
+  await categoryStore.ensureLoaded()
+  
   // 先设置筛选条件（不触发加载）
   if (route.query.category) {
     productStore.filters.categoryId = route.query.category as string
@@ -213,7 +220,7 @@ watch(
                 <span>产品分类</span>
               </div>
               <button
-                v-if="CATEGORIES.length > 10"
+                v-if="categories.length > 10"
                 class="filter-more-btn"
                 @click="showAllCategories = !showAllCategories"
               >
