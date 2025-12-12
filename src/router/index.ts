@@ -104,12 +104,19 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/products/ProductsList.vue'),
         meta: { title: '产品列表' }
       },
-      // 分类管理
+      // 分类管理（新版）
       {
         path: 'products/categories',
         name: 'AdminCategoryList',
         component: () => import('@/views/admin/products/CategoryList.vue'),
         meta: { title: '分类管理' }
+      },
+      // 分类图片库
+      {
+        path: 'products/category-images',
+        name: 'AdminCategoryImages',
+        component: () => import('@/views/admin/products/CategoryImageList.vue'),
+        meta: { title: '分类图片库' }
       },
       // 品牌管理
       {

@@ -9,6 +9,7 @@ import VersionHistoryDialog from './VersionHistoryDialog.vue'
 import PublishDialog from './PublishDialog.vue'
 import DuplicateReportDialog from './DuplicateReportDialog.vue'
 import ImageUploader from '@/components/admin/ImageUploader.vue'
+import CategoryImagePicker from '@/components/admin/CategoryImagePicker.vue'
 import { ExcelExporter, type ExportColumn, type ExportMode } from '@/utils/excelExporter'
 import { DuplicateDetector, type DuplicateCheckResult } from '@/utils/duplicateDetector'
 
@@ -29,7 +30,7 @@ interface ColumnConfig {
   sortable?: boolean
   editable?: boolean
   fixed?: 'left' | 'right'
-  type?: 'text' | 'number' | 'select' | 'date' | 'boolean' | 'image' | 'textarea' | 'tags'
+  type?: 'text' | 'number' | 'select' | 'date' | 'boolean' | 'image' | 'textarea' | 'tags' | 'category-image'
   options?: { label: string; value: string | number | boolean }[]
   truncate?: number
   showInTable?: boolean
@@ -54,6 +55,7 @@ interface SortConfig {
 interface ImportConfig {
   enabled: boolean
   accept?: string
+  multiple?: boolean  // 是否支持多文件导入
   handler?: (file: File) => Promise<any[]>
 }
 
@@ -94,7 +96,9 @@ const props = withDefaults(defineProps<{
   publishConfig?: PublishConfig
   // 数据处理钩子
   beforeSave?: (data: any[]) => any[]
-  beforeAdd?: (item: any) => any
+  beforeAdd?: (item: any, allData?: any[]) => any  // 新增前处理
+  beforeEdit?: (item: any, allData: any[]) => any  // 编辑前处理，可用于动态更新数据
+  beforeDelete?: (item: any) => boolean | Promise<boolean>  // 删除前验证，返回 false 阻止删除
   generateId?: () => string | number
 }>(), {
   rowKey: 'id',
@@ -135,6 +139,8 @@ const currentPage = ref(1)
 const currentPageSize = ref(props.pageSize)
 const currentCategory = ref(props.defaultCategory || props.categories?.[0]?.key || '')
 const selectedRows = ref<any[]>([])
+const isAllSelected = ref(false)  // 是否选择了所有数据（跨页）
+const tableRef = ref<any>(null)
 
 // 编辑面板
 const editPanelVisible = ref(false)
@@ -166,6 +172,9 @@ const showPublishDialog = ref(false)
 // 已删除的数据 keys（用于保存时同步删除到后端）
 const deletedKeys = ref<string[]>([])
 const publishSummary = ref('')
+
+// 保存进度（用于大数据量分批保存）
+const saveProgress = ref({ saved: 0, total: 0, show: false })
 
 // 原始数据快照（用于变更检测）
 const originalDataString = ref<string>('')
@@ -251,6 +260,17 @@ const getColumnMinWidth = (col: ColumnConfig): number | undefined => {
 
 
 
+// 搜索框宽度（根据 placeholder 长度动态计算）
+const searchInputWidth = computed(() => {
+  const placeholder = props.searchPlaceholder || '搜索...'
+  // 中文字符约 14px，英文/数字约 8px，加上图标和 padding
+  const chineseCount = (placeholder.match(/[\u4e00-\u9fa5]/g) || []).length
+  const otherCount = placeholder.length - chineseCount
+  const textWidth = chineseCount * 14 + otherCount * 8
+  // 最小 160px，最大 400px，加上图标(20px) + padding(24px) + clearable按钮(20px)
+  return Math.min(400, Math.max(160, textWidth + 64))
+})
+
 // 按分类和排序过滤数据
 const categoryFilteredData = computed(() => {
   let result = [...localData.value]
@@ -334,6 +354,23 @@ const getFilenameFromUrl = (url: string) => {
 const handlePreviewImage = (url: string) => {
   previewUrl.value = getImageUrl(url)
   previewVisible.value = true
+}
+
+// 图片加载失败时的处理
+const handleImageError = (e: Event, row: any, col: ColumnConfig) => {
+  const img = e.target as HTMLImageElement
+  // 如果列配置了 imageFallback，使用它
+  if ((col as any).imageFallback) {
+    const fallbackUrl = typeof (col as any).imageFallback === 'function' 
+      ? (col as any).imageFallback(row) 
+      : (col as any).imageFallback
+    if (fallbackUrl && img.src !== fallbackUrl) {
+      img.src = fallbackUrl
+      return
+    }
+  }
+  // 默认 fallback
+  img.src = '/images/common/placeholder.png'
 }
 
 // 文本截断
@@ -423,6 +460,11 @@ const openAddPanel = () => {
     else editFormData.value[col.key] = ''
   })
   
+  // 从现有数据中获取 _usedImagesMap（用于图片选择器显示已使用状态）
+  if (localData.value.length > 0 && localData.value[0]._usedImagesMap) {
+    editFormData.value._usedImagesMap = localData.value[0]._usedImagesMap
+  }
+  
   // 生成ID
   if (props.generateId) {
     editFormData.value[props.rowKey] = props.generateId()
@@ -451,7 +493,7 @@ const openAddPanel = () => {
   
   // 调用 beforeAdd 钩子
   if (props.beforeAdd) {
-    editFormData.value = props.beforeAdd(editFormData.value)
+    editFormData.value = props.beforeAdd(editFormData.value, localData.value)
   }
   
   editPanelVisible.value = true
@@ -460,7 +502,14 @@ const openAddPanel = () => {
 const openEditPanel = (row: any) => {
   isAddMode.value = false
   editingItem.value = row
-  editFormData.value = { ...row }
+  
+  // 调用 beforeEdit 钩子（可用于动态更新数据，如 _usedImagesMap）
+  let processedRow = { ...row }
+  if (props.beforeEdit) {
+    processedRow = props.beforeEdit(processedRow, localData.value)
+  }
+  
+  editFormData.value = processedRow
   // 处理 tags 类型
   props.columns.forEach(col => {
     if (col.type === 'tags' && Array.isArray(editFormData.value[col.key])) {
@@ -474,6 +523,17 @@ const closeEditPanel = () => {
   editPanelVisible.value = false
   editingItem.value = null
   editFormData.value = {}
+}
+
+// 处理分类图片变更，同步更新 imageUrl 和 imageName
+const handleCategoryImageChange = (imageInfo: { id: number | null; url: string; filename: string } | null) => {
+  if (imageInfo) {
+    editFormData.value.imageUrl = imageInfo.url
+    editFormData.value.imageName = imageInfo.filename
+  } else {
+    editFormData.value.imageUrl = ''
+    editFormData.value.imageName = ''
+  }
 }
 
 const saveEditForm = () => {
@@ -570,7 +630,7 @@ const saveEditForm = () => {
       }
       localData.value[index] = processedData
       emit('update', processedData)
-      ElMessage.success(props.publishConfig?.enabled ? '修改成功，请点击"保存草稿"保存到服务器' : '保存成功')
+      ElMessage.success(props.publishConfig?.enabled ? '修改成功，请点击"保存草稿"保存到服务器' : '修改成功，请点击"保存全部"保存更改')
     }
   }
   
@@ -579,6 +639,12 @@ const saveEditForm = () => {
 
 const deleteItem = async (row: any) => {
   try {
+    // 调用 beforeDelete 钩子验证
+    if (props.beforeDelete) {
+      const canDelete = await props.beforeDelete(row)
+      if (!canDelete) return
+    }
+    
     await ElMessageBox.confirm('确定要删除这条数据吗？', '提示', { type: 'warning' })
     const index = localData.value.findIndex(item => item[props.rowKey] === row[props.rowKey])
     if (index > -1) {
@@ -599,21 +665,81 @@ const batchDelete = async () => {
     ElMessage.warning('请先选择要删除的数据')
     return
   }
+  const deleteCount = selectedRows.value.length
+  const confirmMsg = isAllSelected.value 
+    ? `确定要删除全部 ${deleteCount} 条数据吗？此操作不可恢复！`
+    : `确定要删除选中的 ${deleteCount} 条数据吗？`
+  
   try {
-    await ElMessageBox.confirm(`确定要删除选中的 ${selectedRows.value.length} 条数据吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(confirmMsg, '提示', { type: 'warning' })
     const keys = selectedRows.value.map(row => String(row[props.rowKey]))
     localData.value = localData.value.filter(item => !keys.includes(String(item[props.rowKey])))
     // 记录已删除的 keys
     if (props.publishConfig?.enabled) {
       deletedKeys.value.push(...keys)
     }
+    // 重置选择状态
+    isAllSelected.value = false
     selectedRows.value = []
+    tableRef.value?.clearSelection()
     ElMessage.success(props.publishConfig?.enabled ? '批量删除成功，请点击"保存草稿"同步到服务器' : '批量删除成功')
   } catch { /* 用户取消 */ }
 }
 
+// 全选对话框状态
+const showSelectAllDialog = ref(false)
+const pendingSelectAll = ref(false)
+
 const handleSelectionChange = (rows: any[]) => {
+  // 检测是否是点击表头全选（从0变为当前页全部）
+  const wasEmpty = selectedRows.value.length === 0
+  const isNowFullPage = rows.length === paginatedData.value.length && rows.length > 0
+  const hasMorePages = props.paginated && filteredData.value.length > currentPageSize.value
+  
+  // 如果是点击全选且有多页数据，弹出选择对话框
+  if (wasEmpty && isNowFullPage && hasMorePages && !isAllSelected.value) {
+    pendingSelectAll.value = true
+    showSelectAllDialog.value = true
+    // 先临时设置为当前页选中
+    selectedRows.value = rows
+    return
+  }
+  
   selectedRows.value = rows
+  // 如果取消了部分选择，重置全选状态
+  if (isAllSelected.value && rows.length < paginatedData.value.length) {
+    isAllSelected.value = false
+  }
+}
+
+// 选择当前页
+const selectCurrentPage = () => {
+  showSelectAllDialog.value = false
+  pendingSelectAll.value = false
+  // 已经选中当前页了，不需要额外操作
+}
+
+// 选择所有数据（跨页）
+const selectAllData = () => {
+  showSelectAllDialog.value = false
+  pendingSelectAll.value = false
+  isAllSelected.value = true
+  selectedRows.value = [...filteredData.value]
+}
+
+// 取消全选
+const clearSelection = () => {
+  isAllSelected.value = false
+  selectedRows.value = []
+  tableRef.value?.clearSelection()
+}
+
+// 关闭对话框时的处理
+const handleSelectDialogClose = () => {
+  if (pendingSelectAll.value) {
+    // 用户关闭对话框，默认保持当前页选中
+    pendingSelectAll.value = false
+  }
 }
 
 
@@ -638,45 +764,64 @@ const saveAll = async () => {
       const contentType = props.publishConfig.contentType
       const getKey = props.publishConfig.getContentKey || ((item: any) => item[props.rowKey])
       
-      // 先删除已删除的数据
+      // 先批量删除已删除的数据
       if (deletedKeys.value.length > 0) {
-        for (const key of deletedKeys.value) {
-          try {
-            await adminApi.delete(contentType, key)
-          } catch (e) {
-            console.warn(`删除 ${key} 失败:`, e)
-          }
+        console.log(`[saveAll] 准备删除 ${deletedKeys.value.length} 条数据:`, deletedKeys.value.slice(0, 10))
+        try {
+          await adminApi.batchDelete(contentType, deletedKeys.value)
+        } catch (e) {
+          console.warn('批量删除失败:', e)
         }
         deletedKeys.value = []
       }
       
-      // 批量保存草稿
+      // 批量保存草稿（大数据量时显示进度）
       const items = dataToSave.map(item => ({
         key: String(getKey(item)),
         data: item
       }))
       
-      await adminApi.batchSaveDraft(contentType, items)
+      // 超过 500 条时显示进度
+      if (items.length > 500) {
+        saveProgress.value = { saved: 0, total: items.length, show: true }
+      }
+      
+      await adminApi.batchSaveDraft(contentType, items, {
+        batchSize: 500,
+        onProgress: (saved, total) => {
+          saveProgress.value.saved = saved
+          saveProgress.value.total = total
+        }
+      })
+      
+      saveProgress.value.show = false
       
       // 更新状态
       originalDataString.value = currentDataString.value
       contentStatus.value = 'draft'
       editStatus.value = 'clean'
+      
+      emit('save', dataToSave)
+      adminStore.addActivity({
+        type: 'modify',
+        target: props.title,
+        description: `保存了 ${props.title} 的数据更改，共 ${dataToSave.length} 条`
+      })
+      ElMessage.success('草稿已保存')
     } catch (error) {
       editStatus.value = hasUnsavedChanges.value ? 'dirty' : 'clean'
       console.error('保存草稿失败:', error)
       ElMessage.error('保存草稿失败')
       return
     }
+  } else {
+    // 未启用发布功能时，直接触发 save 事件，由父组件处理保存逻辑
+    // 父组件需要自己处理成功/失败的提示和状态更新
+    emit('save', dataToSave)
+    // 更新原始数据快照，使 hasUnsavedChanges 变为 false
+    originalDataString.value = currentDataString.value
+    editStatus.value = 'clean'
   }
-  
-  emit('save', dataToSave)
-  adminStore.addActivity({
-    type: 'modify',
-    target: props.title,
-    description: `保存了 ${props.title} 的数据更改，共 ${dataToSave.length} 条`
-  })
-  ElMessage.success(props.publishConfig?.enabled ? '草稿已保存' : '保存成功')
 }
 
 // 打开发布对话框
@@ -714,12 +859,25 @@ const publishAll = async () => {
     const contentType = props.publishConfig.contentType
     const getKey = props.publishConfig.getContentKey || ((item: any) => item[props.rowKey])
     
-    // 批量保存草稿
+    // 批量保存草稿（大数据量时显示进度）
     const items = dataToSave.map(item => ({
       key: String(getKey(item)),
       data: item
     }))
-    await adminApi.batchSaveDraft(contentType, items)
+    
+    if (items.length > 500) {
+      saveProgress.value = { saved: 0, total: items.length, show: true }
+    }
+    
+    await adminApi.batchSaveDraft(contentType, items, {
+      batchSize: 500,
+      onProgress: (saved, total) => {
+        saveProgress.value.saved = saved
+        saveProgress.value.total = total
+      }
+    })
+    
+    saveProgress.value.show = false
     
     // 批量发布（传递变更说明）
     const keys = items.map(item => item.key)
@@ -860,12 +1018,42 @@ const triggerImport = () => {
 
 const handleFileChange = async (event: Event) => {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file || !props.importConfig?.handler) return
+  const files = input.files
+  if (!files || files.length === 0 || !props.importConfig?.handler) return
   
   try {
-    const importedData = await props.importConfig.handler(file)
-    if (!importedData || importedData.length === 0) {
+    // 支持多文件导入
+    const allImportedData: any[] = []
+    const errors: string[] = []
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      try {
+        const data = await props.importConfig.handler(file)
+        if (data && data.length > 0) {
+          allImportedData.push(...data)
+        }
+      } catch (e) {
+        const errMsg = (e as Error).message
+        // 跳过待处理分类的特殊错误
+        if (errMsg === '__PENDING_CATEGORY_DEFINITION__') {
+          input.value = ''
+          return
+        }
+        errors.push(`${file.name}: ${errMsg}`)
+      }
+    }
+    
+    // 显示部分失败的警告
+    if (errors.length > 0 && allImportedData.length > 0) {
+      ElMessage.warning(`部分文件导入失败：\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? `\n...还有 ${errors.length - 3} 个错误` : ''}`)
+    } else if (errors.length > 0 && allImportedData.length === 0) {
+      ElMessage.error('导入失败：' + errors[0])
+      input.value = ''
+      return
+    }
+    
+    if (allImportedData.length === 0) {
       ElMessage.warning('导入文件中没有有效数据')
       input.value = ''
       return
@@ -878,7 +1066,7 @@ const handleFileChange = async (event: Event) => {
 
     // 检测重复
     const checkResult = DuplicateDetector.check(
-      importedData,
+      allImportedData,
       localData.value,
       props.rowKey,
       compareFields
@@ -886,17 +1074,18 @@ const handleFileChange = async (event: Event) => {
 
     if (checkResult.hasDuplicates) {
       // 有重复，保存数据并显示对话框
-      pendingImportData.value = importedData
+      pendingImportData.value = allImportedData
       duplicateCheckResult.value = checkResult
       showDuplicateDialog.value = true
     } else {
       // 无重复，直接导入
-      localData.value.push(...importedData)
-      emit('import', importedData)
+      localData.value.push(...allImportedData)
+      emit('import', allImportedData)
+      const fileCount = files.length > 1 ? `（${files.length} 个文件）` : ''
       ElMessage.success(
         props.publishConfig?.enabled 
-          ? `成功导入 ${importedData.length} 条数据，请点击"保存草稿"保存到服务器` 
-          : `成功导入 ${importedData.length} 条数据`
+          ? `成功导入 ${allImportedData.length} 条数据${fileCount}，请点击"保存草稿"保存到服务器` 
+          : `成功导入 ${allImportedData.length} 条数据${fileCount}`
       )
     }
   } catch (error) {
@@ -976,9 +1165,21 @@ watch(searchQuery, () => {
 watch(currentCategory, () => {
   currentPage.value = 1
   selectedRows.value = []
+  isAllSelected.value = false
+  tableRef.value?.clearSelection()
 })
 
-watch(() => props.data, () => {
+// 监听 props.data 变化，但只在数据长度变化或首次加载时重新初始化
+// 避免在编辑过程中因为 computed 重新计算而覆盖用户的编辑
+watch(() => props.data, (newData, oldData) => {
+  // 如果正在保存或发布中，不要重新初始化
+  if (editStatus.value === 'saving' || editStatus.value === 'publishing') {
+    return
+  }
+  // 如果数据长度相同且不是首次加载，可能只是 computed 重新计算，不需要重新初始化
+  if (oldData && newData.length === oldData.length && newData.length === localData.value.length) {
+    return
+  }
   initLocalData()
 }, { deep: true })
 
@@ -1016,12 +1217,23 @@ onBeforeUnmount(() => {
           :placeholder="searchPlaceholder || '搜索...'"
           clearable
           class="search-input"
+          :style="{ width: searchInputWidth + 'px' }"
         >
           <template #prefix><i class="fas fa-search"></i></template>
         </el-input>
       </div>
       
       <div class="toolbar-right">
+        <!-- 保存进度（大数据量时显示） -->
+        <div v-if="saveProgress.show" class="save-progress">
+          <el-progress 
+            :percentage="Math.round(saveProgress.saved / saveProgress.total * 100)" 
+            :stroke-width="6"
+            style="width: 120px"
+          />
+          <span class="progress-text">{{ saveProgress.saved }}/{{ saveProgress.total }}</span>
+        </div>
+        
         <!-- 状态标签 -->
         <el-tag v-if="publishConfig?.enabled" :type="statusConfig.type" size="small" :class="['status-tag', { pulse: statusConfig.pulse }]">
           <i :class="statusConfig.icon" class="mr-1"></i> {{ statusConfig.text }}
@@ -1032,6 +1244,9 @@ onBeforeUnmount(() => {
         <el-button v-if="publishConfig?.enabled" @click="showVersionHistory = true" :disabled="isOperating">
           <i class="fas fa-history mr-1"></i> 版本历史
         </el-button>
+        
+        <!-- 自定义工具栏按钮插槽 -->
+        <slot name="toolbar-extra"></slot>
         
         <!-- 新增 -->
         <el-button v-if="addable" type="primary" @click="openAddPanel">
@@ -1047,6 +1262,7 @@ onBeforeUnmount(() => {
           ref="fileInputRef"
           type="file"
           :accept="importConfig.accept || '.xlsx,.xls'"
+          :multiple="importConfig.multiple !== false"
           style="display: none"
           @change="handleFileChange"
         />
@@ -1099,8 +1315,16 @@ onBeforeUnmount(() => {
       使用上移/下移按钮调整显示顺序，调整后请点击"保存全部"
     </div>
 
+    <!-- 已全选提示条 -->
+    <div v-if="isAllSelected" class="select-all-tip selected">
+      <i class="fas fa-check-circle"></i>
+      <span>已选择全部 {{ selectedRows.length }} 条数据</span>
+      <el-button type="primary" link @click="clearSelection">取消选择</el-button>
+    </div>
+
     <!-- 数据表格 -->
     <el-table
+      ref="tableRef"
       :data="paginatedData"
       :row-key="rowKey"
       border
@@ -1140,8 +1364,20 @@ onBeforeUnmount(() => {
         <template #default="{ row }">
           <!-- 图片 -->
           <template v-if="col.type === 'image'">
-            <div v-if="row[col.key]" class="image-cell" :class="{ 'image-contain': col.imageStyle === 'contain' }" @click="handlePreviewImage(row[col.key])">
-              <img :src="getImageUrl(row[col.key])" :alt="col.label" />
+            <div v-if="row[col.key] || (col as any).imageFallback" class="image-cell" :class="{ 'image-contain': col.imageStyle === 'contain' }" @click="handlePreviewImage(row[col.key] || (typeof (col as any).imageFallback === 'function' ? (col as any).imageFallback(row) : (col as any).imageFallback))">
+              <img 
+                :src="getImageUrl(row[col.key]) || (typeof (col as any).imageFallback === 'function' ? (col as any).imageFallback(row) : (col as any).imageFallback)" 
+                :alt="col.label"
+                @error="(e: Event) => handleImageError(e, row, col)"
+              />
+            </div>
+            <span v-else class="no-image">暂无</span>
+          </template>
+          
+          <!-- 分类图片（通过 imageUrl 显示） -->
+          <template v-else-if="col.type === 'category-image'">
+            <div v-if="row.imageUrl" class="image-cell image-contain" @click="handlePreviewImage(row.imageUrl)">
+              <img :src="row.imageUrl" :alt="row.name || col.label" @error="(e: Event) => handleImageError(e, row, col)" />
             </div>
             <span v-else class="no-image">暂无</span>
           </template>
@@ -1281,6 +1517,17 @@ onBeforeUnmount(() => {
               </div>
             </template>
             
+            <!-- 分类图片选择器 -->
+            <template v-else-if="col.type === 'category-image'">
+              <CategoryImagePicker
+                v-model="editFormData[col.key]"
+                :placeholder="col.placeholder || '点击选择分类图片'"
+                :used-images-map="editFormData._usedImagesMap"
+                :current-category-id="editFormData.id"
+                @image-change="handleCategoryImageChange"
+              />
+            </template>
+            
             <!-- 默认文本 -->
             <template v-else>
               <el-input v-model="editFormData[col.key]" :placeholder="col.placeholder" />
@@ -1292,7 +1539,7 @@ onBeforeUnmount(() => {
       <template #footer>
         <div class="drawer-footer">
           <el-button @click="closeEditPanel">取消</el-button>
-          <el-button type="primary" @click="saveEditForm">{{ isAddMode ? '添加' : '保存' }}</el-button>
+          <el-button type="primary" @click="saveEditForm">{{ isAddMode ? '添加' : '确定' }}</el-button>
         </div>
       </template>
     </el-drawer>
@@ -1333,6 +1580,39 @@ onBeforeUnmount(() => {
       @import-all="handleImportAll"
       @cancel="handleCancelImport"
     />
+    
+    <!-- 全选范围选择对话框 -->
+    <el-dialog
+      v-model="showSelectAllDialog"
+      title="选择范围"
+      width="420px"
+      :close-on-click-modal="false"
+      @close="handleSelectDialogClose"
+    >
+      <div class="select-scope-dialog">
+        <p class="dialog-desc">请选择要操作的数据范围：</p>
+        <div class="scope-options">
+          <div class="scope-option" @click="selectCurrentPage">
+            <div class="option-icon current-page">
+              <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="option-content">
+              <div class="option-title">当前页</div>
+              <div class="option-count">{{ paginatedData.length }} 条数据</div>
+            </div>
+          </div>
+          <div class="scope-option" @click="selectAllData">
+            <div class="option-icon all-data">
+              <i class="fas fa-database"></i>
+            </div>
+            <div class="option-content">
+              <div class="option-title">全部数据</div>
+              <div class="option-count">{{ filteredData.length }} 条数据</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -1373,10 +1653,20 @@ onBeforeUnmount(() => {
 }
 
 .search-input {
-  width: 200px;
   margin-left: 12px;
 }
 
+.save-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 12px;
+}
+.progress-text {
+  font-size: 12px;
+  color: #909399;
+  white-space: nowrap;
+}
 .status-tag { margin-right: 4px; }
 .status-tag.pulse { animation: pulse-animation 1.5s infinite; }
 @keyframes pulse-animation { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
@@ -1398,6 +1688,91 @@ onBeforeUnmount(() => {
 }
 
 .sort-tip i { margin-right: 6px; }
+
+.select-all-tip.selected {
+  padding: 10px 20px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 13px;
+  border-bottom: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select-all-tip.selected i {
+  font-size: 14px;
+}
+
+/* 全选范围选择对话框 */
+.select-scope-dialog {
+  padding: 10px 0;
+}
+
+.dialog-desc {
+  margin: 0 0 20px;
+  color: #606266;
+  font-size: 14px;
+}
+
+.scope-options {
+  display: flex;
+  gap: 16px;
+}
+
+.scope-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  border: 2px solid #e4e7ed;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scope-option:hover {
+  border-color: #409eff;
+  background: #f0f9ff;
+}
+
+.option-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  font-size: 24px;
+}
+
+.option-icon.current-page {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.option-icon.all-data {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.option-content {
+  text-align: center;
+}
+
+.option-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.option-count {
+  font-size: 13px;
+  color: #909399;
+}
 
 .publish-tip {
   padding: 10px 20px;

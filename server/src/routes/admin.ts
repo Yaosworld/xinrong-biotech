@@ -67,6 +67,7 @@ router.put('/content/:type/batch-draft', (req: Request, res: Response) => {
   try {
     const { type } = req.params
     const { items } = req.body
+    console.log(`[batch-draft] 类型: ${type}, 数量: ${items?.length || 0}`)
     contentService.batchSaveDraft(type, items)
     res.json({ success: true })
   } catch (e) {
@@ -134,6 +135,31 @@ router.delete('/content/:type/:key', (req: Request, res: Response) => {
   }
 })
 
+// 批量删除
+router.post('/content/:type/batch-delete', (req: Request, res: Response) => {
+  try {
+    const { type } = req.params
+    const { keys } = req.body
+    
+    // 添加日志追踪
+    console.log(`[batch-delete] 类型: ${type}, 数量: ${keys?.length || 0}`)
+    if (keys?.length > 0) {
+      console.log(`[batch-delete] 前5个key: ${keys.slice(0, 5).join(', ')}`)
+    }
+    
+    if (!Array.isArray(keys) || keys.length === 0) {
+      res.status(400).json({ error: 'keys must be a non-empty array' })
+      return
+    }
+    
+    const count = contentService.batchDelete(type, keys)
+    console.log(`[batch-delete] 已删除 ${count} 条`)
+    res.json({ success: true, deletedCount: count })
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
 // ========================================
 // 分类管理
 // ========================================
@@ -183,6 +209,61 @@ router.get('/category/generate-id', (req: Request, res: Response) => {
   try {
     const id = categoryService.generateCategoryId()
     res.json({ id })
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// 直接保存所有分类（不使用发布机制）
+router.put('/category/save-all', (req: Request, res: Response) => {
+  try {
+    const { categories } = req.body
+    console.log('[save-all] 收到分类数据:', JSON.stringify(categories).substring(0, 200))
+    if (!Array.isArray(categories)) {
+      res.status(400).json({ error: 'categories must be an array' })
+      return
+    }
+    console.log('[save-all] 分类数量:', categories.length)
+    categoryService.saveAllCategories(categories)
+    res.json({ success: true })
+  } catch (e) {
+    console.error('[save-all] 错误:', e)
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// 检查分类是否可以删除
+router.get('/category/:id/can-delete', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const result = categoryService.canDelete(id)
+    res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// 删除单个分类（同时删除图片）
+router.delete('/category/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const result = categoryService.deleteCategory(id)
+    if (result.success) {
+      res.json({ success: true })
+    } else {
+      res.status(400).json({ success: false, error: result.error })
+    }
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message })
+  }
+})
+
+// 重置为默认分类
+router.post('/category/reset-default', (_req: Request, res: Response) => {
+  try {
+    categoryService.resetToDefaultCategories()
+    const categories = categoryService.getCategoriesWithCount()
+    res.json({ success: true, data: categories })
   } catch (e) {
     res.status(500).json({ error: (e as Error).message })
   }

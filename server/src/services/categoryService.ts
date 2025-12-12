@@ -1,5 +1,6 @@
 import db from '../db'
 import { contentService } from './contentService'
+import { uploadService } from './uploadService'
 
 /**
  * 分类数据接口
@@ -7,7 +8,8 @@ import { contentService } from './contentService'
 export interface CategoryData {
   id: string           // 分类ID，如 "C01"
   name: string         // 分类名称
-  imageName: string    // 图片文件名
+  imageName?: string   // 图片文件名（旧字段，保持兼容）
+  imageId?: number | null  // 图片ID（新字段，一对一关联）
   description?: string // 分类描述
 }
 
@@ -91,32 +93,70 @@ export const categoryService = {
 
 
   /**
-   * 获取分类及其关联的产品数量
+   * 获取分类及其关联的产品数量（含图片信息）
    */
-  getCategoriesWithCount(): Array<CategoryData & { productCount: number }> {
+  getCategoriesWithCount(): Array<CategoryData & { productCount: number; imageUrl: string }> {
     // 获取所有分类
     const categories = this.getAllAdmin()
     
-    // 获取所有已发布产品的分类统计
+    // 获取所有图片
+    const imageRows = db.queryAll('SELECT id, filename FROM category_images')
+    const imageMap = new Map<number, string>()
+    imageRows.forEach(row => imageMap.set(row.id, row.filename))
+    
+    // 获取所有产品的分类统计（包括草稿和已发布，与 canDelete 逻辑保持一致）
     const productRows = db.queryAll(`
-      SELECT published_data FROM contents 
-      WHERE content_type = 'product' AND status = 'published' AND published_data IS NOT NULL
+      SELECT draft_data, published_data FROM contents 
+      WHERE content_type = 'product' AND status != 'deleted'
     `)
     
-    // 统计每个分类的产品数量
+    // 统计每个分类的产品数量（优先使用草稿数据）
     const countMap = new Map<string, number>()
     productRows.forEach(row => {
-      const product = JSON.parse(row.published_data)
-      if (product.categoryId) {
-        countMap.set(product.categoryId, (countMap.get(product.categoryId) || 0) + 1)
+      const data = row.draft_data || row.published_data
+      if (data) {
+        const product = JSON.parse(data)
+        if (product.categoryId) {
+          countMap.set(product.categoryId, (countMap.get(product.categoryId) || 0) + 1)
+        }
       }
     })
     
-    // 合并数据
-    return categories.map(cat => ({
-      ...cat,
-      productCount: countMap.get(cat.id) || 0
-    }))
+    // 合并数据，计算图片URL
+    return categories.map(cat => {
+      let imageUrl = '/images/common/placeholder.png'
+      let imageName = ''
+      
+      if (cat.imageId) {
+        // 新方式：通过 imageId 获取图片
+        imageName = imageMap.get(cat.imageId) || ''
+      } else if (cat.imageName) {
+        // 旧方式：直接使用 imageName
+        imageName = cat.imageName
+      }
+      
+      // 根据图片是否在 uploads 目录来决定 URL
+      if (imageName) {
+        const fs = require('fs')
+        const path = require('path')
+        const UPLOAD_BASE = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads')
+        const uploadPath = path.join(UPLOAD_BASE, 'images/products', imageName)
+        
+        if (fs.existsSync(uploadPath)) {
+          imageUrl = `/uploads/images/products/${imageName}`
+        } else {
+          // 预设图片在 public 目录
+          imageUrl = `/images/products/${imageName}`
+        }
+      }
+      
+      return {
+        ...cat,
+        imageName,
+        imageUrl,
+        productCount: countMap.get(cat.id) || 0
+      }
+    })
   },
 
   /**
@@ -124,14 +164,15 @@ export const categoryService = {
    * @returns canDelete: 是否可删除, productCount: 关联产品数量
    */
   canDelete(categoryId: string): { canDelete: boolean; productCount: number } {
-    // 统计该分类下的产品数量
+    // 统计该分类下的产品数量（包括草稿和已发布）
     const productRows = db.queryAll(`
-      SELECT published_data FROM contents 
+      SELECT draft_data, published_data FROM contents 
       WHERE content_type = 'product' AND status != 'deleted'
     `)
     
     let productCount = 0
     productRows.forEach(row => {
+      // 优先检查草稿数据，因为草稿可能有未发布的分类变更
       const data = row.draft_data || row.published_data
       if (data) {
         const product = JSON.parse(data)
@@ -227,21 +268,156 @@ export const categoryService = {
   },
 
   /**
-   * 创建新分类
+   * 重置为默认分类数据
+   * 会删除所有现有分类并重新创建默认分类
    */
-  createCategory(data: Omit<CategoryData, 'id'>): CategoryData {
+  resetToDefaultCategories(): void {
+    console.log('📂 重置为默认分类数据...')
+    
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+    
+    db.transaction(() => {
+      // 删除所有现有分类
+      db.run(`DELETE FROM contents WHERE content_type = 'category'`)
+      
+      // 创建默认分类
+      DEFAULT_CATEGORIES.forEach((category, index) => {
+        const data = JSON.stringify(category)
+        db.run(`
+          INSERT INTO contents (content_type, content_key, draft_data, published_data, status, sort_order, created_at, updated_at, published_at)
+          VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?)
+        `, ['category', category.id, data, data, index + 1, now, now, now])
+      })
+    })
+    
+    console.log(`✅ 已重置为 ${DEFAULT_CATEGORIES.length} 个默认分类`)
+  },
+
+  /**
+   * 创建新分类（同时保存草稿和发布）
+   */
+  createCategory(data: Omit<CategoryData, 'id'>, autoPublish = true): CategoryData {
     const id = this.generateCategoryId()
     const category: CategoryData = { id, ...data }
     
     contentService.saveDraft('category', id, category)
     
+    // 自动发布，使分类立即可用
+    if (autoPublish) {
+      contentService.publish('category', id, '新建分类')
+    }
+    
     return category
   },
 
   /**
-   * 批量创建分类
+   * 批量创建分类（同时保存草稿和发布）
    */
-  batchCreateCategories(items: Array<Omit<CategoryData, 'id'>>): CategoryData[] {
-    return items.map(item => this.createCategory(item))
+  batchCreateCategories(items: Array<Omit<CategoryData, 'id'>>, autoPublish = true): CategoryData[] {
+    return items.map(item => this.createCategory(item, autoPublish))
+  },
+
+  /**
+   * 直接保存所有分类到数据库（替换现有数据）
+   * 用于分类管理页面的保存操作
+   */
+  saveAllCategories(categories: CategoryData[]): void {
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+    
+    // 获取当前数据库中所有分类（包括已删除的，用于检测 UNIQUE 冲突）
+    const allRows = db.queryAll(`
+      SELECT content_key, draft_data, published_data, status FROM contents 
+      WHERE content_type = 'category'
+    `)
+    
+    // 活跃的分类（非删除状态）
+    const activeRows = allRows.filter(row => row.status !== 'deleted')
+    const activeIds = new Set(activeRows.map(row => row.content_key))
+    
+    // 所有分类ID（包括已删除的）
+    const allExistingIds = new Set(allRows.map(row => row.content_key))
+    
+    const newIds = new Set(categories.map(c => c.id))
+    
+    // 找出需要删除的分类（当前活跃但不在新数据中）
+    const toDeleteIds = [...activeIds].filter(id => !newIds.has(id))
+    
+    db.transaction(() => {
+      // 1. 物理删除不再需要的分类记录，并删除对应的图片
+      for (const id of toDeleteIds) {
+        const row = activeRows.find(r => r.content_key === id)
+        if (row) {
+          const data = row.draft_data || row.published_data
+          if (data) {
+            const category = JSON.parse(data) as CategoryData
+            // 删除对应的图片文件
+            if (category.imageName) {
+              uploadService.delete(`images/products/${category.imageName}`)
+            }
+          }
+        }
+        // 物理删除记录（而不是软删除），这样可以重新使用该 ID
+        db.run(`DELETE FROM contents WHERE content_type = 'category' AND content_key = ?`, [id])
+      }
+      
+      // 2. 清理所有已软删除的分类记录（物理删除）
+      db.run(`DELETE FROM contents WHERE content_type = 'category' AND status = 'deleted'`)
+      
+      // 3. 更新或创建分类
+      categories.forEach((category, index) => {
+        const data = JSON.stringify(category)
+        
+        if (activeIds.has(category.id)) {
+          // 更新现有活跃分类
+          db.run(`
+            UPDATE contents 
+            SET draft_data = ?, published_data = ?, status = 'published', sort_order = ?, updated_at = ?, published_at = ?
+            WHERE content_type = 'category' AND content_key = ?
+          `, [data, data, index + 1, now, now, category.id])
+        } else {
+          // 创建新分类（直接发布）
+          // 注意：此时已删除的记录已被物理删除，不会有 UNIQUE 冲突
+          db.run(`
+            INSERT INTO contents (content_type, content_key, draft_data, published_data, status, sort_order, created_at, updated_at, published_at)
+            VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?)
+          `, ['category', category.id, data, data, index + 1, now, now, now])
+        }
+      })
+    })
+  },
+
+  /**
+   * 删除分类及其图片
+   */
+  deleteCategory(categoryId: string): { success: boolean; error?: string } {
+    // 检查是否可以删除
+    const { canDelete, productCount } = this.canDelete(categoryId)
+    if (!canDelete) {
+      return { success: false, error: `该分类下有 ${productCount} 个产品，无法删除` }
+    }
+    
+    // 获取分类数据
+    const row = db.queryOne(`
+      SELECT draft_data, published_data FROM contents 
+      WHERE content_type = 'category' AND content_key = ? AND status != 'deleted'
+    `, [categoryId])
+    
+    if (!row) {
+      return { success: false, error: '分类不存在' }
+    }
+    
+    const data = row.draft_data || row.published_data
+    if (data) {
+      const category = JSON.parse(data) as CategoryData
+      // 删除对应的图片文件
+      if (category.imageName) {
+        uploadService.delete(`images/products/${category.imageName}`)
+      }
+    }
+    
+    // 物理删除记录（而不是软删除），这样可以重新使用该 ID 和图片名
+    db.run(`DELETE FROM contents WHERE content_type = 'category' AND content_key = ?`, [categoryId])
+    
+    return { success: true }
   }
 }

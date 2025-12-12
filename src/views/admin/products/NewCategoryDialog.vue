@@ -1,12 +1,26 @@
 <script setup lang="ts">
+/**
+ * 新分类定义对话框
+ * 
+ * 用于在导入产品时，为 Excel 中未定义的分类创建新分类
+ * 
+ * 关键逻辑：
+ * 1. 使用 imageId 而不是 imageName 来关联图片
+ * 2. 图片选择需要排除：
+ *    - 现有分类已使用的图片（从 API 获取）
+ *    - 当前对话框中其他新分类已选择的图片
+ * 3. 每个图片只能被一个分类使用（一对一关系）
+ */
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import CategoryImagePicker from '@/components/admin/CategoryImagePicker.vue'
 
 interface CategoryDefinition {
   originalName: string  // Excel中的原始名称
   name: string          // 用户定义的分类名称
-  imageName: string     // 图片文件名
+  imageId: number | null // 图片ID（新架构）
   description: string   // 描述
+  previewId?: string    // 预览ID（将要分配的ID）
 }
 
 const props = defineProps<{
@@ -16,23 +30,93 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
-  (e: 'confirm', categories: CategoryDefinition[]): void
+  (e: 'confirm', categories: Array<{ originalName: string; name: string; imageId: number | null; description: string }>): void
   (e: 'skip'): void
   (e: 'cancel'): void
 }>()
 
 // 分类定义表单
 const categoryForms = ref<CategoryDefinition[]>([])
+const loadingIds = ref(false)
+
+// 现有分类已使用的图片映射（从 API 获取）
+const existingUsedImages = ref<Map<number, string>>(new Map())
+
+// 加载现有分类的图片使用情况
+const loadExistingUsedImages = async () => {
+  try {
+    const token = localStorage.getItem('admin_token') || ''
+    const res = await fetch('/api/admin/category/with-count', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (res.ok) {
+      const result = await res.json()
+      const map = new Map<number, string>()
+      result.data?.forEach((cat: { id: string; imageId: number | null }) => {
+        if (cat.imageId) {
+          map.set(cat.imageId, cat.id)
+        }
+      })
+      existingUsedImages.value = map
+    }
+  } catch (e) {
+    console.warn('加载现有分类图片使用情况失败:', e)
+  }
+}
+
+// 计算某个分类的已使用图片映射（包括现有分类 + 当前对话框中其他新分类已选择的）
+const getUsedImagesMapForCategory = (currentIndex: number): Map<number, string> => {
+  const map = new Map(existingUsedImages.value)
+  
+  // 添加当前对话框中其他新分类已选择的图片
+  categoryForms.value.forEach((form, index) => {
+    if (index !== currentIndex && form.imageId) {
+      map.set(form.imageId, form.previewId || `新分类${index + 1}`)
+    }
+  })
+  
+  return map
+}
+
+// 获取预览ID
+const fetchPreviewIds = async () => {
+  loadingIds.value = true
+  try {
+    const token = localStorage.getItem('admin_token') || ''
+    const res = await fetch('/api/admin/category/generate-id', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (res.ok) {
+      const result = await res.json()
+      const baseId = result.id // 如 "C06"
+      const baseNum = parseInt(baseId.replace('C', ''), 10)
+      
+      // 为每个分类分配预览ID
+      categoryForms.value.forEach((form, index) => {
+        form.previewId = `C${(baseNum + index).toString().padStart(2, '0')}`
+      })
+    }
+  } catch (e) {
+    console.warn('获取预览ID失败:', e)
+  } finally {
+    loadingIds.value = false
+  }
+}
 
 // 初始化表单
-watch(() => props.undefinedCategories, (newVal) => {
+watch(() => props.undefinedCategories, async (newVal) => {
   if (newVal && newVal.length > 0) {
     categoryForms.value = newVal.map(name => ({
       originalName: name,
       name: name,  // 默认使用原始名称
-      imageName: '',
-      description: ''
+      imageId: null,
+      description: '',
+      previewId: '...'
     }))
+    // 加载现有分类的图片使用情况
+    await loadExistingUsedImages()
+    // 获取预览ID
+    await fetchPreviewIds()
   }
 }, { immediate: true })
 
@@ -47,7 +131,16 @@ const handleConfirm = () => {
     ElMessage.warning('请填写所有分类名称')
     return
   }
-  emit('confirm', categoryForms.value)
+  
+  // 转换为输出格式
+  const categories = categoryForms.value.map(form => ({
+    originalName: form.originalName,
+    name: form.name,
+    imageId: form.imageId,
+    description: form.description
+  }))
+  
+  emit('confirm', categories)
   emit('update:visible', false)
 }
 
@@ -99,7 +192,9 @@ const handleClose = () => {
           class="category-item"
         >
           <div class="category-header">
-            <span class="category-index">{{ index + 1 }}</span>
+            <span class="category-id" :class="{ loading: loadingIds }">
+              {{ form.previewId || '...' }}
+            </span>
             <span class="original-name">原始值: "{{ form.originalName }}"</span>
           </div>
           
@@ -112,10 +207,12 @@ const handleClose = () => {
                 show-word-limit
               />
             </el-form-item>
-            <el-form-item label="图片文件">
-              <el-input
-                v-model="form.imageName"
-                placeholder="如: new-category.png（可选）"
+            <el-form-item label="分类图片">
+              <CategoryImagePicker
+                v-model="form.imageId"
+                placeholder="点击选择分类图片（可选）"
+                :used-images-map="getUsedImagesMapForCategory(index)"
+                :current-category-id="form.previewId"
               />
             </el-form-item>
             <el-form-item label="描述">
@@ -178,17 +275,26 @@ const handleClose = () => {
   border-bottom: 1px dashed #ddd;
 }
 
-.category-index {
-  width: 24px;
-  height: 24px;
+.category-id {
+  padding: 4px 10px;
   background: #667eea;
   color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
+  font-family: monospace;
+  min-width: 40px;
+  text-align: center;
+}
+
+.category-id.loading {
+  background: #c0c4cc;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .original-name {

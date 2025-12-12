@@ -8,7 +8,9 @@
 export interface Category {
   id: string            // 分类ID, e.g., "C01"
   name: string          // 分类名称, e.g., "精密仪器"
-  imageName: string     // 对应图片文件名, e.g., "instrument-cover.jpg"
+  imageId?: number      // 关联的图片ID（新架构）
+  imageName?: string    // 对应图片文件名（旧架构兼容）
+  imageUrl?: string     // 图片完整URL（由服务端计算）
   description?: string  // 分类描述
 }
 

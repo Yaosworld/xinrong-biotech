@@ -123,40 +123,50 @@ const processImportFile = async (file: File, newCategoryMap?: Map<string, string
 }
 
 // 处理新分类确认
-const handleNewCategoryConfirm = async (categories: Array<{ originalName: string; name: string; imageName: string; description: string }>) => {
+const handleNewCategoryConfirm = async (categories: Array<{ originalName: string; name: string; imageId: number | null; description: string }>) => {
   if (!pendingImportFile.value) return
   
   try {
-    // 创建新分类
+    // 批量创建新分类
     const token = localStorage.getItem('admin_token') || ''
     const newCategoryMap = new Map<string, string>()
     
-    for (const cat of categories) {
-      // 调用后端创建分类
-      const res = await fetch('/api/admin/content/category/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
+    // 调用批量创建分类 API（使用 imageId 而不是 imageName）
+    const res = await fetch('/api/admin/category/batch-create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        categories: categories.map(cat => ({
           name: cat.name,
-          imageName: cat.imageName || 'placeholder.png',
-          description: cat.description
-        })
+          imageId: cat.imageId,  // 使用 imageId
+          description: cat.description || ''
+        }))
       })
-      
-      if (res.ok) {
-        const result = await res.json()
-        // 记录原始名称到新ID的映射
-        newCategoryMap.set(cat.originalName, result.data?.id || result.id)
-      }
+    })
+    
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || '创建分类失败')
     }
     
-    // 刷新分类数据
+    const result = await res.json()
+    
+    // 建立原始名称到新ID的映射
+    if (result.data && Array.isArray(result.data)) {
+      result.data.forEach((created: { id: string; name: string }, index: number) => {
+        const originalName = categories[index].originalName
+        newCategoryMap.set(originalName, created.id)
+        console.log(`分类映射: "${originalName}" -> ${created.id}`)
+      })
+    }
+    
+    // 刷新分类数据（确保 categoryStore 和 ExcelProcessor 能获取到新分类）
     await categoryStore.loadCategories()
     
-    // 继续处理导入
+    // 继续处理导入，传入新分类映射
     const importedData = await processImportFile(pendingImportFile.value, newCategoryMap)
     
     // 手动触发导入完成
@@ -253,7 +263,13 @@ const loadAdminData = async () => {
   try {
     // 从 Admin API 加载（优先使用草稿数据）
     const result = await adminApi.getList('product', { pageSize: 9999 })
-    localProducts.value = result.data.map(item => item.draftData || item.publishedData)
+    console.log(`[loadAdminData] API 返回 ${result.data.length} 条记录`)
+    // 过滤掉空数据
+    const products = result.data
+      .map(item => item.draftData || item.publishedData)
+      .filter(Boolean)
+    console.log(`[loadAdminData] 过滤后 ${products.length} 条有效数据`)
+    localProducts.value = products
   } catch (e) {
     console.warn('Admin API 加载失败，降级到前台 Store:', e)
     // 降级到前台 Store
@@ -265,8 +281,8 @@ const loadAdminData = async () => {
 }
 
 onMounted(async () => {
-  // 确保分类数据已加载
-  await categoryStore.ensureLoaded()
+  // 每次进入页面都重新加载分类数据，确保获取最新的分类信息
+  await categoryStore.loadCategories()
   await loadAdminData()
 })
 </script>
@@ -279,7 +295,7 @@ onMounted(async () => {
       :data="products"
       :columns="columns"
       row-key="id"
-      search-placeholder="搜索产品名称、货号、品牌..."
+      search-placeholder="搜索名称、货号、品牌、规格、描述..."
       :page-size="12"
       :page-sizes="[12, 24, 48, 100]"
       :import-config="{ enabled: true, accept: '.xlsx,.xls', handler: handleExcelImport }"

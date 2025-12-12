@@ -33,7 +33,8 @@ const allMenuItems: MenuItem[] = [
     icon: 'fas fa-box',
     children: [
       { id: 'products-list', title: '产品列表', path: '/admin/products/list' },
-      { id: 'products-categories', title: '分类管理', path: '/admin/products/categories' }
+      { id: 'products-categories', title: '分类管理', path: '/admin/products/categories' },
+      { id: 'products-images', title: '分类图片库', path: '/admin/products/category-images' }
     ]
   },
   { id: 'promotions', title: '活动管理', icon: 'fas fa-bullhorn', path: '/admin/promotions/list' },
@@ -462,36 +463,42 @@ async function handleChangePwd() {
 
 /* 导航菜单 */
 .sidebar-nav {
-  padding: 12px 0;
+  padding: 8px 0;
 }
 
+/* 一级菜单项 */
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
-  color: rgba(255, 255, 255, 0.65);
+  padding: 14px 20px;
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   white-space: nowrap;
   overflow: hidden;
+  margin: 4px 8px;
+  border-radius: 8px;
 }
 
-.nav-item i {
-  width: 24px;
+.nav-item i:first-child {
+  width: 20px;
   text-align: center;
   flex-shrink: 0;
-  transition: all 0.3s ease;
+  font-size: 15px;
 }
 
 .nav-item span {
   margin-left: 12px;
+  font-size: 14px;
+  font-weight: 500;
   opacity: 1;
   transition: opacity 0.2s ease, margin 0.3s ease;
 }
 
 .admin-sidebar.collapsed .nav-item {
-  padding: 12px 20px;
+  padding: 14px;
+  margin: 4px 8px;
   justify-content: center;
 }
 
@@ -503,53 +510,85 @@ async function handleChangePwd() {
 
 .nav-item:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(102, 126, 234, 0.15);
 }
 
 .nav-item.active {
   color: #fff;
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
-/* 有子菜单的项 */
+/* 有子菜单的一级项 */
 .nav-item.has-children {
   position: relative;
 }
 
+.nav-item.has-children.active {
+  background: rgba(102, 126, 234, 0.2);
+  box-shadow: none;
+}
+
 .nav-item.has-children .arrow {
   margin-left: auto;
-  font-size: 12px;
+  font-size: 10px;
   transition: transform 0.3s;
+  opacity: 0.6;
 }
 
 .nav-item.has-children.expanded .arrow {
   transform: rotate(180deg);
 }
 
-/* 子菜单 */
+/* 子菜单容器 */
 .submenu {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
+  margin: 0 8px 4px 8px;
+  border-radius: 8px;
+  padding: 4px 0;
+  overflow: hidden;
 }
 
+/* 二级菜单项 */
 .submenu-item {
-  padding-left: 52px !important;
+  padding: 10px 16px 10px 44px !important;
   font-size: 13px;
+  margin: 2px 4px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.submenu-item:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.submenu-item.active {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  font-weight: 500;
 }
 
 .submenu-item::before {
   content: '';
   width: 6px;
   height: 6px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 50%;
   position: absolute;
-  left: 32px;
+  left: 24px;
   top: 50%;
   transform: translateY(-50%);
+  transition: all 0.2s;
+}
+
+.submenu-item:hover::before {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .submenu-item.active::before {
-  background: #fff;
+  background: #667eea;
+  box-shadow: 0 0 6px rgba(102, 126, 234, 0.6);
 }
 
 /* 内容区域 */

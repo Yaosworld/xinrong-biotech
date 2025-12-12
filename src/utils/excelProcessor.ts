@@ -442,12 +442,19 @@ export class ExcelProcessor {
       usedIds.add(id)
       
       // 处理分类ID
-      let categoryId = this.normalizeCategoryId(row.categoryId)
-      if (!categoryId && row.categoryId) {
-        // 尝试从新分类映射中查找
-        const trimmed = String(row.categoryId).trim()
-        categoryId = newCategoryMap?.get(trimmed) || null
+      let categoryId: string | null = null
+      const rawCategoryValue = row.categoryId ? String(row.categoryId).trim() : ''
+      
+      if (rawCategoryValue) {
+        // 优先从新分类映射中查找（处理刚创建的分类）
+        if (newCategoryMap?.has(rawCategoryValue)) {
+          categoryId = newCategoryMap.get(rawCategoryValue)!
+        } else {
+          // 尝试从已有分类中查找
+          categoryId = this.normalizeCategoryId(rawCategoryValue)
+        }
       }
+      
       // 如果仍然没有找到，设为未分类
       if (!categoryId) {
         categoryId = this.UNCATEGORIZED_ID

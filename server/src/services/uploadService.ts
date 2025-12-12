@@ -94,9 +94,12 @@ export const uploadService = {
 
   /**
    * 上传文件
-   * 每次上传都会创建新文件，文件名冲突时添加数字后缀
+   * @param file 文件信息
+   * @param category 上传分类
+   * @param options 选项
+   *   - rejectDuplicate: 如果为 true，文件名冲突时返回错误而不是添加后缀
    */
-  async upload(file: FileInfo, category: string): Promise<UploadResult> {
+  async upload(file: FileInfo, category: string, options?: { rejectDuplicate?: boolean }): Promise<UploadResult> {
     // 验证分类
     const targetDir = UPLOAD_DIRS[category]
     if (!targetDir) {
@@ -109,14 +112,36 @@ export const uploadService = {
       return { success: false, error: validation.error }
     }
 
-    // 生成文件名（文件名冲突时自动添加数字后缀）
     const fullDir = path.join(UPLOAD_BASE, targetDir)
-    const filename = this.generateFilename(file.originalName, targetDir)
-    const fullPath = path.join(fullDir, filename)
-
+    
     // 确保目录存在
     if (!fs.existsSync(fullDir)) {
       fs.mkdirSync(fullDir, { recursive: true })
+    }
+
+    // 生成安全的文件名
+    const ext = path.extname(file.originalName).toLowerCase()
+    const baseName = path.basename(file.originalName, ext)
+      .replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_')
+      .substring(0, 50)
+    
+    let filename = `${baseName}${ext}`
+    let fullPath = path.join(fullDir, filename)
+
+    // 检查文件是否已存在
+    if (fs.existsSync(fullPath)) {
+      if (options?.rejectDuplicate) {
+        // 拒绝重复文件名
+        return { success: false, error: `文件名 "${filename}" 已存在，请修改文件名后重试` }
+      } else {
+        // 添加数字后缀
+        let counter = 1
+        while (fs.existsSync(fullPath)) {
+          filename = `${baseName}_${counter}${ext}`
+          fullPath = path.join(fullDir, filename)
+          counter++
+        }
+      }
     }
 
     // 写入文件

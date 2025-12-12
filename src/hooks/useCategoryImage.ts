@@ -106,7 +106,11 @@ export function getCategoryName(id: string): string {
  */
 export function getCategoryImagePath(id: string): string {
   const category = getCategoryById(id)
-  if (category && category.imageName) {
+  // 优先使用 imageUrl（新架构），降级到 imageName（旧架构）
+  if (category?.imageUrl) {
+    return category.imageUrl
+  }
+  if (category?.imageName) {
     return `/images/products/${category.imageName}`
   }
   return '/images/common/placeholder.png'

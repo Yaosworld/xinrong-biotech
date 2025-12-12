@@ -1,4 +1,10 @@
 import db from '../db'
+import fs from 'fs'
+import path from 'path'
+const { batchOperation, runNoSave } = db
+
+// 图片目录配置
+const UPLOAD_BASE = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads')
 
 export interface QueryOptions {
   page?: number
@@ -31,6 +37,11 @@ export const contentService = {
       ...JSON.parse(row.published_data),
       _sortOrder: row.sort_order
     }))
+    
+    // 如果是分类数据，自动添加 imageUrl
+    if (contentType === 'category') {
+      data = this.enrichCategoryData(data)
+    }
     
     // 筛选
     if (search) {
@@ -207,17 +218,83 @@ export const contentService = {
       const sortOrder = (maxOrder?.max || 0) + 1
       
       db.run(`
-        INSERT INTO contents (content_type, content_key, draft_data, sort_order, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO contents (content_type, content_key, draft_data, status, sort_order, created_at, updated_at)
+        VALUES (?, ?, ?, 'draft', ?, ?, ?)
       `, [contentType, contentKey, draftData, sortOrder, now, now])
     }
   },
   
-  // 批量保存草稿
+  // 批量保存草稿（优化版：减少磁盘写入次数）
   batchSaveDraft(contentType: string, items: { key: string; data: any }[]) {
-    db.transaction(() => {
+    if (items.length === 0) return
+    
+    batchOperation(() => {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+      
+      // 一次性查询所有已存在的记录（包括已删除的，用于恢复）
+      const existingRows = db.queryAll(`
+        SELECT content_key, id, status FROM contents 
+        WHERE content_type = ? AND content_key IN (${items.map(() => '?').join(',')})
+      `, [contentType, ...items.map(i => i.key)])
+      
+      // 区分活跃记录和已删除记录
+      const activeKeys = new Set<string>()
+      const deletedKeys = new Set<string>()
+      existingRows.forEach(r => {
+        if (r.status === 'deleted') {
+          deletedKeys.add(r.content_key)
+        } else {
+          activeKeys.add(r.content_key)
+        }
+      })
+      
+      // 获取当前最大排序值
+      const maxOrderResult = db.queryOne(`
+        SELECT MAX(sort_order) as max FROM contents WHERE content_type = ?
+      `, [contentType])
+      let sortOrder = (maxOrderResult?.max || 0) + 1
+      
+      // 分离新增、更新和恢复
+      const toInsert: { key: string; data: string; sortOrder: number }[] = []
+      const toUpdate: { key: string; data: string }[] = []
+      const toRestore: { key: string; data: string }[] = []
+      
       for (const item of items) {
-        this.saveDraft(contentType, item.key, item.data)
+        const draftData = JSON.stringify(item.data)
+        if (activeKeys.has(item.key)) {
+          // 活跃记录：只更新数据
+          toUpdate.push({ key: item.key, data: draftData })
+        } else if (deletedKeys.has(item.key)) {
+          // 已删除记录：恢复并更新数据
+          toRestore.push({ key: item.key, data: draftData })
+        } else {
+          // 新记录：插入
+          toInsert.push({ key: item.key, data: draftData, sortOrder: sortOrder++ })
+        }
+      }
+      
+      // 批量更新活跃记录
+      for (const item of toUpdate) {
+        runNoSave(`
+          UPDATE contents SET draft_data = ?, updated_at = ?
+          WHERE content_type = ? AND content_key = ?
+        `, [item.data, now, contentType, item.key])
+      }
+      
+      // 批量恢复已删除记录（更新数据并恢复状态）
+      for (const item of toRestore) {
+        runNoSave(`
+          UPDATE contents SET draft_data = ?, status = 'draft', updated_at = ?
+          WHERE content_type = ? AND content_key = ?
+        `, [item.data, now, contentType, item.key])
+      }
+      
+      // 批量插入新记录
+      for (const item of toInsert) {
+        runNoSave(`
+          INSERT INTO contents (content_type, content_key, draft_data, status, sort_order, created_at, updated_at)
+          VALUES (?, ?, ?, 'draft', ?, ?, ?)
+        `, [contentType, item.key, item.data, item.sortOrder, now, now])
       }
     })
   },
@@ -230,6 +307,24 @@ export const contentService = {
       UPDATE contents SET status = 'deleted', updated_at = ?
       WHERE content_type = ? AND content_key = ?
     `, [now, contentType, contentKey])
+  },
+  
+  // 批量删除（软删除，优化版：减少磁盘写入次数）
+  batchDelete(contentType: string, contentKeys: string[]) {
+    if (contentKeys.length === 0) return 0
+    
+    return batchOperation(() => {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+      
+      // 使用 IN 子句一次性更新所有记录
+      const placeholders = contentKeys.map(() => '?').join(',')
+      runNoSave(`
+        UPDATE contents SET status = 'deleted', updated_at = ?
+        WHERE content_type = ? AND content_key IN (${placeholders})
+      `, [now, contentType, ...contentKeys])
+      
+      return contentKeys.length
+    })
   },
 
   // ========================================
@@ -270,45 +365,49 @@ export const contentService = {
     })
   },
   
-  // 批量发布（支持变更说明）
+  // 批量发布（优化版：减少查询和磁盘写入次数）
   batchPublish(contentType: string, contentKeys: string[], changeSummary?: string) {
+    if (contentKeys.length === 0) return 0
+    
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
     let publishedCount = 0
     // 自动生成变更说明（如果未提供）
     const summary = changeSummary || `批量发布 ${contentKeys.length} 条 ${contentType} 数据`
     
-    db.transaction(() => {
-      for (const key of contentKeys) {
-        const content = db.queryOne(`
-          SELECT * FROM contents WHERE content_type = ? AND content_key = ?
-        `, [contentType, key])
+    return batchOperation(() => {
+      // 一次性查询所有需要发布的内容
+      const contents = db.queryAll(`
+        SELECT id, content_key, draft_data, version FROM contents 
+        WHERE content_type = ? AND content_key IN (${contentKeys.map(() => '?').join(',')})
+          AND draft_data IS NOT NULL
+      `, [contentType, ...contentKeys])
+      
+      // 批量处理
+      for (const content of contents) {
+        const newVersion = content.version + 1
         
-        if (content && content.draft_data) {
-          const newVersion = content.version + 1
-          
-          // 创建版本快照（包含变更说明）
-          db.run(`
-            INSERT INTO content_versions (content_id, version, data, change_summary, created_at)
-            VALUES (?, ?, ?, ?, ?)
-          `, [content.id, newVersion, content.draft_data, summary, now])
-          
-          // 发布
-          db.run(`
-            UPDATE contents SET 
-              published_data = ?,
-              status = 'published',
-              version = ?,
-              published_at = ?,
-              updated_at = ?
-            WHERE id = ?
-          `, [content.draft_data, newVersion, now, now, content.id])
-          
-          publishedCount++
-        }
+        // 创建版本快照
+        runNoSave(`
+          INSERT INTO content_versions (content_id, version, data, change_summary, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `, [content.id, newVersion, content.draft_data, summary, now])
+        
+        // 发布
+        runNoSave(`
+          UPDATE contents SET 
+            published_data = ?,
+            status = 'published',
+            version = ?,
+            published_at = ?,
+            updated_at = ?
+          WHERE id = ?
+        `, [content.draft_data, newVersion, now, now, content.id])
+        
+        publishedCount++
       }
+      
+      return publishedCount
     })
-    
-    return publishedCount
   },
   
   // 回滚
@@ -331,5 +430,41 @@ export const contentService = {
       UPDATE contents SET draft_data = ?, updated_at = ?
       WHERE id = ?
     `, [versionData.data, now, content.id])
+  },
+
+  // ========================================
+  // 辅助方法
+  // ========================================
+  
+  // 为分类数据添加 imageUrl 和 imageName
+  enrichCategoryData(categories: any[]): any[] {
+    // 获取所有图片
+    const imageRows = db.queryAll('SELECT id, filename FROM category_images')
+    const imageMap = new Map<number, string>()
+    imageRows.forEach(row => imageMap.set(row.id, row.filename))
+    
+    return categories.map(cat => {
+      let imageUrl = '/images/common/placeholder.png'
+      let imageName = ''
+      
+      if (cat.imageId) {
+        imageName = imageMap.get(cat.imageId) || ''
+        if (imageName) {
+          // 检查图片是否在 uploads 目录
+          const uploadPath = path.join(UPLOAD_BASE, 'images/products', imageName)
+          if (fs.existsSync(uploadPath)) {
+            imageUrl = `/uploads/images/products/${imageName}`
+          } else {
+            imageUrl = `/images/products/${imageName}`
+          }
+        }
+      }
+      
+      return {
+        ...cat,
+        imageName,
+        imageUrl
+      }
+    })
   }
 }

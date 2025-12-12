@@ -100,6 +100,10 @@ export const useCategoryStore = defineStore('category', () => {
    */
   function getCategoryImagePath(id: string): string {
     const category = getCategoryById(id)
+    // 优先使用 imageUrl（新架构），降级到 imageName（旧架构）
+    if (category?.imageUrl) {
+      return category.imageUrl
+    }
     if (category?.imageName) {
       return `${IMAGE_BASE_PATH}${category.imageName}`
     }

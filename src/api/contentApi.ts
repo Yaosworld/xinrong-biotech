@@ -184,18 +184,47 @@ export const adminApi = {
   },
 
   /**
-   * 批量保存草稿
+   * 批量保存草稿（支持分批和进度回调）
+   * @param contentType 内容类型
+   * @param items 要保存的数据
+   * @param options 选项：batchSize 每批大小，onProgress 进度回调
    */
   async batchSaveDraft<T>(
     contentType: string,
-    items: { key: string; data: T }[]
+    items: { key: string; data: T }[],
+    options?: {
+      batchSize?: number
+      onProgress?: (saved: number, total: number) => void
+    }
   ): Promise<void> {
-    const res = await fetch(`${API_BASE}/admin/content/${contentType}/batch-draft`, {
-      method: 'PUT',
-      headers: getAuthHeaders('application/json'),
-      body: JSON.stringify({ items })
-    })
-    if (!res.ok) throw new Error('批量保存失败')
+    const batchSize = options?.batchSize || 500  // 默认每批 500 条
+    const total = items.length
+    
+    // 小数据量直接保存
+    if (total <= batchSize) {
+      const res = await fetch(`${API_BASE}/admin/content/${contentType}/batch-draft`, {
+        method: 'PUT',
+        headers: getAuthHeaders('application/json'),
+        body: JSON.stringify({ items })
+      })
+      if (!res.ok) throw new Error('批量保存失败')
+      options?.onProgress?.(total, total)
+      return
+    }
+    
+    // 大数据量分批保存
+    let saved = 0
+    for (let i = 0; i < total; i += batchSize) {
+      const batch = items.slice(i, i + batchSize)
+      const res = await fetch(`${API_BASE}/admin/content/${contentType}/batch-draft`, {
+        method: 'PUT',
+        headers: getAuthHeaders('application/json'),
+        body: JSON.stringify({ items: batch })
+      })
+      if (!res.ok) throw new Error(`批量保存失败（第 ${Math.floor(i / batchSize) + 1} 批）`)
+      saved += batch.length
+      options?.onProgress?.(saved, total)
+    }
   },
 
   /**
@@ -261,6 +290,19 @@ export const adminApi = {
       headers: getAuthHeaders()
     })
     if (!res.ok) throw new Error('删除失败')
+  },
+
+  /**
+   * 批量删除（软删除）
+   */
+  async batchDelete(contentType: string, contentKeys: string[]): Promise<{ deletedCount: number }> {
+    const res = await fetch(`${API_BASE}/admin/content/${contentType}/batch-delete`, {
+      method: 'POST',
+      headers: getAuthHeaders('application/json'),
+      body: JSON.stringify({ keys: contentKeys })
+    })
+    if (!res.ok) throw new Error('批量删除失败')
+    return res.json()
   }
 }
 

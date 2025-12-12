@@ -7,8 +7,10 @@ import adminRouter from './routes/admin'
 import authRouter from './routes/auth'
 import adminUsersRouter from './routes/adminUsers'
 import uploadRouter from './routes/upload'
+import categoryImageRouter from './routes/categoryImage'
 import { authenticate } from './middleware/auth'
 import { categoryService } from './services/categoryService'
+import { categoryImageService } from './services/categoryImageService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -28,6 +30,7 @@ app.use('/api/content', contentRouter)
 // 受保护路由（需要认证）
 app.use('/api/admin/users', adminUsersRouter)
 app.use('/api/admin/upload', authenticate, uploadRouter)
+app.use('/api/admin/category-images', authenticate, categoryImageRouter)
 app.use('/api/admin', authenticate, adminRouter)
 
 // 健康检查
@@ -42,6 +45,13 @@ async function start() {
     
     // 初始化默认分类数据
     categoryService.initDefaultCategories()
+    
+    // 初始化分类图片表并同步文件系统
+    categoryImageService.initTable()
+    const syncResult = categoryImageService.syncFromFileSystem()
+    if (syncResult.added > 0) {
+      console.log(`📷 同步了 ${syncResult.added} 张分类图片到数据库`)
+    }
     
     app.listen(PORT, () => {
       console.log(`\n🚀 CMS API Server running on http://localhost:${PORT}`)

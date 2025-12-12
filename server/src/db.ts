@@ -199,11 +199,23 @@ function queryOne(sql: string, params: any[] = []): any | null {
   return results.length > 0 ? results[0] : null
 }
 
+// 批量操作标志 - 在批量操作期间不自动保存
+let inBatchOperation = false
+
 // 执行更新/插入语句
 function run(sql: string, params: any[] = []): void {
   const database = getDb()
   database.run(sql, params)
-  saveDb()
+  // 只有在非批量操作时才自动保存
+  if (!inBatchOperation) {
+    saveDb()
+  }
+}
+
+// 执行更新/插入语句（不自动保存，用于批量操作内部）
+function runNoSave(sql: string, params: any[] = []): void {
+  const database = getDb()
+  database.run(sql, params)
 }
 
 // 获取最后插入的 ID
@@ -223,6 +235,26 @@ function transaction<T>(fn: () => T): T {
   }
 }
 
+/**
+ * 批量操作执行器
+ * 在批量操作期间禁用自动保存，操作完成后统一保存一次
+ * 这可以将 N 次磁盘写入减少为 1 次，大幅提升性能
+ */
+function batchOperation<T>(fn: () => T): T {
+  const wasInBatch = inBatchOperation
+  inBatchOperation = true
+  try {
+    const result = fn()
+    return result
+  } finally {
+    inBatchOperation = wasInBatch
+    // 只有最外层批量操作结束时才保存
+    if (!wasInBatch) {
+      saveDb()
+    }
+  }
+}
+
 export {
   initDb,
   getDb,
@@ -230,8 +262,10 @@ export {
   queryAll,
   queryOne,
   run,
+  runNoSave,
   lastInsertRowId,
-  transaction
+  transaction,
+  batchOperation
 }
 
 export default {
@@ -241,6 +275,8 @@ export default {
   queryAll,
   queryOne,
   run,
+  runNoSave,
   lastInsertRowId,
-  transaction
+  transaction,
+  batchOperation
 }
