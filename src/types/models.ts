@@ -55,15 +55,21 @@ export interface Brand {
  * 促销/资讯活动接口
  */
 export interface Promotion {
-  id: number               // 促销活动 ID
+  id: string               // 促销活动 ID (统一使用字符串，如 "A001")
   title: string            // 标题
   summary: string          // 摘要
   description?: string     // 详细描述
-  cover_url?: string       // 活动封面图片
-  poster_url?: string      // 活动海报图片
+  
+  // 图片信息（新架构：使用 ID 关联）
+  coverId?: number | null  // 封面图片ID
+  posterId?: number | null // 海报图片ID
+  cover_url?: string       // 封面图片URL（兼容旧数据/动态计算）
+  poster_url?: string      // 海报图片URL（兼容旧数据/动态计算）
+  
   icon_class?: string      // FontAwesome 图标类名
   
   // 时间信息
+  publish_date?: string    // 发布日期 (YYYY-MM-DD)
   start_date?: string      // 开始日期 (YYYY-MM-DD)
   end_date?: string        // 结束日期 (YYYY-MM-DD)
   
@@ -76,15 +82,26 @@ export interface Promotion {
   tags?: string[]          // 标签数组
   applicable_products?: string  // 适用产品描述
   
-  // 状态信息 (动态计算)
-  status?: 'active' | 'ended' | 'coming' | 'endingSoon' | 'all'  // 活动状态
-  statusText?: string      // 状态文本
+  // 时间状态信息 (动态计算，非存储字段)
+  timeStatus?: PromotionTimeStatus  // 活动时间状态
+  timeStatusText?: string           // 时间状态文本
+  
+  // 兼容旧字段（逐步废弃）
+  status?: PromotionTimeStatus | 'all'  // 兼容旧代码
+  statusText?: string                    // 兼容旧代码
 }
 
 /**
- * 促销状态类型
+ * 促销时间状态类型（动态计算）
+ * 与数据库状态（draft/published/deleted）区分
  */
-export type PromotionStatus = 'active' | 'ended' | 'coming' | 'endingSoon' | 'all'
+export type PromotionTimeStatus = 'active' | 'ended' | 'coming' | 'endingSoon'
+
+/**
+ * 促销状态类型（兼容旧代码）
+ * @deprecated 使用 PromotionTimeStatus 替代
+ */
+export type PromotionStatus = PromotionTimeStatus | 'all'
 
 /**
  * 排序方式类型
@@ -121,6 +138,9 @@ export interface BrandFilters {
  */
 export interface PromotionFilters {
   search: string
+  timeStatus?: PromotionTimeStatus | 'all'  // 按时间状态筛选
+  dateRange?: [string, string] | null       // 按日期范围筛选 [startDate, endDate]
+  tags?: string[]                           // 按标签筛选
 }
 
 /**

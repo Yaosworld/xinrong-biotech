@@ -43,6 +43,11 @@ export const contentService = {
       data = this.enrichCategoryData(data)
     }
     
+    // 如果是促销活动数据，自动添加图片 URL
+    if (contentType === 'promotion') {
+      data = this.enrichPromotionData(data)
+    }
+    
     // 筛选
     if (search) {
       const query = search.toLowerCase()
@@ -464,6 +469,51 @@ export const contentService = {
         ...cat,
         imageName,
         imageUrl
+      }
+    })
+  },
+
+  // 为促销活动数据添加图片 URL
+  enrichPromotionData(promotions: any[]): any[] {
+    // 获取所有促销图片
+    const imageRows = db.queryAll('SELECT id, filename, image_type FROM promotion_images')
+    const imageMap = new Map<number, { filename: string; imageType: string }>()
+    imageRows.forEach(row => imageMap.set(row.id, { filename: row.filename, imageType: row.image_type }))
+    
+    return promotions.map(promo => {
+      let cover_url = promo.cover_url || ''
+      let poster_url = promo.poster_url || ''
+      
+      // 如果有 coverId，计算 cover_url
+      if (promo.coverId) {
+        const coverInfo = imageMap.get(promo.coverId)
+        if (coverInfo) {
+          const uploadPath = path.join(UPLOAD_BASE, 'images/promotions/covers', coverInfo.filename)
+          if (fs.existsSync(uploadPath)) {
+            cover_url = `/uploads/images/promotions/covers/${coverInfo.filename}`
+          } else {
+            cover_url = `/images/promotions/covers/${coverInfo.filename}`
+          }
+        }
+      }
+      
+      // 如果有 posterId，计算 poster_url
+      if (promo.posterId) {
+        const posterInfo = imageMap.get(promo.posterId)
+        if (posterInfo) {
+          const uploadPath = path.join(UPLOAD_BASE, 'images/promotions/posters', posterInfo.filename)
+          if (fs.existsSync(uploadPath)) {
+            poster_url = `/uploads/images/promotions/posters/${posterInfo.filename}`
+          } else {
+            poster_url = `/images/promotions/posters/${posterInfo.filename}`
+          }
+        }
+      }
+      
+      return {
+        ...promo,
+        cover_url,
+        poster_url
       }
     })
   }

@@ -4,6 +4,11 @@ import { usePromotionStore } from '@/stores/promotionStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
 import { adminApi } from '@/api/contentApi'
+import { 
+  generatePromotionId, 
+  extractPromotionIdNum,
+  PROMOTION_PAGINATION_CONFIG 
+} from '@/constants/promotions'
 
 const promotionStore = usePromotionStore()
 const adminStore = useAdminStore()
@@ -17,9 +22,25 @@ const promotions = computed(() => localPromotions.value)
 
 // 列配置
 const columns = computed(() => [
-  { key: 'id', label: 'ID', width: 60, editable: false, sortable: true, fixed: 'left' as const },
-  { key: 'cover_url', label: '封面', width: 65, type: 'image' as const, imageStyle: 'contain' as const },
-  { key: 'poster_url', label: '海报', width: 65, type: 'image' as const, imageStyle: 'contain' as const },
+  { key: 'id', label: 'ID', width: 70, editable: false, sortable: true, fixed: 'left' as const },
+  { 
+    key: 'coverId', 
+    label: '封面', 
+    width: 70, 
+    type: 'promotion-image' as const, 
+    imageType: 'cover',
+    // 动态获取封面URL
+    getValue: (row: any) => row.cover_url || ''
+  },
+  { 
+    key: 'posterId', 
+    label: '海报', 
+    width: 70, 
+    type: 'promotion-image' as const, 
+    imageType: 'poster',
+    // 动态获取海报URL
+    getValue: (row: any) => row.poster_url || ''
+  },
   { key: 'title', label: '标题', width: { min: 140, flex: 2 }, required: true },
   { key: 'summary', label: '摘要', width: { min: 120, flex: 3 }, truncate: 30, required: true },
   { key: 'description', label: '详情', width: { min: 120, flex: 4 }, type: 'textarea' as const, truncate: 35 },
@@ -30,20 +51,22 @@ const columns = computed(() => [
   { key: 'publish_date', label: '发布日期', type: 'date' as const, showInTable: false }
 ])
 
-// 生成活动ID - 基于当前编辑器数据和 store 数据，避免 ID 冲突
-const generatePromotionId = (currentData: any[]) => {
+// 生成活动ID - 统一使用字符串格式 "A001"
+const generateId = (currentData: any[]) => {
   const allPromotions = [...currentData, ...localPromotions.value, ...promotionStore.promotions]
   const maxIdNum = allPromotions.reduce((max, item) => {
-    const num = parseInt(item.id?.replace('A', '') || '0')
-    return Math.max(max, num)
+    return Math.max(max, extractPromotionIdNum(item.id))
   }, 0)
-  return `A${String(maxIdNum + 1).padStart(3, '0')}`
+  return generatePromotionId(maxIdNum + 1)
 }
 
 // 保存前处理 - tags 转换
 const beforeSave = (data: any[]) => {
   return data.map(item => ({
     ...item,
+    // 确保 ID 是字符串格式
+    id: String(item.id),
+    // tags 转换为数组
     tags: typeof item.tags === 'string' 
       ? item.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
       : item.tags || []
@@ -70,11 +93,20 @@ const loadAdminData = async () => {
   loading.value = true
   try {
     const result = await adminApi.getList('promotion', { pageSize: 9999 })
-    localPromotions.value = result.data.map(item => item.draftData || item.publishedData)
+    // 过滤空数据并确保 ID 是字符串
+    localPromotions.value = result.data
+      .map(item => {
+        const data = item.draftData || item.publishedData
+        if (data) {
+          return { ...data, id: String(data.id) }
+        }
+        return null
+      })
+      .filter(Boolean)
   } catch (e) {
     console.warn('Admin API 加载失败，降级到前台 Store:', e)
     await promotionStore.loadPromotions()
-    localPromotions.value = [...promotionStore.promotions]
+    localPromotions.value = promotionStore.promotions.map(p => ({ ...p, id: String(p.id) }))
   } finally {
     loading.value = false
   }
@@ -97,11 +129,11 @@ onMounted(async () => {
     :columns="columns"
     row-key="id"
     search-placeholder="搜索活动标题、摘要..."
-    :page-size="10"
-    :page-sizes="[10, 20, 50]"
+    :page-size="PROMOTION_PAGINATION_CONFIG.ADMIN_PAGE_SIZE"
+    :page-sizes="PROMOTION_PAGINATION_CONFIG.PAGE_SIZES"
     :publish-config="{ enabled: true, contentType: 'promotion' }"
     :before-save="beforeSave"
-    :generate-id="generatePromotionId"
+    :generate-id="generateId"
     @save="handleSave"
     @publish="handlePublish"
     @reload="handleReload"

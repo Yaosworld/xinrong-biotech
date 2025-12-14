@@ -8,9 +8,11 @@ import authRouter from './routes/auth'
 import adminUsersRouter from './routes/adminUsers'
 import uploadRouter from './routes/upload'
 import categoryImageRouter from './routes/categoryImage'
+import promotionImageRouter from './routes/promotionImage'
 import { authenticate } from './middleware/auth'
 import { categoryService } from './services/categoryService'
 import { categoryImageService } from './services/categoryImageService'
+import { promotionImageService } from './services/promotionImageService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -31,6 +33,7 @@ app.use('/api/content', contentRouter)
 app.use('/api/admin/users', adminUsersRouter)
 app.use('/api/admin/upload', authenticate, uploadRouter)
 app.use('/api/admin/category-images', authenticate, categoryImageRouter)
+app.use('/api/admin/promotion-images', authenticate, promotionImageRouter)
 app.use('/api/admin', authenticate, adminRouter)
 
 // 健康检查
@@ -51,6 +54,13 @@ async function start() {
     const syncResult = categoryImageService.syncFromFileSystem()
     if (syncResult.added > 0) {
       console.log(`📷 同步了 ${syncResult.added} 张分类图片到数据库`)
+    }
+    
+    // 初始化促销图片表并同步文件系统
+    promotionImageService.initTable()
+    const promoSyncResult = promotionImageService.syncFromFileSystem()
+    if (promoSyncResult.added > 0) {
+      console.log(`🎉 同步了 ${promoSyncResult.added} 张促销图片到数据库`)
     }
     
     app.listen(PORT, () => {

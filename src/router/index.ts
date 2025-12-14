@@ -132,6 +132,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/promotions/PromotionsList.vue'),
         meta: { title: '活动列表' }
       },
+      // 促销图片库
+      {
+        path: 'promotions/images',
+        name: 'AdminPromotionImages',
+        component: () => import('@/views/admin/promotions/PromotionImageList.vue'),
+        meta: { title: '活动图片库' }
+      },
       // 关于我们
       {
         path: 'about/content',

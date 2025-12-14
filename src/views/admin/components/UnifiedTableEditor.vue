@@ -10,6 +10,7 @@ import PublishDialog from './PublishDialog.vue'
 import DuplicateReportDialog from './DuplicateReportDialog.vue'
 import ImageUploader from '@/components/admin/ImageUploader.vue'
 import CategoryImagePicker from '@/components/admin/CategoryImagePicker.vue'
+import PromotionImagePicker from '@/components/admin/PromotionImagePicker.vue'
 import { ExcelExporter, type ExportColumn, type ExportMode } from '@/utils/excelExporter'
 import { DuplicateDetector, type DuplicateCheckResult } from '@/utils/duplicateDetector'
 
@@ -541,6 +542,24 @@ const handleCategoryImageChange = (imageInfo: { id: number | null; url: string; 
   } else {
     editFormData.value.imageUrl = ''
     editFormData.value.imageName = ''
+  }
+}
+
+// 处理促销活动图片变更，同步更新对应的 URL 字段
+const handlePromotionImageChange = (key: string, imageInfo: { id: number | null; url: string; filename: string } | null) => {
+  if (imageInfo) {
+    // 根据 key 更新对应的 URL 字段
+    if (key === 'coverId') {
+      editFormData.value.cover_url = imageInfo.url
+    } else if (key === 'posterId') {
+      editFormData.value.poster_url = imageInfo.url
+    }
+  } else {
+    if (key === 'coverId') {
+      editFormData.value.cover_url = ''
+    } else if (key === 'posterId') {
+      editFormData.value.poster_url = ''
+    }
   }
 }
 
@@ -1405,6 +1424,14 @@ onBeforeUnmount(() => {
             <span v-else class="no-image">暂无</span>
           </template>
           
+          <!-- 促销活动图片（通过 getValue 或 cover_url/poster_url 显示） -->
+          <template v-else-if="col.type === 'promotion-image'">
+            <div v-if="getCellValue(row, col)" class="image-cell image-contain" @click="handlePreviewImage(getCellValue(row, col))">
+              <img :src="getImageUrl(getCellValue(row, col))" :alt="col.label" @error="(e: Event) => handleImageError(e, row, col)" />
+            </div>
+            <span v-else class="no-image">暂无</span>
+          </template>
+          
           <!-- 布尔 -->
           <template v-else-if="col.type === 'boolean'">
             <el-tag :type="row[col.key] ? 'success' : 'info'" size="small">
@@ -1548,6 +1575,16 @@ onBeforeUnmount(() => {
                 :used-images-map="editFormData._usedImagesMap"
                 :current-category-id="editFormData.id"
                 @image-change="handleCategoryImageChange"
+              />
+            </template>
+            
+            <!-- 促销活动图片选择器 -->
+            <template v-else-if="col.type === 'promotion-image'">
+              <PromotionImagePicker
+                v-model="editFormData[col.key]"
+                :image-type="(col as any).imageType || 'cover'"
+                :placeholder="col.placeholder || `点击选择${(col as any).imageType === 'poster' ? '海报' : '封面'}图片`"
+                @image-change="(info: any) => handlePromotionImageChange(col.key, info)"
               />
             </template>
             

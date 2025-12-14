@@ -37,7 +37,15 @@ const allMenuItems: MenuItem[] = [
       { id: 'products-images', title: '分类图片库', path: '/admin/products/category-images' }
     ]
   },
-  { id: 'promotions', title: '活动管理', icon: 'fas fa-bullhorn', path: '/admin/promotions/list' },
+  { 
+    id: 'promotions', 
+    title: '活动管理', 
+    icon: 'fas fa-bullhorn',
+    children: [
+      { id: 'promotions-list', title: '活动列表', path: '/admin/promotions/list' },
+      { id: 'promotions-images', title: '活动图片库', path: '/admin/promotions/images' }
+    ]
+  },
   { id: 'brands', title: '品牌管理', icon: 'fas fa-award', path: '/admin/brands/list' },
   { id: 'about', title: '关于我们', icon: 'fas fa-info-circle', path: '/admin/about/content' },
   { id: 'banners', title: '横幅设置', icon: 'fas fa-image', path: '/admin/banners' },
@@ -54,7 +62,7 @@ const menuItems = computed(() => {
 })
 
 // 展开的子菜单
-const expandedMenus = ref<string[]>(['products'])
+const expandedMenus = ref<string[]>(['products', 'promotions'])
 
 // 判断路由是否激活
 const isActive = (path: string) => route.path === path

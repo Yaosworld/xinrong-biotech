@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePromotionStore } from '@/stores/promotionStore'
 import type { Promotion } from '@/types'
+import { PROMOTION_STATUS_CONFIG } from '@/constants/promotions'
 
 interface Props {
   promotion: Promotion
@@ -16,6 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
 const router = useRouter()
 const promotionStore = usePromotionStore()
 const imageError = ref(false)
+const imageLoaded = ref(false)
 
 // 获取促销活动封面图片路径（仿照商品中心）
 const promotionCoverPath = computed(() => {
@@ -61,27 +63,31 @@ const formatDateRange = (start: string, end: string) => {
   return `${format(s)} - ${format(e)}`
 }
 
+// 时间状态（优先使用 timeStatus，兼容旧的 status）
+const currentStatus = computed(() => props.promotion.timeStatus || props.promotion.status)
+const currentStatusText = computed(() => props.promotion.timeStatusText || props.promotion.statusText)
+
 // 时间状态样式类
 const timeStatusClass = computed(() => {
-  switch (props.promotion.status) {
-    case 'endingSoon': return 'time-status-ending-soon'  // 即将结束
-    case 'active': return 'time-status-active'           // 正在进行
-    case 'coming': return 'time-status-coming'           // 即将开始
-    case 'ended': return 'time-status-ended'             // 已结束
-    default: return ''
-  }
+  const status = currentStatus.value
+  return PROMOTION_STATUS_CONFIG.COLOR_CLASS[status as keyof typeof PROMOTION_STATUS_CONFIG.COLOR_CLASS] || ''
 })
 
 // 时间状态图标
 const timeStatusIcon = computed(() => {
-  switch (props.promotion.status) {
-    case 'endingSoon': return 'fas fa-hourglass-end'    // 即将结束
-    case 'active': return 'fas fa-play-circle'          // 正在进行
-    case 'coming': return 'fas fa-clock'                // 即将开始
-    case 'ended': return 'fas fa-check-circle'          // 已结束
-    default: return 'fas fa-info-circle'
-  }
+  const status = currentStatus.value
+  return PROMOTION_STATUS_CONFIG.ICON[status as keyof typeof PROMOTION_STATUS_CONFIG.ICON] || 'fas fa-info-circle'
 })
+
+// 图片加载完成
+const handleImageLoad = () => {
+  imageLoaded.value = true
+}
+
+// 图片加载失败
+const handleImageError = () => {
+  imageError.value = true
+}
 
 // 导航到详情页
 const goToDetail = () => {
@@ -94,18 +100,26 @@ const goToDetail = () => {
     <!-- 左侧图片 -->
     <div class="news-card-image">
       <div class="image-wrapper">
+        <!-- 加载占位 -->
+        <div v-if="!imageLoaded && !imageError && promotionCoverPath" class="image-placeholder">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        
         <img
           v-if="!imageError && promotionCoverPath"
           :src="promotionCoverPath"
           :alt="promotion.title"
-          @error="imageError = true"
+          :class="{ 'image-loaded': imageLoaded }"
+          loading="lazy"
+          @load="handleImageLoad"
+          @error="handleImageError"
         />
         <div v-else class="news-card-fallback flex items-center justify-center">
           <i :class="promotion.icon_class || 'fas fa-bullhorn'" class="text-4xl text-gradient-300"></i>
         </div>
 
         <!-- 高级蒙版层 -->
-        <div v-if="!imageError" class="image-overlay"></div>
+        <div v-if="!imageError && imageLoaded" class="image-overlay"></div>
       </div>
       
     </div>
@@ -123,7 +137,7 @@ const goToDetail = () => {
           <!-- 状态标签（右对齐） -->
           <span :class="['time-status-badge', timeStatusClass]">
             <i :class="timeStatusIcon" class="mr-1"></i>
-            {{ promotion.statusText }}
+            {{ currentStatusText }}
           </span>
         </div>
         
@@ -193,6 +207,28 @@ const goToDetail = () => {
   @apply w-full h-full;
   object-fit: cover; /* 关键：图片填满容器，保持比例，可能裁剪 */
   object-position: center; /* 图片居中显示 */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-wrapper img.image-loaded {
+  opacity: 1;
+}
+
+/* 图片加载占位 */
+.image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa, #e4e7ed);
+  color: #c0c4cc;
+  font-size: 24px;
+  pointer-events: none; /* 允许点击穿透到父元素 */
 }
 
 /* 备用显示区域 */
@@ -207,6 +243,7 @@ const goToDetail = () => {
   left: 0;
   right: 0;
   bottom: 0;
+  pointer-events: none; /* 允许点击穿透到父元素 */
 
   /* 黑色透明蒙版 */
   background: linear-gradient(

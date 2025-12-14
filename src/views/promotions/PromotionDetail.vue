@@ -8,7 +8,8 @@ const route = useRoute()
 const router = useRouter()
 const promotionStore = usePromotionStore()
 
-const promotionId = computed(() => Number(route.params.id))
+// ID 可能是字符串或数字，统一处理
+const promotionId = computed(() => route.params.id as string)
 const loading = ref(true)
 const posterError = ref(false)
 
@@ -83,15 +84,22 @@ const descriptionParagraphs = computed(() => {
   return promotion.value.description.split(/\n\n+/).filter(p => p.trim())
 })
 
+// 当前状态（优先使用 timeStatus）
+const currentStatus = computed(() => promotion.value?.timeStatus || promotion.value?.status)
+const currentStatusText = computed(() => promotion.value?.timeStatusText || promotion.value?.statusText)
+
 // 状态颜色
 const statusColorClass = computed(() => {
-  switch (promotion.value?.status) {
+  const status = currentStatus.value
+  switch (status) {
     case 'active':
       return 'bg-green-100 text-green-700'
+    case 'endingSoon':
+      return 'bg-orange-100 text-orange-700'
     case 'coming':
-      return 'bg-yellow-100 text-yellow-700'
+      return 'bg-blue-100 text-blue-700'
     case 'ended':
-      return 'bg-red-100 text-red-700'
+      return 'bg-gray-100 text-gray-500'
     default:
       return 'bg-gray-100 text-gray-700'
   }
@@ -175,7 +183,7 @@ onMounted(async () => {
             <div class="poster-header">
               <div class="flex items-center gap-4 flex-wrap">
                 <span class="status-badge" :class="statusColorClass">
-                  {{ promotion.statusText }}
+                  {{ currentStatusText }}
                 </span>
                 <span v-if="promotion.start_date && promotion.end_date" class="date-range">
                   <i class="fas fa-calendar-alt mr-2"></i>
@@ -203,7 +211,7 @@ onMounted(async () => {
             <div class="promotion-header">
               <div class="flex items-center gap-4 flex-wrap mb-4">
                 <span class="status-badge" :class="statusColorClass">
-                  {{ promotion.statusText }}
+                  {{ currentStatusText }}
                 </span>
                 <span v-if="promotion.start_date && promotion.end_date" class="date-range">
                   <i class="fas fa-calendar-alt mr-2"></i>
@@ -269,7 +277,7 @@ onMounted(async () => {
             <div class="promotion-header">
               <div class="flex items-center gap-4 flex-wrap mb-4">
                 <span class="status-badge" :class="statusColorClass">
-                  {{ promotion.statusText }}
+                  {{ currentStatusText }}
                 </span>
                 <span v-if="promotion.start_date && promotion.end_date" class="date-range">
                   <i class="fas fa-calendar-alt mr-2"></i>
