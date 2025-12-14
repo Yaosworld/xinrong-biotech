@@ -67,13 +67,18 @@ const isGroupActive = (item: MenuItem) => {
   return route.path === item.path
 }
 
-// 切换子菜单展开状态
+// 切换子菜单展开状态，并导航到第一个子菜单
 const toggleSubmenu = (id: string) => {
   const index = expandedMenus.value.indexOf(id)
   if (index > -1) {
     expandedMenus.value.splice(index, 1)
   } else {
     expandedMenus.value.push(id)
+    // 展开时自动导航到第一个子菜单
+    const menuItem = menuItems.value.find(item => item.id === id)
+    if (menuItem?.children && menuItem.children.length > 0) {
+      router.push(menuItem.children[0].path)
+    }
   }
 }
 
@@ -513,20 +518,15 @@ async function handleChangePwd() {
   background: rgba(102, 126, 234, 0.15);
 }
 
+/* 一级菜单激活状态 - 统一样式 */
 .nav-item.active {
   color: #fff;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  background: rgba(102, 126, 234, 0.2);
 }
 
 /* 有子菜单的一级项 */
 .nav-item.has-children {
   position: relative;
-}
-
-.nav-item.has-children.active {
-  background: rgba(102, 126, 234, 0.2);
-  box-shadow: none;
 }
 
 .nav-item.has-children .arrow {

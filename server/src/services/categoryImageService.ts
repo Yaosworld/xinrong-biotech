@@ -5,9 +5,10 @@
  * 
  * 设计原则：
  * 1. 图片表独立存储图片元数据（ID、文件名、路径）
- * 2. 分类表通过 imageId 关联图片
+ * 2. 分类表通过 imageId 关联图片（唯一方式）
  * 3. 一张图片只能被一个分类使用（一对一）
  * 4. 图片文件名不能重复
+ * 5. 不支持SVG文件（安全考虑）
  */
 import db from '../db'
 import fs from 'fs'
@@ -17,6 +18,14 @@ import path from 'path'
 const UPLOAD_BASE = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads')
 const CATEGORY_IMAGE_DIR = 'images/products'
 
+// 允许的图片类型（移除SVG以增强安全性）
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+
+// 分页配置
+const DEFAULT_PAGE_SIZE = 50
+const MAX_PAGE_SIZE = 200
+
 export interface CategoryImage {
   id: number
   filename: string      // 文件名（唯一）
@@ -25,6 +34,16 @@ export interface CategoryImage {
   url: string           // 访问URL
   usedByCategoryId: string | null  // 被哪个分类使用（null表示未使用）
   createdAt: string
+}
+
+export interface PaginatedImages {
+  data: CategoryImage[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
 }
 
 export const categoryImageService = {
@@ -46,8 +65,35 @@ export const categoryImageService = {
   },
 
   /**
+   * 获取图片使用映射（imageId -> categoryId）
+   * 仅通过 imageId 关联
+   */
+  getUsageMap(): Map<number, string> {
+    const categoryRows = db.queryAll(`
+      SELECT draft_data, published_data FROM contents 
+      WHERE content_type = 'category' AND status != 'deleted'
+    `)
+    
+    const map = new Map<number, string>()
+    categoryRows.forEach(row => {
+      const data = row.draft_data || row.published_data
+      if (data) {
+        try {
+          const cat = JSON.parse(data)
+          if (cat.imageId) {
+            map.set(cat.imageId, cat.id)
+          }
+        } catch {
+          // 忽略解析错误
+        }
+      }
+    })
+    
+    return map
+  },
+
+  /**
    * 获取所有图片（含使用状态）
-   * 同时支持新旧两种关联方式：imageId（新）和 imageName（旧）
    */
   getAll(): CategoryImage[] {
     const rows = db.queryAll(`
@@ -61,31 +107,8 @@ export const categoryImageService = {
       ORDER BY ci.created_at DESC
     `)
     
-    // 获取分类使用情况
-    const categoryRows = db.queryAll(`
-      SELECT draft_data, published_data FROM contents 
-      WHERE content_type = 'category' AND status != 'deleted'
-    `)
-    
-    // 构建 filename -> categoryId 映射（支持新旧两种方式）
-    const usageMap = new Map<string, string>()
-    categoryRows.forEach(row => {
-      const data = row.draft_data || row.published_data
-      if (data) {
-        const cat = JSON.parse(data)
-        // 新方式：通过 imageId 关联
-        if (cat.imageId) {
-          const imgRow = db.queryOne('SELECT filename FROM category_images WHERE id = ?', [cat.imageId])
-          if (imgRow) {
-            usageMap.set(imgRow.filename, cat.id)
-          }
-        }
-        // 旧方式：通过 imageName 关联
-        else if (cat.imageName) {
-          usageMap.set(cat.imageName, cat.id)
-        }
-      }
-    })
+    // 获取使用映射
+    const usageMap = this.getUsageMap()
     
     return rows.map(row => {
       // 判断图片是在 uploads 还是 public 目录
@@ -98,9 +121,63 @@ export const categoryImageService = {
       return {
         ...row,
         url,
-        usedByCategoryId: usageMap.get(row.filename) || null
+        usedByCategoryId: usageMap.get(row.id) || null
       }
     })
+  },
+
+  /**
+   * 获取图片列表（分页）
+   */
+  getPaginated(page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE): PaginatedImages {
+    // 限制页大小
+    const limitedPageSize = Math.min(Math.max(1, pageSize), MAX_PAGE_SIZE)
+    const offset = (Math.max(1, page) - 1) * limitedPageSize
+    
+    // 获取总数
+    const countResult = db.queryOne('SELECT COUNT(*) as total FROM category_images')
+    const total = countResult?.total || 0
+    const totalPages = Math.ceil(total / limitedPageSize)
+    
+    // 获取分页数据
+    const rows = db.queryAll(`
+      SELECT 
+        ci.id,
+        ci.filename,
+        ci.original_name as originalName,
+        ci.path,
+        ci.created_at as createdAt
+      FROM category_images ci
+      ORDER BY ci.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [limitedPageSize, offset])
+    
+    // 获取使用映射
+    const usageMap = this.getUsageMap()
+    
+    const data = rows.map(row => {
+      const uploadPath = path.join(UPLOAD_BASE, CATEGORY_IMAGE_DIR, row.filename)
+      const isUploaded = fs.existsSync(uploadPath)
+      const url = isUploaded 
+        ? `/uploads/${CATEGORY_IMAGE_DIR}/${row.filename}`
+        : `/images/products/${row.filename}`
+      
+      return {
+        ...row,
+        url,
+        usedByCategoryId: usageMap.get(row.id) || null
+      }
+    })
+    
+    return {
+      data,
+      pagination: {
+        page: Math.max(1, page),
+        pageSize: limitedPageSize,
+        total,
+        totalPages
+      }
+    }
   },
 
   /**
@@ -114,28 +191,20 @@ export const categoryImageService = {
     
     if (!row) return null
     
-    // 检查使用状态
-    const categoryRows = db.queryAll(`
-      SELECT draft_data, published_data FROM contents 
-      WHERE content_type = 'category' AND status != 'deleted'
-    `)
+    // 获取使用状态
+    const usageMap = this.getUsageMap()
     
-    let usedByCategoryId: string | null = null
-    for (const catRow of categoryRows) {
-      const data = catRow.draft_data || catRow.published_data
-      if (data) {
-        const cat = JSON.parse(data)
-        if (cat.imageId === id) {
-          usedByCategoryId = cat.id
-          break
-        }
-      }
-    }
+    // 判断图片位置
+    const uploadPath = path.join(UPLOAD_BASE, CATEGORY_IMAGE_DIR, row.filename)
+    const isUploaded = fs.existsSync(uploadPath)
+    const url = isUploaded 
+      ? `/uploads/${CATEGORY_IMAGE_DIR}/${row.filename}`
+      : `/images/products/${row.filename}`
     
     return {
       ...row,
-      url: `/uploads/${CATEGORY_IMAGE_DIR}/${row.filename}`,
-      usedByCategoryId
+      url,
+      usedByCategoryId: usageMap.get(id) || null
     }
   },
 
@@ -223,8 +292,9 @@ export const categoryImageService = {
   /**
    * 同步文件系统中的图片到数据库
    * 同时扫描 uploads 目录和 public 目录
+   * 注意：不同步SVG文件（安全考虑）
    */
-  syncFromFileSystem(): { added: number; existing: number } {
+  syncFromFileSystem(): { added: number; existing: number; skipped: number } {
     const uploadDir = path.join(UPLOAD_BASE, CATEGORY_IMAGE_DIR)
     const publicDir = path.join(__dirname, '../../../public/images/products')
     
@@ -235,14 +305,25 @@ export const categoryImageService = {
     
     let added = 0
     let existing = 0
+    let skipped = 0
+    
+    // 允许的文件扩展名（不包含SVG）
+    const allowedPattern = /\.(jpg|jpeg|png|gif|webp)$/i
     
     // 扫描 uploads 目录
     if (fs.existsSync(uploadDir)) {
-      const files = fs.readdirSync(uploadDir).filter(f => 
-        /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f)
-      )
+      const files = fs.readdirSync(uploadDir)
       
       for (const filename of files) {
+        // 跳过不允许的文件类型
+        if (!allowedPattern.test(filename)) {
+          if (/\.svg$/i.test(filename)) {
+            skipped++
+            console.warn(`跳过SVG文件（安全考虑）: ${filename}`)
+          }
+          continue
+        }
+        
         const exists = db.queryOne('SELECT id FROM category_images WHERE filename = ?', [filename])
         if (exists) {
           existing++
@@ -259,11 +340,17 @@ export const categoryImageService = {
     
     // 扫描 public 目录（预设图片）
     if (fs.existsSync(publicDir)) {
-      const publicFiles = fs.readdirSync(publicDir).filter(f => 
-        /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f)
-      )
+      const publicFiles = fs.readdirSync(publicDir)
       
       for (const filename of publicFiles) {
+        // 跳过不允许的文件类型
+        if (!allowedPattern.test(filename)) {
+          if (/\.svg$/i.test(filename)) {
+            skipped++
+          }
+          continue
+        }
+        
         const exists = db.queryOne('SELECT id FROM category_images WHERE filename = ?', [filename])
         if (exists) {
           existing++
@@ -279,7 +366,7 @@ export const categoryImageService = {
       }
     }
     
-    return { added, existing }
+    return { added, existing, skipped }
   },
 
   /**
@@ -312,33 +399,25 @@ export const categoryImageService = {
   },
 
   /**
-   * 获取图片使用映射（imageId -> categoryId）
-   */
-  getUsageMap(): Map<number, string> {
-    const categoryRows = db.queryAll(`
-      SELECT draft_data, published_data FROM contents 
-      WHERE content_type = 'category' AND status != 'deleted'
-    `)
-    
-    const map = new Map<number, string>()
-    categoryRows.forEach(row => {
-      const data = row.draft_data || row.published_data
-      if (data) {
-        const cat = JSON.parse(data)
-        if (cat.imageId) {
-          map.set(cat.imageId, cat.id)
-        }
-      }
-    })
-    
-    return map
-  },
-
-  /**
    * 获取可用图片列表（未被使用的）
    */
   getAvailable(): CategoryImage[] {
     const all = this.getAll()
     return all.filter(img => !img.usedByCategoryId)
+  },
+
+  /**
+   * 验证文件类型是否允许
+   */
+  isAllowedType(mimetype: string): boolean {
+    return ALLOWED_IMAGE_TYPES.includes(mimetype)
+  },
+
+  /**
+   * 验证文件扩展名是否允许
+   */
+  isAllowedExtension(filename: string): boolean {
+    const ext = path.extname(filename).toLowerCase()
+    return ALLOWED_IMAGE_EXTENSIONS.includes(ext)
   }
 }

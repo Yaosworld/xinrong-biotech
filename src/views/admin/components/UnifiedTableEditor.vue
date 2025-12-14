@@ -99,7 +99,7 @@ const props = withDefaults(defineProps<{
   beforeAdd?: (item: any, allData?: any[]) => any  // 新增前处理
   beforeEdit?: (item: any, allData: any[]) => any  // 编辑前处理，可用于动态更新数据
   beforeDelete?: (item: any) => boolean | Promise<boolean>  // 删除前验证，返回 false 阻止删除
-  generateId?: () => string | number
+  generateId?: (currentData: any[]) => string | number  // 生成ID，接收当前数据用于避免冲突
 }>(), {
   rowKey: 'id',
   searchable: true,
@@ -339,6 +339,14 @@ const initLocalData = () => {
   deletedKeys.value = []
 }
 
+// 获取单元格值（支持 getValue 函数动态计算）
+const getCellValue = (row: any, col: ColumnConfig) => {
+  if ((col as any).getValue && typeof (col as any).getValue === 'function') {
+    return (col as any).getValue(row)
+  }
+  return row[col.key]
+}
+
 // 图片处理
 const getImageUrl = (url: string) => {
   if (!url) return ''
@@ -465,9 +473,9 @@ const openAddPanel = () => {
     editFormData.value._usedImagesMap = localData.value[0]._usedImagesMap
   }
   
-  // 生成ID
+  // 生成ID - 传入当前 localData 以避免 ID 冲突
   if (props.generateId) {
-    editFormData.value[props.rowKey] = props.generateId()
+    editFormData.value[props.rowKey] = props.generateId(localData.value)
   } else {
     const maxId = localData.value.reduce((max, item) => {
       const id = typeof item[props.rowKey] === 'number' ? item[props.rowKey] : 0
@@ -1234,11 +1242,22 @@ onBeforeUnmount(() => {
           <span class="progress-text">{{ saveProgress.saved }}/{{ saveProgress.total }}</span>
         </div>
         
-        <!-- 状态标签 -->
+        <!-- 状态标签 - 发布模式 -->
         <el-tag v-if="publishConfig?.enabled" :type="statusConfig.type" size="small" :class="['status-tag', { pulse: statusConfig.pulse }]">
           <i :class="statusConfig.icon" class="mr-1"></i> {{ statusConfig.text }}
         </el-tag>
         <el-tag v-if="publishConfig?.enabled" type="info" size="small" class="version-tag">v{{ currentVersion }}</el-tag>
+        
+        <!-- 状态标签 - 非发布模式（简化显示） -->
+        <el-tag v-if="!publishConfig?.enabled && editStatus === 'saving'" type="info" size="small" class="status-tag">
+          <i class="fas fa-spinner fa-spin mr-1"></i> 保存中...
+        </el-tag>
+        <el-tag v-else-if="!publishConfig?.enabled && hasUnsavedChanges" type="warning" size="small" class="status-tag pulse">
+          <i class="fas fa-pen mr-1"></i> 有未保存的更改
+        </el-tag>
+        <el-tag v-else-if="!publishConfig?.enabled && !hasUnsavedChanges && localData.length > 0" type="success" size="small" class="status-tag">
+          <i class="fas fa-check-circle mr-1"></i> 已保存
+        </el-tag>
         
         <!-- 版本历史 -->
         <el-button v-if="publishConfig?.enabled" @click="showVersionHistory = true" :disabled="isOperating">
@@ -1298,7 +1317,11 @@ onBeforeUnmount(() => {
         </el-dropdown>
         
         <!-- 保存 -->
-        <el-button :loading="editStatus === 'saving'" :disabled="publishConfig?.enabled && (!hasUnsavedChanges || editStatus === 'publishing')" @click="saveAll">
+        <el-button 
+          :loading="editStatus === 'saving'" 
+          :disabled="!hasUnsavedChanges || editStatus === 'publishing'" 
+          @click="saveAll"
+        >
           <i class="fas fa-save mr-1"></i> {{ publishConfig?.enabled ? '保存草稿' : '保存全部' }}
         </el-button>
         
@@ -1362,11 +1385,11 @@ onBeforeUnmount(() => {
         show-overflow-tooltip
       >
         <template #default="{ row }">
-          <!-- 图片 -->
+          <!-- 图片（支持 getValue 动态计算） -->
           <template v-if="col.type === 'image'">
-            <div v-if="row[col.key] || (col as any).imageFallback" class="image-cell" :class="{ 'image-contain': col.imageStyle === 'contain' }" @click="handlePreviewImage(row[col.key] || (typeof (col as any).imageFallback === 'function' ? (col as any).imageFallback(row) : (col as any).imageFallback))">
+            <div v-if="getCellValue(row, col) || (col as any).imageFallback" class="image-cell" :class="{ 'image-contain': col.imageStyle === 'contain' }" @click="handlePreviewImage(getCellValue(row, col) || (typeof (col as any).imageFallback === 'function' ? (col as any).imageFallback(row) : (col as any).imageFallback))">
               <img 
-                :src="getImageUrl(row[col.key]) || (typeof (col as any).imageFallback === 'function' ? (col as any).imageFallback(row) : (col as any).imageFallback)" 
+                :src="getImageUrl(getCellValue(row, col)) || (typeof (col as any).imageFallback === 'function' ? (col as any).imageFallback(row) : (col as any).imageFallback)" 
                 :alt="col.label"
                 @error="(e: Event) => handleImageError(e, row, col)"
               />

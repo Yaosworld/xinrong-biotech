@@ -18,7 +18,7 @@ export interface Category {
  * 产品接口
  */
 export interface Product {
-  id: string            // 产品ID, e.g., "P1001"
+  id: string            // 产品ID, e.g., "P000001" (P + 6位数字，自增不重用)
   name: string          // 产品名称
   categoryId: string    // 分类ID (外键)
   brand?: string        // 品牌名称

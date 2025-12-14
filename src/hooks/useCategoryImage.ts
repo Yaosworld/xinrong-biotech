@@ -1,42 +1,7 @@
 import { computed, type Ref, type ComputedRef } from 'vue'
 import type { Category } from '@/types'
 import { useCategoryStore } from '@/stores/categoryStore'
-
-// ========================================
-// 默认分类数据（用于降级和初始化）
-// ========================================
-const DEFAULT_CATEGORIES: Category[] = [
-  {
-    id: 'C01',
-    name: '仪器设备',
-    imageName: 'lab-instruments.png',
-    description: '高精度科学仪器设备，包括显微镜、光谱仪、分析仪等'
-  },
-  {
-    id: 'C02',
-    name: '实验耗材',
-    imageName: 'lab-consumables.png',
-    description: '实验室常用耗材，包括培养皿、移液管、离心管等'
-  },
-  {
-    id: 'C03',
-    name: '实验试剂',
-    imageName: 'bio-reagents.png',
-    description: '各类生物化学试剂，包括DNA提取试剂、PCR试剂、抗体等'
-  },
-  {
-    id: 'C04',
-    name: '细胞相关产品',
-    imageName: 'cell-experiments.png',
-    description: '细胞培养相关产品，包括培养基、血清、培养瓶等'
-  },
-  {
-    id: 'C05',
-    name: '分子生物实验产品',
-    imageName: 'molecular-biology.png',
-    description: '分子生物学实验产品，包括质粒、酶类、标记物等'
-  }
-]
+import { DEFAULT_CATEGORIES, DEFAULT_IMAGE_PATH } from '@/constants/categories'
 
 // ========================================
 // 动态分类数据（从 store 获取）
@@ -103,17 +68,15 @@ export function getCategoryName(id: string): string {
 
 /**
  * 根据ID获取分类图片路径
+ * 优先使用 imageUrl（由服务端计算）
  */
 export function getCategoryImagePath(id: string): string {
   const category = getCategoryById(id)
-  // 优先使用 imageUrl（新架构），降级到 imageName（旧架构）
+  // 优先使用 imageUrl（服务端计算的完整路径）
   if (category?.imageUrl) {
     return category.imageUrl
   }
-  if (category?.imageName) {
-    return `/images/products/${category.imageName}`
-  }
-  return '/images/common/placeholder.png'
+  return DEFAULT_IMAGE_PATH
 }
 
 // ========================================
@@ -138,7 +101,7 @@ export function useCategoryImage(categoryId: Ref<string> | string): ComputedRef<
  */
 export function useCategoryImageWithFallback(
   categoryId: Ref<string> | string,
-  fallback: string = '/images/common/placeholder.png'
+  fallback: string = DEFAULT_IMAGE_PATH
 ): {
   imagePath: ComputedRef<string>
   handleError: (event: Event) => void

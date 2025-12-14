@@ -117,10 +117,12 @@ const columns = computed(() => [
   { key: 'productCount', label: '产品数量', width: 100, editable: false, showInForm: false }
 ])
 
-// 生成新ID
-const generateId = () => {
-  const maxNum = categories.value.reduce((max, c) => {
-    const num = parseInt(c.id.replace(/^C/, ''), 10)
+// 生成新ID - 基于当前编辑器中的所有数据（包括新增但未保存的）
+const generateId = (currentData: any[]) => {
+  // 合并服务器数据和当前编辑器数据，取最大 ID
+  const allData = [...categories.value, ...currentData]
+  const maxNum = allData.reduce((max, c) => {
+    const num = parseInt(c.id?.replace(/^C/, ''), 10)
     return isNaN(num) ? max : Math.max(max, num)
   }, 0)
   return `C${(maxNum + 1).toString().padStart(2, '0')}`

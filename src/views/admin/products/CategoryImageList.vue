@@ -24,6 +24,15 @@ const loading = ref(false)
 const uploading = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
+// 图片预览
+const previewVisible = ref(false)
+const previewUrl = ref('')
+const previewFilename = ref('')
+
+// 选择模式（用于批量下载）
+const selectionMode = ref(false)
+const selectedImages = ref<Set<number>>(new Set())
+
 // 统计信息
 const stats = computed(() => {
   const total = images.value.length
@@ -160,6 +169,79 @@ const handleImageError = (e: Event) => {
   img.src = '/images/common/placeholder.png'
 }
 
+// 预览图片
+const previewImage = (img: CategoryImage) => {
+  previewUrl.value = img.url
+  previewFilename.value = img.filename
+  previewVisible.value = true
+}
+
+// 切换选择模式
+const toggleSelectionMode = () => {
+  selectionMode.value = !selectionMode.value
+  if (!selectionMode.value) {
+    selectedImages.value.clear()
+  }
+}
+
+// 切换图片选择
+const toggleImageSelection = (img: CategoryImage) => {
+  if (selectedImages.value.has(img.id)) {
+    selectedImages.value.delete(img.id)
+  } else {
+    selectedImages.value.add(img.id)
+  }
+}
+
+// 全选/取消全选
+const toggleSelectAll = () => {
+  if (selectedImages.value.size === images.value.length) {
+    selectedImages.value.clear()
+  } else {
+    selectedImages.value = new Set(images.value.map(img => img.id))
+  }
+}
+
+// 下载单张图片
+const downloadImage = async (img: CategoryImage) => {
+  try {
+    const response = await fetch(img.url)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = img.filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('下载失败')
+  }
+}
+
+// 批量下载选中的图片
+const downloadSelected = async () => {
+  if (selectedImages.value.size === 0) {
+    ElMessage.warning('请先选择要下载的图片')
+    return
+  }
+  
+  const selectedList = images.value.filter(img => selectedImages.value.has(img.id))
+  ElMessage.info(`开始下载 ${selectedList.length} 张图片...`)
+  
+  // 逐个下载（避免浏览器阻止多个下载）
+  for (let i = 0; i < selectedList.length; i++) {
+    await downloadImage(selectedList[i])
+    // 添加小延迟避免浏览器阻止
+    if (i < selectedList.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 300))
+    }
+  }
+  
+  ElMessage.success(`已下载 ${selectedList.length} 张图片`)
+}
+
 onMounted(() => {
   loadImages()
 })
@@ -187,6 +269,27 @@ onMounted(() => {
         <el-button @click="syncFileSystem">
           <i class="fas fa-sync-alt mr-1"></i> 同步文件
         </el-button>
+        <el-button 
+          :type="selectionMode ? 'warning' : 'default'" 
+          @click="toggleSelectionMode"
+        >
+          <i class="fas fa-check-square mr-1"></i> 
+          {{ selectionMode ? '取消选择' : '批量下载' }}
+        </el-button>
+        <template v-if="selectionMode">
+          <el-button @click="toggleSelectAll">
+            <i class="fas fa-check-double mr-1"></i>
+            {{ selectedImages.size === images.length ? '取消全选' : '全选' }}
+          </el-button>
+          <el-button 
+            type="success" 
+            :disabled="selectedImages.size === 0"
+            @click="downloadSelected"
+          >
+            <i class="fas fa-download mr-1"></i> 
+            下载 ({{ selectedImages.size }})
+          </el-button>
+        </template>
         <el-button type="primary" :loading="uploading" @click="triggerUpload">
           <i class="fas fa-cloud-upload-alt mr-1"></i> 上传图片
         </el-button>
@@ -212,12 +315,33 @@ onMounted(() => {
         v-for="img in sortedImages"
         :key="img.id"
         class="image-card"
-        :class="{ used: img.usedByCategoryId }"
+        :class="{ 
+          used: img.usedByCategoryId,
+          selected: selectionMode && selectedImages.has(img.id)
+        }"
+        @click="selectionMode ? toggleImageSelection(img) : null"
       >
-        <div class="image-preview">
+        <div class="image-preview" @click.stop="!selectionMode && previewImage(img)">
           <img :src="img.url" :alt="img.filename" @error="handleImageError" />
           <div v-if="img.usedByCategoryId" class="used-badge">
             <i class="fas fa-link"></i> {{ img.usedByCategoryId }}
+          </div>
+          <!-- 选择模式下的勾选框 -->
+          <div v-if="selectionMode" class="selection-checkbox" @click.stop="toggleImageSelection(img)">
+            <i :class="selectedImages.has(img.id) ? 'fas fa-check-circle' : 'far fa-circle'"></i>
+          </div>
+          <!-- 悬浮操作按钮 -->
+          <div v-if="!selectionMode" class="hover-actions">
+            <el-tooltip content="放大预览" placement="top">
+              <button class="action-btn" @click.stop="previewImage(img)">
+                <i class="fas fa-search-plus"></i>
+              </button>
+            </el-tooltip>
+            <el-tooltip content="下载图片" placement="top">
+              <button class="action-btn" @click.stop="downloadImage(img)">
+                <i class="fas fa-download"></i>
+              </button>
+            </el-tooltip>
           </div>
         </div>
         <div class="image-info">
@@ -228,7 +352,7 @@ onMounted(() => {
               type="danger"
               size="small"
               link
-              @click="deleteImage(img)"
+              @click.stop="deleteImage(img)"
             >
               <i class="fas fa-trash"></i>
             </el-button>
@@ -241,6 +365,23 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- 图片预览弹窗 -->
+    <el-dialog
+      v-model="previewVisible"
+      title="图片预览"
+      width="600px"
+      append-to-body
+      :modal-append-to-body="true"
+      destroy-on-close
+    >
+      <div class="image-preview-dialog">
+        <img :src="previewUrl" :alt="previewFilename" />
+      </div>
+      <template #footer>
+        <span class="preview-filename">{{ previewFilename }}</span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -249,6 +390,8 @@ onMounted(() => {
   padding: 20px;
   background: #f5f7fa;
   min-height: 100%;
+  /* 防止弹窗打开时滚动条消失导致布局抖动 */
+  overflow-y: scroll;
 }
 
 .page-header {
@@ -389,5 +532,101 @@ onMounted(() => {
 
 .actions {
   flex-shrink: 0;
+}
+
+/* 选中状态 */
+.image-card.selected {
+  border: 2px solid #67c23a;
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2);
+}
+
+/* 选择复选框 */
+.selection-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.selection-checkbox i {
+  font-size: 20px;
+  color: #67c23a;
+}
+
+.selection-checkbox .fa-circle {
+  color: #c0c4cc;
+}
+
+/* 悬浮操作按钮 */
+.hover-actions {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.image-preview:hover .hover-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #606266;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #667eea;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+/* 预览弹窗 - 与 UnifiedTableEditor 保持一致 */
+.image-preview-dialog {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-preview-dialog img {
+  max-width: 100%;
+  max-height: 500px;
+  object-fit: contain;
+}
+
+.preview-filename {
+  color: #909399;
+  font-size: 13px;
+}
+
+/* 选择模式下的卡片样式 */
+.image-card {
+  cursor: default;
+  transition: all 0.2s;
+}
+
+.image-card .image-preview {
+  cursor: pointer;
 }
 </style>

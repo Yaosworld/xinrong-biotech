@@ -61,11 +61,12 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (_req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+    // 移除SVG支持（安全考虑：SVG可能包含恶意脚本）
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true)
     } else {
-      cb(new Error('不支持的文件类型'))
+      cb(new Error('不支持的文件类型，仅支持 JPG、PNG、GIF、WebP 格式'))
     }
   }
 })

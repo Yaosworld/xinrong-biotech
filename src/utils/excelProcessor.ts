@@ -4,11 +4,19 @@
  */
 
 import { useCategoryStore } from '@/stores/categoryStore'
+import { 
+  DEFAULT_CATEGORY_IDS, 
+  CATEGORY_ID_TO_NAME, 
+  CATEGORY_NAME_TO_ID,
+  UNCATEGORIZED_ID 
+} from '@/constants/categories'
+import { PendingCategoryError, ValidationError } from '@/types/errors'
 
 export interface ValidationResult {
   isValid: boolean
   errors: string[]
   warnings: string[]
+  undefinedCategories?: string[]
 }
 
 export interface ProcessResult<T> {
@@ -19,6 +27,9 @@ export interface ProcessResult<T> {
   /** 检测到的未定义分类列表 */
   undefinedCategories?: string[]
 }
+
+// 重新导出错误类型
+export { PendingCategoryError, ValidationError }
 
 /**
  * Excel 处理器类
@@ -161,16 +172,8 @@ export class ExcelProcessor {
     }
   }
 
-  // 默认分类映射表（用于降级）
-  static readonly DEFAULT_CATEGORY_MAP: Record<string, string> = {
-    'C01': '仪器设备', 'C02': '实验耗材', 'C03': '实验试剂',
-    'C04': '细胞相关产品', 'C05': '分子生物实验产品',
-    '仪器设备': 'C01', '实验耗材': 'C02', '实验试剂': 'C03',
-    '细胞相关产品': 'C04', '分子生物实验产品': 'C05'
-  }
-
-  // 默认有效分类 ID 列表
-  static readonly DEFAULT_CATEGORY_IDS = ['C01', 'C02', 'C03', 'C04', 'C05']
+  // 使用统一的常量定义
+  static readonly DEFAULT_CATEGORY_IDS = DEFAULT_CATEGORY_IDS
 
   /**
    * 动态获取分类映射表（从 categoryStore）
@@ -187,15 +190,12 @@ export class ExcelProcessor {
     } catch {
       // store 未初始化
     }
-    // 降级到默认值
-    const idToName = new Map<string, string>()
-    const nameToId = new Map<string, string>()
-    this.DEFAULT_CATEGORY_IDS.forEach(id => {
-      const name = this.DEFAULT_CATEGORY_MAP[id]
-      idToName.set(id, name)
-      nameToId.set(name, id)
-    })
-    return { idToName, nameToId, validIds: new Set(this.DEFAULT_CATEGORY_IDS) }
+    // 降级到统一的默认值
+    return { 
+      idToName: new Map(CATEGORY_ID_TO_NAME), 
+      nameToId: new Map(CATEGORY_NAME_TO_ID), 
+      validIds: new Set(DEFAULT_CATEGORY_IDS) 
+    }
   }
 
   /**
@@ -256,8 +256,6 @@ export class ExcelProcessor {
     const requiredFields = ['name', 'categoryId', 'specs', 'desc']
     const errors: string[] = []
     const warnings: string[] = []
-    const { validIds, idToName } = this.getCategoryMap()
-    const validNames = Array.from(idToName.values())
     const undefinedCategories: string[] = []
 
     data.forEach((row, index) => {
@@ -280,15 +278,18 @@ export class ExcelProcessor {
         }
       }
 
-      // 检查ID格式（警告）
-      if (row.id && !/^P\d+$/.test(row.id)) {
-        warnings.push(`第${index + 2}行: 产品ID格式建议为 "P" + 数字`)
-      }
+      // ID 列会被忽略，不需要逐行警告（在下面统一提示）
     })
 
     // 如果有未定义分类，添加警告而不是错误（让调用方决定如何处理）
     if (undefinedCategories.length > 0 && !skipCategoryValidation) {
       warnings.push(`检测到 ${undefinedCategories.length} 个未定义分类: ${undefinedCategories.join(', ')}`)
+    }
+
+    // 检查是否有 ID 列，提示用户 ID 会被忽略
+    const hasIdColumn = data.some(row => row.id !== undefined && row.id !== '')
+    if (hasIdColumn) {
+      warnings.push('Excel 中的 ID 列将被忽略，系统会自动生成新的产品ID（格式：P000001）')
     }
 
     return {
@@ -411,36 +412,57 @@ export class ExcelProcessor {
     return false
   }
 
-  /** 未分类的特殊ID */
-  static readonly UNCATEGORIZED_ID = 'C00'
+  /** 未分类的特殊ID（使用统一常量） */
+  static readonly UNCATEGORIZED_ID = UNCATEGORIZED_ID
+
+  /** 产品 ID 位数（支持100万条产品） */
+  static readonly PRODUCT_ID_DIGITS = 6
+
+  /**
+   * 生成产品 ID
+   * @param num 数字序号
+   * @returns 格式化的产品 ID，如 P000001
+   */
+  static generateProductId(num: number): string {
+    return `P${String(num).padStart(this.PRODUCT_ID_DIGITS, '0')}`
+  }
+
+  /**
+   * 从产品 ID 中提取数字
+   * @param id 产品 ID，如 P000001 或 P1
+   * @returns 数字序号
+   */
+  static extractProductIdNum(id: string | undefined | null): number {
+    if (!id) return 0
+    const num = parseInt(id.replace(/^P/, ''), 10)
+    return isNaN(num) ? 0 : num
+  }
 
   /**
    * 格式化产品数据
+   * 
+   * 设计原则：
+   * 1. 导入时忽略 Excel 中的 ID，统一生成新 ID（确保 ID 唯一性和格式一致性）
+   * 2. ID 格式为 P + 6位数字（如 P000001），支持100万条产品
+   * 3. ID 自增，永不重用（即使删除产品，ID 也不会被重新分配）
+   * 
    * @param data 原始数据
-   * @param existingIds 已存在的 ID 列表（用于避免冲突）
+   * @param existingIds 已存在的 ID 列表（用于计算下一个可用 ID）
    * @param newCategoryMap 新分类映射（名称 -> ID），用于处理新定义的分类
    */
   static formatProductsData(data: any[], existingIds?: string[], newCategoryMap?: Map<string, string>): any[] {
-    // 收集已使用的 ID（包括已存在的和本次导入中已分配的）
-    const usedIds = new Set<string>(existingIds || [])
-    
-    // 找到最大的数字 ID
+    // 找到当前最大的数字 ID
     let maxIdNum = 0
-    usedIds.forEach(id => {
-      const num = parseInt(id?.replace(/^P/, '') || '0', 10)
-      if (!isNaN(num)) maxIdNum = Math.max(maxIdNum, num)
+    existingIds?.forEach(id => {
+      const num = this.extractProductIdNum(id)
+      if (num > maxIdNum) maxIdNum = num
     })
     
     return data.map((row) => {
-      let id = row.id
-      
-      // 如果没有 ID 或 ID 已存在，生成新 ID
-      if (!id || usedIds.has(id)) {
-        maxIdNum++
-        id = `P${maxIdNum}`
-      }
-      usedIds.add(id)
-      
+      // 始终生成新 ID，忽略 Excel 中的 ID（确保格式一致性和唯一性）
+      maxIdNum++
+      const id = this.generateProductId(maxIdNum)
+
       // 处理分类ID
       let categoryId: string | null = null
       const rawCategoryValue = row.categoryId ? String(row.categoryId).trim() : ''

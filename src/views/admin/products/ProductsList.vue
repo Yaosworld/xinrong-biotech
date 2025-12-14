@@ -7,7 +7,7 @@ import { useCategoryStore } from '@/stores/categoryStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
 import NewCategoryDialog from './NewCategoryDialog.vue'
 import { getCategoryImagePath } from '@/hooks/useCategoryImage'
-import { ExcelProcessor } from '@/utils/excelProcessor'
+import { ExcelProcessor, PendingCategoryError } from '@/utils/excelProcessor'
 import { adminApi } from '@/api/contentApi'
 
 const productStore = useProductStore()
@@ -24,13 +24,9 @@ const pendingUndefinedCategories = ref<string[]>([])
 const pendingImportFile = ref<File | null>(null)
 const tableEditorRef = ref<InstanceType<typeof UnifiedTableEditor> | null>(null)
 
-// 产品数据 - 添加分类图片路径
-const products = computed(() => 
-  localProducts.value.map(p => ({
-    ...p,
-    categoryImage: getCategoryImagePath(p.categoryId)
-  }))
-)
+// 产品数据 - 直接使用 localProducts，不再预计算 categoryImage
+// categoryImage 改为通过列配置的 getValue 函数动态获取
+const products = computed(() => localProducts.value)
 
 // 分类选项（从 store 动态获取）
 const categoryOptions = computed(() => {
@@ -50,9 +46,20 @@ const categoryOptions = computed(() => {
 // 列配置
 // 注意：sortable 列会自动增加24px给排序箭头
 // required 标记与 ExcelProcessor.validateProductData 中的必填字段保持一致
+// 修复：categoryOptions 直接使用 computed 引用，确保响应性更新
 const columns = computed(() => [
   { key: 'id', label: 'ID', width: 65, editable: false, sortable: true, fixed: 'left' as const },
-  { key: 'categoryImage', label: '分类图', width: 70, type: 'image' as const, editable: false, imageStyle: 'contain' as const, showInForm: false },
+  { 
+    key: 'categoryImage', 
+    label: '分类图', 
+    width: 70, 
+    type: 'image' as const, 
+    editable: false, 
+    imageStyle: 'contain' as const, 
+    showInForm: false,
+    // 动态获取分类图片，确保修改 categoryId 后图片立即更新
+    getValue: (row: any) => getCategoryImagePath(row.categoryId)
+  },
   { key: 'name', label: '产品名称', width: { min: 100, flex: 1.5 }, required: true },
   { key: 'sku', label: '货号', width: { min: 110, flex: 2 } },
   { key: 'brand', label: '品牌', width: { min: 100, flex: 1.5 } },
@@ -62,7 +69,8 @@ const columns = computed(() => [
     width: 120,
     type: 'select' as const,
     required: true,
-    options: categoryOptions.value
+    // 直接在 computed 内部访问 categoryOptions.value，确保响应性
+    options: [...categoryOptions.value]
   },
   { key: 'specs', label: '规格', width: 75, truncate: 12, required: true },
   { key: 'unit', label: '单位', width: 55 },
@@ -86,8 +94,8 @@ const handleExcelImport = async (file: File) => {
     pendingUndefinedCategories.value = undefinedCategories
     pendingImportFile.value = file
     newCategoryDialogVisible.value = true
-    // 返回空数组，等待用户处理后再继续
-    throw new Error('__PENDING_CATEGORY_DEFINITION__')
+    // 使用自定义错误类替代特殊字符串
+    throw new PendingCategoryError(undefinedCategories)
   }
   
   // 没有未定义分类，正常处理
@@ -215,16 +223,15 @@ const beforeSave = (data: any[]) => {
   return data.map(({ categoryImage, ...rest }) => rest)
 }
 
-// 生成产品ID - 基于当前本地数据，避免与导入数据冲突
-const generateProductId = () => {
-  // 同时考虑本地数据和 productStore 中的数据，取最大值
-  const allProducts = [...localProducts.value, ...productStore.products]
+// 生成产品ID - 基于当前编辑器数据和 store 数据，避免 ID 冲突
+// 使用 ExcelProcessor 中的统一方法，确保格式一致（P + 6位数字）
+const generateProductId = (currentData: any[]) => {
+  // 合并当前编辑器数据、本地数据和 store 数据，取最大值
+  const allProducts = [...currentData, ...localProducts.value, ...productStore.products]
   const maxIdNum = allProducts.reduce((max, item) => {
-    const idStr = item.id?.replace(/^P/, '') || '0'
-    const num = parseInt(idStr, 10)
-    return isNaN(num) ? max : Math.max(max, num)
+    return Math.max(max, ExcelProcessor.extractProductIdNum(item.id))
   }, 0)
-  return `P${maxIdNum + 1}`
+  return ExcelProcessor.generateProductId(maxIdNum + 1)
 }
 
 // 保存数据

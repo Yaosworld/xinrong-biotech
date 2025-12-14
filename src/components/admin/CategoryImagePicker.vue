@@ -19,16 +19,16 @@ interface ImageItem {
 }
 
 const props = defineProps<{
-  modelValue: number | string | null  // imageId 或 filename
+  modelValue: number | null  // imageId（统一使用数字类型）
   placeholder?: string
-  // 已使用的图片映射：imageId -> categoryId
-  usedImagesMap?: Map<number, string> | Record<string, string>
+  // 已使用的图片映射：imageId -> categoryId（统一使用 Map 类型）
+  usedImagesMap?: Map<number, string>
   // 当前编辑的分类ID（用于判断是否是自己使用的图片）
   currentCategoryId?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: number | string | null): void
+  (e: 'update:modelValue', value: number | null): void
   (e: 'imageChange', imageInfo: { id: number | null; url: string; filename: string } | null): void
   (e: 'refresh'): void
 }>()
@@ -39,14 +39,9 @@ const dialogVisible = ref(false)
 const uploadingFiles = ref<File[]>([])
 const isUploading = ref(false)
 
-// 当前选中的图片ID
+// 当前选中的图片ID（统一使用数字类型）
 const selectedImageId = computed({
-  get: () => {
-    const val = props.modelValue
-    if (typeof val === 'number') return val
-    if (typeof val === 'string' && /^\d+$/.test(val)) return parseInt(val, 10)
-    return null
-  },
+  get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
 
@@ -64,15 +59,10 @@ const getImageUrl = (img: ImageItem | null) => {
 
 // 检查图片是否被使用（排除当前分类）
 const isImageUsed = (img: ImageItem): string | null => {
-  // 检查 usedImagesMap
+  // 检查 usedImagesMap（统一使用 Map 类型）
   if (props.usedImagesMap) {
-    if (props.usedImagesMap instanceof Map) {
-      const usedBy = props.usedImagesMap.get(img.id)
-      if (usedBy && usedBy !== props.currentCategoryId) return usedBy
-    } else {
-      const usedBy = props.usedImagesMap[String(img.id)]
-      if (usedBy && usedBy !== props.currentCategoryId) return usedBy
-    }
+    const usedBy = props.usedImagesMap.get(img.id)
+    if (usedBy && usedBy !== props.currentCategoryId) return usedBy
   }
   // 检查图片自带的 usedByCategoryId
   if (img.usedByCategoryId && img.usedByCategoryId !== props.currentCategoryId) {

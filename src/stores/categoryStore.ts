@@ -1,22 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Category } from '@/types'
+import { 
+  DEFAULT_CATEGORIES, 
+  DEFAULT_IMAGE_PATH, 
+  PRODUCT_IMAGE_BASE_PATH 
+} from '@/constants/categories'
 
 // API 基础路径
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
-
-// 默认分类数据（用于降级）
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'C01', name: '仪器设备', imageName: 'lab-instruments.png', description: '高精度科学仪器设备' },
-  { id: 'C02', name: '实验耗材', imageName: 'lab-consumables.png', description: '实验室常用耗材' },
-  { id: 'C03', name: '实验试剂', imageName: 'bio-reagents.png', description: '各类生物化学试剂' },
-  { id: 'C04', name: '细胞相关产品', imageName: 'cell-experiments.png', description: '细胞培养相关产品' },
-  { id: 'C05', name: '分子生物实验产品', imageName: 'molecular-biology.png', description: '分子生物学实验产品' }
-]
-
-// 默认图片路径
-const DEFAULT_IMAGE = '/images/common/placeholder.png'
-const IMAGE_BASE_PATH = '/images/products/'
 
 export const useCategoryStore = defineStore('category', () => {
   // ========================================
@@ -97,17 +89,15 @@ export const useCategoryStore = defineStore('category', () => {
 
   /**
    * 根据ID获取分类图片路径
+   * 优先使用 imageUrl（由服务端计算）
    */
   function getCategoryImagePath(id: string): string {
     const category = getCategoryById(id)
-    // 优先使用 imageUrl（新架构），降级到 imageName（旧架构）
+    // 优先使用 imageUrl（服务端计算的完整路径）
     if (category?.imageUrl) {
       return category.imageUrl
     }
-    if (category?.imageName) {
-      return `${IMAGE_BASE_PATH}${category.imageName}`
-    }
-    return DEFAULT_IMAGE
+    return DEFAULT_IMAGE_PATH
   }
 
   /**

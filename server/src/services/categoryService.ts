@@ -1,62 +1,185 @@
-import db from '../db'
-import { contentService } from './contentService'
-import { uploadService } from './uploadService'
-
 /**
- * 分类数据接口
+ * 分类服务（重构版）
+ * 
+ * 设计原则：
+ * 1. 分类通过 imageId 关联图片（一对一）
+ * 2. 图片由 categoryImageService 独立管理
+ * 3. 移除旧的 imageName 关联方式
+ * 4. 添加产品数量缓存机制
  */
-export interface CategoryData {
-  id: string           // 分类ID，如 "C01"
-  name: string         // 分类名称
-  imageName?: string   // 图片文件名（旧字段，保持兼容）
-  imageId?: number | null  // 图片ID（新字段，一对一关联）
-  description?: string // 分类描述
+import db from '../db'
+import { categoryImageService } from './categoryImageService'
+import { 
+  CategoryData, 
+  CategoryWithImage, 
+  DEFAULT_CATEGORIES, 
+  UNCATEGORIZED_ID 
+} from '../constants/categories'
+
+// 重新导出类型和常量
+export type { CategoryData, CategoryWithImage }
+export { DEFAULT_CATEGORIES, UNCATEGORIZED_ID }
+
+// ========================================
+// 缓存机制
+// ========================================
+
+interface ProductCountCache {
+  data: Map<string, number>
+  timestamp: number
+  ttl: number // 缓存有效期（毫秒）
+}
+
+const productCountCache: ProductCountCache = {
+  data: new Map(),
+  timestamp: 0,
+  ttl: 60000 // 1分钟缓存
 }
 
 /**
- * 默认分类数据（用于初始化）
+ * 使缓存失效
  */
-export const DEFAULT_CATEGORIES: CategoryData[] = [
-  { id: 'C01', name: '仪器设备', imageName: 'lab-instruments.png', description: '高精度科学仪器设备，包括显微镜、光谱仪、分析仪等' },
-  { id: 'C02', name: '实验耗材', imageName: 'lab-consumables.png', description: '实验室常用耗材，包括培养皿、移液管、离心管等' },
-  { id: 'C03', name: '实验试剂', imageName: 'bio-reagents.png', description: '各类生物化学试剂，包括DNA提取试剂、PCR试剂、抗体等' },
-  { id: 'C04', name: '细胞相关产品', imageName: 'cell-experiments.png', description: '细胞培养相关产品，包括培养基、血清、培养瓶等' },
-  { id: 'C05', name: '分子生物实验产品', imageName: 'molecular-biology.png', description: '分子生物学实验产品，包括质粒、酶类、标记物等' }
-]
+function invalidateCache(): void {
+  productCountCache.timestamp = 0
+  productCountCache.data.clear()
+}
 
 /**
- * 未分类的特殊ID
+ * 获取产品数量统计（带缓存）
  */
-export const UNCATEGORIZED_ID = 'C00'
+function getProductCountMap(): Map<string, number> {
+  const now = Date.now()
+  
+  // 检查缓存是否有效
+  if (productCountCache.timestamp > 0 && 
+      now - productCountCache.timestamp < productCountCache.ttl) {
+    return productCountCache.data
+  }
+  
+  // 重新计算
+  const countMap = new Map<string, number>()
+  const productRows = db.queryAll(`
+    SELECT draft_data, published_data FROM contents 
+    WHERE content_type = 'product' AND status != 'deleted'
+  `)
+  
+  productRows.forEach(row => {
+    // 优先使用草稿数据（与 canDelete 逻辑保持一致）
+    const data = row.draft_data || row.published_data
+    if (data) {
+      try {
+        const product = JSON.parse(data)
+        if (product.categoryId) {
+          countMap.set(product.categoryId, (countMap.get(product.categoryId) || 0) + 1)
+        }
+      } catch {
+        // 忽略解析错误
+      }
+    }
+  })
+  
+  // 更新缓存
+  productCountCache.data = countMap
+  productCountCache.timestamp = now
+  
+  return countMap
+}
+
+// ========================================
+// 图片URL计算
+// ========================================
+
+/**
+ * 根据图片ID获取图片URL
+ */
+function getImageUrl(imageId: number | null | undefined, imageMap: Map<number, { filename: string; path: string }>): string {
+  if (!imageId) {
+    return '/images/common/placeholder.png'
+  }
+  
+  const image = imageMap.get(imageId)
+  if (!image) {
+    return '/images/common/placeholder.png'
+  }
+  
+  const fs = require('fs')
+  const path = require('path')
+  const UPLOAD_BASE = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads')
+  const uploadPath = path.join(UPLOAD_BASE, 'images/products', image.filename)
+  
+  if (fs.existsSync(uploadPath)) {
+    return `/uploads/images/products/${image.filename}`
+  }
+  
+  // 预设图片在 public 目录
+  return `/images/products/${image.filename}`
+}
+
+/**
+ * 构建图片映射表
+ */
+function buildImageMap(): Map<number, { filename: string; path: string }> {
+  const imageRows = db.queryAll('SELECT id, filename, path FROM category_images')
+  return new Map(imageRows.map(row => [row.id, { filename: row.filename, path: row.path }]))
+}
+
+// ========================================
+// 分类服务
+// ========================================
 
 export const categoryService = {
   /**
-   * 获取所有已发布的分类
+   * 使缓存失效（供外部调用）
    */
-  getAllPublished(): CategoryData[] {
+  invalidateCache,
+
+  /**
+   * 获取所有已发布的分类（用于前台）
+   */
+  getAllPublished(): CategoryWithImage[] {
     const rows = db.queryAll(`
       SELECT published_data FROM contents 
       WHERE content_type = 'category' AND status = 'published' AND published_data IS NOT NULL
       ORDER BY sort_order ASC, id ASC
     `)
     
-    return rows.map(row => JSON.parse(row.published_data) as CategoryData)
+    const imageMap = buildImageMap()
+    
+    return rows.map(row => {
+      const cat = JSON.parse(row.published_data) as CategoryData
+      const imageName = cat.imageId ? imageMap.get(cat.imageId)?.filename || '' : ''
+      return {
+        ...cat,
+        imageUrl: getImageUrl(cat.imageId, imageMap),
+        imageName
+      }
+    })
   },
 
   /**
    * 获取所有分类（包含草稿，用于后台）
    */
-  getAllAdmin(): CategoryData[] {
+  getAllAdmin(): CategoryWithImage[] {
     const rows = db.queryAll(`
       SELECT draft_data, published_data FROM contents 
       WHERE content_type = 'category' AND status != 'deleted'
       ORDER BY sort_order ASC, id ASC
     `)
     
+    const imageMap = buildImageMap()
+    
     return rows.map(row => {
       const data = row.draft_data || row.published_data
-      return data ? JSON.parse(data) as CategoryData : null
-    }).filter(Boolean) as CategoryData[]
+      if (!data) return null
+      
+      const cat = JSON.parse(data) as CategoryData
+      const imageName = cat.imageId ? imageMap.get(cat.imageId)?.filename || '' : ''
+      return {
+        ...cat,
+        imageUrl: getImageUrl(cat.imageId, imageMap),
+        imageName
+      }
+    }).filter(Boolean) as CategoryWithImage[]
   },
 
   /**
@@ -64,7 +187,6 @@ export const categoryService = {
    * 格式: C + 两位数字，如 C01, C02, ..., C99
    */
   generateCategoryId(): string {
-    // 获取所有现有的分类ID
     const rows = db.queryAll(`
       SELECT content_key FROM contents 
       WHERE content_type = 'category' AND status != 'deleted'
@@ -91,72 +213,17 @@ export const categoryService = {
     throw new Error('无法生成新的分类ID，已达到上限')
   },
 
-
   /**
    * 获取分类及其关联的产品数量（含图片信息）
    */
-  getCategoriesWithCount(): Array<CategoryData & { productCount: number; imageUrl: string }> {
-    // 获取所有分类
+  getCategoriesWithCount(): Array<CategoryWithImage & { productCount: number }> {
     const categories = this.getAllAdmin()
+    const countMap = getProductCountMap()
     
-    // 获取所有图片
-    const imageRows = db.queryAll('SELECT id, filename FROM category_images')
-    const imageMap = new Map<number, string>()
-    imageRows.forEach(row => imageMap.set(row.id, row.filename))
-    
-    // 获取所有产品的分类统计（包括草稿和已发布，与 canDelete 逻辑保持一致）
-    const productRows = db.queryAll(`
-      SELECT draft_data, published_data FROM contents 
-      WHERE content_type = 'product' AND status != 'deleted'
-    `)
-    
-    // 统计每个分类的产品数量（优先使用草稿数据）
-    const countMap = new Map<string, number>()
-    productRows.forEach(row => {
-      const data = row.draft_data || row.published_data
-      if (data) {
-        const product = JSON.parse(data)
-        if (product.categoryId) {
-          countMap.set(product.categoryId, (countMap.get(product.categoryId) || 0) + 1)
-        }
-      }
-    })
-    
-    // 合并数据，计算图片URL
-    return categories.map(cat => {
-      let imageUrl = '/images/common/placeholder.png'
-      let imageName = ''
-      
-      if (cat.imageId) {
-        // 新方式：通过 imageId 获取图片
-        imageName = imageMap.get(cat.imageId) || ''
-      } else if (cat.imageName) {
-        // 旧方式：直接使用 imageName
-        imageName = cat.imageName
-      }
-      
-      // 根据图片是否在 uploads 目录来决定 URL
-      if (imageName) {
-        const fs = require('fs')
-        const path = require('path')
-        const UPLOAD_BASE = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads')
-        const uploadPath = path.join(UPLOAD_BASE, 'images/products', imageName)
-        
-        if (fs.existsSync(uploadPath)) {
-          imageUrl = `/uploads/images/products/${imageName}`
-        } else {
-          // 预设图片在 public 目录
-          imageUrl = `/images/products/${imageName}`
-        }
-      }
-      
-      return {
-        ...cat,
-        imageName,
-        imageUrl,
-        productCount: countMap.get(cat.id) || 0
-      }
-    })
+    return categories.map(cat => ({
+      ...cat,
+      productCount: countMap.get(cat.id) || 0
+    }))
   },
 
   /**
@@ -164,23 +231,8 @@ export const categoryService = {
    * @returns canDelete: 是否可删除, productCount: 关联产品数量
    */
   canDelete(categoryId: string): { canDelete: boolean; productCount: number } {
-    // 统计该分类下的产品数量（包括草稿和已发布）
-    const productRows = db.queryAll(`
-      SELECT draft_data, published_data FROM contents 
-      WHERE content_type = 'product' AND status != 'deleted'
-    `)
-    
-    let productCount = 0
-    productRows.forEach(row => {
-      // 优先检查草稿数据，因为草稿可能有未发布的分类变更
-      const data = row.draft_data || row.published_data
-      if (data) {
-        const product = JSON.parse(data)
-        if (product.categoryId === categoryId) {
-          productCount++
-        }
-      }
-    })
+    const countMap = getProductCountMap()
+    const productCount = countMap.get(categoryId) || 0
     
     return {
       canDelete: productCount === 0,
@@ -223,16 +275,9 @@ export const categoryService = {
   /**
    * 根据名称或ID获取分类
    */
-  getCategoryByNameOrId(value: string): CategoryData | null {
+  getCategoryByNameOrId(value: string): CategoryWithImage | null {
     const categories = this.getAllPublished()
-    
-    // 先按ID查找
-    const byId = categories.find(c => c.id === value)
-    if (byId) return byId
-    
-    // 再按名称查找
-    const byName = categories.find(c => c.name === value)
-    return byName || null
+    return categories.find(c => c.id === value || c.name === value) || null
   },
 
   /**
@@ -240,7 +285,6 @@ export const categoryService = {
    * 仅在数据库中没有分类数据时执行
    */
   initDefaultCategories(): void {
-    // 检查是否已有分类数据
     const existing = db.queryOne(`
       SELECT COUNT(*) as count FROM contents WHERE content_type = 'category'
     `)
@@ -271,7 +315,7 @@ export const categoryService = {
    * 重置为默认分类数据
    * 会删除所有现有分类并重新创建默认分类
    */
-  resetToDefaultCategories(): void {
+  resetToDefaultCategories(): CategoryWithImage[] {
     console.log('📂 重置为默认分类数据...')
     
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
@@ -290,7 +334,12 @@ export const categoryService = {
       })
     })
     
+    // 使缓存失效
+    invalidateCache()
+    
     console.log(`✅ 已重置为 ${DEFAULT_CATEGORIES.length} 个默认分类`)
+    
+    return this.getCategoriesWithCount()
   },
 
   /**
@@ -300,12 +349,29 @@ export const categoryService = {
     const id = this.generateCategoryId()
     const category: CategoryData = { id, ...data }
     
-    contentService.saveDraft('category', id, category)
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+    const categoryData = JSON.stringify(category)
     
-    // 自动发布，使分类立即可用
+    // 获取当前最大排序值
+    const maxOrder = db.queryOne(`
+      SELECT MAX(sort_order) as max FROM contents WHERE content_type = 'category'
+    `)
+    const sortOrder = (maxOrder?.max || 0) + 1
+    
     if (autoPublish) {
-      contentService.publish('category', id, '新建分类')
+      db.run(`
+        INSERT INTO contents (content_type, content_key, draft_data, published_data, status, sort_order, created_at, updated_at, published_at)
+        VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?)
+      `, ['category', id, categoryData, categoryData, sortOrder, now, now, now])
+    } else {
+      db.run(`
+        INSERT INTO contents (content_type, content_key, draft_data, status, sort_order, created_at, updated_at)
+        VALUES (?, ?, ?, 'draft', ?, ?, ?)
+      `, ['category', id, categoryData, sortOrder, now, now])
     }
+    
+    // 使缓存失效
+    invalidateCache()
     
     return category
   },
@@ -324,39 +390,20 @@ export const categoryService = {
   saveAllCategories(categories: CategoryData[]): void {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
     
-    // 获取当前数据库中所有分类（包括已删除的，用于检测 UNIQUE 冲突）
-    const allRows = db.queryAll(`
-      SELECT content_key, draft_data, published_data, status FROM contents 
-      WHERE content_type = 'category'
+    // 获取当前数据库中所有活跃分类
+    const activeRows = db.queryAll(`
+      SELECT content_key FROM contents 
+      WHERE content_type = 'category' AND status != 'deleted'
     `)
-    
-    // 活跃的分类（非删除状态）
-    const activeRows = allRows.filter(row => row.status !== 'deleted')
     const activeIds = new Set(activeRows.map(row => row.content_key))
-    
-    // 所有分类ID（包括已删除的）
-    const allExistingIds = new Set(allRows.map(row => row.content_key))
-    
     const newIds = new Set(categories.map(c => c.id))
     
     // 找出需要删除的分类（当前活跃但不在新数据中）
     const toDeleteIds = [...activeIds].filter(id => !newIds.has(id))
     
     db.transaction(() => {
-      // 1. 物理删除不再需要的分类记录，并删除对应的图片
+      // 1. 物理删除不再需要的分类记录
       for (const id of toDeleteIds) {
-        const row = activeRows.find(r => r.content_key === id)
-        if (row) {
-          const data = row.draft_data || row.published_data
-          if (data) {
-            const category = JSON.parse(data) as CategoryData
-            // 删除对应的图片文件
-            if (category.imageName) {
-              uploadService.delete(`images/products/${category.imageName}`)
-            }
-          }
-        }
-        // 物理删除记录（而不是软删除），这样可以重新使用该 ID
         db.run(`DELETE FROM contents WHERE content_type = 'category' AND content_key = ?`, [id])
       }
       
@@ -376,7 +423,6 @@ export const categoryService = {
           `, [data, data, index + 1, now, now, category.id])
         } else {
           // 创建新分类（直接发布）
-          // 注意：此时已删除的记录已被物理删除，不会有 UNIQUE 冲突
           db.run(`
             INSERT INTO contents (content_type, content_key, draft_data, published_data, status, sort_order, created_at, updated_at, published_at)
             VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?)
@@ -384,10 +430,13 @@ export const categoryService = {
         }
       })
     })
+    
+    // 使缓存失效
+    invalidateCache()
   },
 
   /**
-   * 删除分类及其图片
+   * 删除分类
    */
   deleteCategory(categoryId: string): { success: boolean; error?: string } {
     // 检查是否可以删除
@@ -396,9 +445,9 @@ export const categoryService = {
       return { success: false, error: `该分类下有 ${productCount} 个产品，无法删除` }
     }
     
-    // 获取分类数据
+    // 检查分类是否存在
     const row = db.queryOne(`
-      SELECT draft_data, published_data FROM contents 
+      SELECT id FROM contents 
       WHERE content_type = 'category' AND content_key = ? AND status != 'deleted'
     `, [categoryId])
     
@@ -406,17 +455,11 @@ export const categoryService = {
       return { success: false, error: '分类不存在' }
     }
     
-    const data = row.draft_data || row.published_data
-    if (data) {
-      const category = JSON.parse(data) as CategoryData
-      // 删除对应的图片文件
-      if (category.imageName) {
-        uploadService.delete(`images/products/${category.imageName}`)
-      }
-    }
-    
-    // 物理删除记录（而不是软删除），这样可以重新使用该 ID 和图片名
+    // 物理删除记录
     db.run(`DELETE FROM contents WHERE content_type = 'category' AND content_key = ?`, [categoryId])
+    
+    // 使缓存失效
+    invalidateCache()
     
     return { success: true }
   }

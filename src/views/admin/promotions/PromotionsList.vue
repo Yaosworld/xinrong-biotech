@@ -30,9 +30,9 @@ const columns = computed(() => [
   { key: 'publish_date', label: '发布日期', type: 'date' as const, showInTable: false }
 ])
 
-// 生成活动ID
-const generatePromotionId = () => {
-  const allPromotions = [...localPromotions.value, ...promotionStore.promotions]
+// 生成活动ID - 基于当前编辑器数据和 store 数据，避免 ID 冲突
+const generatePromotionId = (currentData: any[]) => {
+  const allPromotions = [...currentData, ...localPromotions.value, ...promotionStore.promotions]
   const maxIdNum = allPromotions.reduce((max, item) => {
     const num = parseInt(item.id?.replace('A', '') || '0')
     return Math.max(max, num)
