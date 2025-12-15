@@ -15,6 +15,7 @@ export type UploadCategory =
   | 'promotion-poster'// 活动海报
   | 'product-category'// 产品分类图
   | 'home-banner'     // 首页 Banner
+  | 'site-config'     // 网站配置图片（Logo、二维码等）
   | 'common'          // 通用图片
 
 export interface UploadResult {

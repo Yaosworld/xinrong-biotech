@@ -1,22 +1,32 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useHomeBannerStore } from '@/stores/homeBannerStore'
 
-const images = [
-  '/images/home/banner_1.jpg',
-  '/images/home/banner_2.jpg',
-  '/images/home/banner_3.jpg',
-  '/images/home/banner_4.jpg'
+const homeBannerStore = useHomeBannerStore()
+
+// 默认图片（降级使用）
+const defaultImages = [
+  { id: '1', url: '/images/home/banner_1.jpg' },
+  { id: '2', url: '/images/home/banner_2.jpg' },
+  { id: '3', url: '/images/home/banner_3.jpg' },
+  { id: '4', url: '/images/home/banner_4.jpg' }
 ]
+
+// 横幅数据
+const banners = computed(() => {
+  const data = homeBannerStore.banners
+  return data.length > 0 ? data : defaultImages
+})
 
 const currentImageIndex = ref(0)
 const intervalId = ref<number | null>(null)
 
 const nextImage = () => {
-  currentImageIndex.value = (currentImageIndex.value + 1) % images.length
+  currentImageIndex.value = (currentImageIndex.value + 1) % banners.value.length
 }
 
 const prevImage = () => {
-  currentImageIndex.value = (currentImageIndex.value - 1 + images.length) % images.length
+  currentImageIndex.value = (currentImageIndex.value - 1 + banners.value.length) % banners.value.length
 }
 
 const goToImage = (index: number) => {
@@ -24,7 +34,7 @@ const goToImage = (index: number) => {
 }
 
 const startAutoRotation = () => {
-  intervalId.value = setInterval(nextImage, 4000) // 每4秒切换一次
+  intervalId.value = setInterval(nextImage, 4000)
 }
 
 const stopAutoRotation = () => {
@@ -34,7 +44,8 @@ const stopAutoRotation = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await homeBannerStore.loadBanners()
   startAutoRotation()
 })
 
@@ -53,13 +64,13 @@ onUnmounted(() => {
     >
       <!-- 当前图片 -->
       <div
-        v-for="(image, index) in images"
-        :key="index"
+        v-for="(banner, index) in banners"
+        :key="banner.id"
         class="absolute inset-0 transition-opacity duration-1000 ease-in-out"
         :class="{ 'opacity-100': index === currentImageIndex, 'opacity-0': index !== currentImageIndex }"
       >
         <img
-          :src="image"
+          :src="banner.url"
           :alt="`Banner ${index + 1}`"
           class="w-full h-full object-cover"
         />
@@ -86,8 +97,8 @@ onUnmounted(() => {
       <!-- 指示器 -->
       <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
         <button
-          v-for="(image, index) in images"
-          :key="index"
+          v-for="(banner, index) in banners"
+          :key="banner.id"
           @click.stop="goToImage(index)"
           class="w-2 h-2 rounded-full transition-all duration-300 hover:scale-125"
           :class="index === currentImageIndex ? 'w-8 bg-white' : 'bg-white/50 hover:bg-white/70'"

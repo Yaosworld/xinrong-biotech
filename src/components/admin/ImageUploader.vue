@@ -181,6 +181,12 @@ const clearImage = () => {
   uploadStatus.value = 'idle'
   errorMessage.value = ''
 }
+
+// 暴露方法供父组件调用
+defineExpose({
+  triggerUpload,
+  clearImage
+})
 </script>
 
 <template>

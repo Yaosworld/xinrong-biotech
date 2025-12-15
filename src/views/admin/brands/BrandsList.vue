@@ -4,6 +4,7 @@ import { useBrandStore } from '@/stores/brandStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
 import { adminApi } from '@/api/contentApi'
+import { COUNTRY_OPTIONS, BRAND_CATEGORIES, generateBrandId } from '@/constants/brands'
 
 const brandStore = useBrandStore()
 const adminStore = useAdminStore()
@@ -15,23 +16,9 @@ const loading = ref(false)
 // 品牌数据
 const brands = computed(() => localBrands.value)
 
-// 国家选项
-const countryOptions = [
-  { label: '中国', value: '中国' },
-  { label: '美国', value: '美国' },
-  { label: '日本', value: '日本' },
-  { label: '德国', value: '德国' },
-  { label: '英国', value: '英国' },
-  { label: '法国', value: '法国' },
-  { label: '瑞士', value: '瑞士' },
-  { label: '韩国', value: '韩国' }
-]
-
-// 分类配置
-const categories = [
-  { key: 'own', label: '自主品牌', filter: (item: any) => item.is_own_brand === true },
-  { key: 'agent', label: '代理品牌', filter: (item: any) => item.is_own_brand !== true }
-]
+// 使用常量配置
+const countryOptions = [...COUNTRY_OPTIONS]
+const categories = [...BRAND_CATEGORIES]
 
 // 列配置
 const columns = computed(() => [
@@ -62,13 +49,9 @@ const columns = computed(() => [
 ])
 
 // 生成品牌ID - 基于当前编辑器数据和 store 数据，避免 ID 冲突
-const generateBrandId = (currentData: any[]) => {
+const handleGenerateBrandId = (currentData: any[]) => {
   const allBrands = [...currentData, ...localBrands.value, ...brandStore.brands]
-  const maxIdNum = allBrands.reduce((max, item) => {
-    const num = parseInt(item.id?.replace('B', '') || '0')
-    return Math.max(max, num)
-  }, 0)
-  return `B${String(maxIdNum + 1).padStart(3, '0')}`
+  return generateBrandId(allBrands)
 }
 
 // 保存数据
@@ -127,7 +110,7 @@ onMounted(async () => {
     :page-size="12"
     :page-sizes="[12, 24, 48, 100]"
     search-placeholder="搜索品牌名称、国家..."
-    :generate-id="generateBrandId"
+    :generate-id="handleGenerateBrandId"
     @save="handleSave"
     @publish="handlePublish"
     @reload="handleReload"

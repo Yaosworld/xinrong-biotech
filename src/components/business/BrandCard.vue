@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Brand } from '@/types'
+import { BRAND_PLACEHOLDER_GRADIENT } from '@/constants/brands'
 
 interface Props {
   brand: Brand
@@ -12,12 +13,13 @@ const props = defineProps<Props>()
 const router = useRouter()
 const imageError = ref(false)
 
-// 获取品牌名称
+// 获取品牌名称（兼容旧字段）
 const brandName = computed(() => props.brand.name || props.brand.show_name || '')
 
 // 获取品牌首字母或首字
 const brandInitial = computed(() => {
   const name = brandName.value
+  if (!name) return '?'
   // 如果是中文，取第一个字
   if (/[\u4e00-\u9fa5]/.test(name.charAt(0))) {
     return name.charAt(0)
@@ -26,20 +28,10 @@ const brandInitial = computed(() => {
   return name.charAt(0).toUpperCase()
 })
 
-// 随机背景颜色
-const bgColorClass = computed(() => {
-  const colors = [
-    'bg-gradient-600',
-    'bg-purple-500',
-    'bg-indigo-500',
-    'bg-blue-500',
-    'bg-cyan-500',
-    'bg-teal-500'
-  ]
-  const index = brandName.value.charCodeAt(0) % colors.length
-  return colors[index]
-})
-
+// 统一使用主题蓝紫渐变色
+const placeholderStyle = computed(() => ({
+  background: BRAND_PLACEHOLDER_GRADIENT
+}))
 
 // 导航到品牌详情页
 const goToBrand = () => {
@@ -61,7 +53,7 @@ const goToBrand = () => {
       <div
         v-else
         class="brand-logo-placeholder"
-        :class="bgColorClass"
+        :style="placeholderStyle"
       >
         {{ brandInitial }}
       </div>

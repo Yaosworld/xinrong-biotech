@@ -30,25 +30,39 @@ export interface Product {
 
 /**
  * 品牌接口
+ * 
+ * 字段命名规范：
+ * - 使用下划线命名法（snake_case）
+ * - 布尔字段使用 is_ 前缀
+ * - URL 字段使用 _url 后缀
  */
 export interface Brand {
-  id: string                // 品牌ID, e.g., "B001"
-  brand_id?: string         // 兼容旧字段
-  name: string              // 品牌名称
-  show_name?: string        // 兼容旧字段
-  logo_url?: string         // Logo 图片路径
-  category?: string         // 品牌分类
-  route?: string | null     // 品牌详情页路由
-  is_own?: boolean          // 是否为自主品牌
-  is_own_brand?: boolean    // 兼容字段
+  // === 核心字段 ===
+  id: string                  // 品牌ID, e.g., "B001"
+  name: string                // 品牌名称
   
-  // 扩展字段
-  description?: string      // 品牌描述
-  country?: string          // 品牌国家/地区
-  product_count?: number    // 关联产品数量
-  sort_order?: number       // 排序顺序（越小越靠前）
-  website_url?: string      // 官网链接
-  certificate_url?: string  // 品牌证书图片路径
+  // === 图片字段 ===
+  logo_url?: string           // Logo 图片路径
+  certificate_url?: string    // 品牌授权证书图片路径
+  
+  // === 分类字段 ===
+  is_own_brand?: boolean      // 是否为自主品牌（true=自主品牌，false/undefined=代理品牌）
+  country?: string            // 品牌国家/地区
+  
+  // === 展示字段 ===
+  description?: string        // 品牌描述
+  website?: string            // 官网链接
+  sort_order?: number         // 排序顺序（越小越靠前）
+  
+  // === 兼容旧字段（逐步废弃，仅用于数据迁移） ===
+  /** @deprecated 使用 id 替代 */
+  brand_id?: string
+  /** @deprecated 使用 name 替代 */
+  show_name?: string
+  /** @deprecated 使用 is_own_brand 替代 */
+  is_own?: boolean
+  /** @deprecated 使用 website 替代 */
+  website_url?: string
 }
 
 /**

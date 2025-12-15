@@ -2,9 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
-import { CATEGORIES } from '@/hooks/useCategoryImage'
+import { useCategoryStore } from '@/stores/categoryStore'
 import { useBrandStore } from '@/stores/brandStore'
 import { usePromotionStore } from '@/stores/promotionStore'
+import { useHomeBannerStore } from '@/stores/homeBannerStore'
 import HomeBanner from '@/components/common/HomeBanner.vue'
 import ProductCard from '@/components/business/ProductCard.vue'
 import BrandCard from '@/components/business/BrandCard.vue'
@@ -12,8 +13,16 @@ import NewsCard from '@/components/business/NewsCard.vue'
 
 const router = useRouter()
 const productStore = useProductStore()
+const categoryStore = useCategoryStore()
 const brandStore = useBrandStore()
 const promotionStore = usePromotionStore()
+const homeBannerStore = useHomeBannerStore()
+
+// 从 store 获取分类列表（用于快捷入口）
+const categories = computed(() => categoryStore.categories)
+
+// 从 store 获取区块标题配置
+const sections = computed(() => homeBannerStore.sections)
 
 // 搜索相关
 const searchInputValue = ref('')
@@ -77,6 +86,13 @@ const latestPromotions = computed(() => {
 
 // 初始化数据
 onMounted(async () => {
+  // 先加载分类数据（ProductCard 需要分类图片）和首页配置
+  await Promise.all([
+    categoryStore.ensureLoaded(),
+    homeBannerStore.loadBanners()
+  ])
+  
+  // 并行加载其他数据
   await Promise.all([
     productStore.loadProducts(),
     brandStore.loadBrands(),
@@ -130,7 +146,7 @@ const goTo = (path: string) => {
       <div class="container-base">
         <div class="flex flex-wrap justify-center gap-3">
           <button
-            v-for="category in CATEGORIES.slice(0, 8)"
+            v-for="category in categories.slice(0, 8)"
             :key="category.id"
             class="filter-tag"
             @click="goTo(`/products?category=${category.id}`)"
@@ -151,8 +167,8 @@ const goTo = (path: string) => {
     <section class="py-16 bg-dark-50">
       <div class="container-base">
         <div class="text-center mb-10">
-          <span class="section-badge">热门产品</span>
-          <h2 class="section-title">精选优质产品</h2>
+          <span class="section-badge">{{ sections.products.badge }}</span>
+          <h2 class="section-title">{{ sections.products.title }}</h2>
         </div>
         
         <div class="products-grid">
@@ -176,8 +192,8 @@ const goTo = (path: string) => {
     <section class="py-16">
       <div class="container-base">
         <div class="text-center mb-10">
-          <span class="section-badge">品牌矩阵</span>
-          <h2 class="section-title">知名品牌，值得信赖</h2>
+          <span class="section-badge">{{ sections.brands.badge }}</span>
+          <h2 class="section-title">{{ sections.brands.title }}</h2>
         </div>
         
         <div class="brands-grid">
@@ -201,8 +217,8 @@ const goTo = (path: string) => {
     <section v-if="latestPromotions.length > 0" class="py-16 bg-dark-50">
       <div class="container-base">
         <div class="text-center mb-10">
-          <span class="section-badge">最新活动</span>
-          <h2 class="section-title">优惠活动动态一手掌握</h2>
+          <span class="section-badge">{{ sections.promotions.badge }}</span>
+          <h2 class="section-title">{{ sections.promotions.title }}</h2>
         </div>
 
         <div class="space-y-6">

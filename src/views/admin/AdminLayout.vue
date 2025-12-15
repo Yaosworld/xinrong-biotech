@@ -27,6 +27,7 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
+  { id: 'home', title: '首页设置', icon: 'fas fa-home', path: '/admin/home' },
   { 
     id: 'products', 
     title: '产品管理', 
@@ -48,7 +49,7 @@ const allMenuItems: MenuItem[] = [
   },
   { id: 'brands', title: '品牌管理', icon: 'fas fa-award', path: '/admin/brands/list' },
   { id: 'about', title: '关于我们', icon: 'fas fa-info-circle', path: '/admin/about/content' },
-  { id: 'banners', title: '横幅设置', icon: 'fas fa-image', path: '/admin/banners' },
+  { id: 'banners', title: '横幅标语', icon: 'fas fa-quote-left', path: '/admin/banners' },
   { id: 'site', title: '网站设置', icon: 'fas fa-cog', path: '/admin/site/settings' },
   { id: 'users', title: '账号管理', icon: 'fas fa-users-cog', path: '/admin/users', requiresSuperAdmin: true }
 ]

@@ -90,12 +90,19 @@ const routes: RouteRecordRaw[] = [
     },
     redirect: '/admin/products/list',
     children: [
-      // 横幅设置（统一管理所有页面的Banner）
+      // 首页设置
+      {
+        path: 'home',
+        name: 'AdminHomeSettings',
+        component: () => import('@/views/admin/home/HomeSettings.vue'),
+        meta: { title: '首页设置' }
+      },
+      // 横幅设置（统一管理所有页面的Banner标语）
       {
         path: 'banners',
         name: 'AdminBanners',
         component: () => import('@/views/admin/banners/BannerManagement.vue'),
-        meta: { title: '横幅设置' }
+        meta: { title: '横幅标语' }
       },
       // 产品管理
       {

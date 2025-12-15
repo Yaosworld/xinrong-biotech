@@ -6,6 +6,7 @@ import { useAdminStore } from '@/stores/adminStore'
 import { adminApi } from '@/api/contentApi'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VersionHistoryDialog from '../components/VersionHistoryDialog.vue'
+import ImageUploader from '@/components/admin/ImageUploader.vue'
 
 const siteStore = useSiteStore()
 const adminStore = useAdminStore()
@@ -415,15 +416,13 @@ onBeforeUnmount(() => {
                   <el-input v-model="companyForm.englishName" placeholder="请输入英文名称" />
                 </div>
                 <div class="form-item full-width">
-                  <label>Logo 路径</label>
-                  <el-input v-model="companyForm.logo" placeholder="如：/images/common/logo.png" />
-                </div>
-              </div>
-              <div class="logo-preview-box">
-                <span class="preview-label">Logo 预览</span>
-                <div class="logo-preview">
-                  <img v-if="companyForm.logo" :src="getImageUrl(companyForm.logo)" alt="Logo" />
-                  <div v-else class="no-logo"><i class="fas fa-image"></i></div>
+                  <label>公司 Logo</label>
+                  <ImageUploader
+                    v-model="companyForm.logo"
+                    category="site-config"
+                    placeholder="点击或拖拽上传 Logo"
+                    :max-size="2"
+                  />
                 </div>
               </div>
             </div>
@@ -490,21 +489,23 @@ onBeforeUnmount(() => {
                 </div>
               </div>
               <div class="qrcode-section mt-4">
-                <div class="qrcode-item">
+                <div class="qrcode-upload-item">
                   <label>微信客服二维码</label>
-                  <el-input v-model="contactForm.wechatQrcode" placeholder="图片路径" />
-                  <div class="qrcode-preview">
-                    <img v-if="contactForm.wechatQrcode" :src="getImageUrl(contactForm.wechatQrcode)" alt="微信" />
-                    <i v-else class="fab fa-weixin"></i>
-                  </div>
+                  <ImageUploader
+                    v-model="contactForm.wechatQrcode"
+                    category="site-config"
+                    placeholder="点击或拖拽上传微信二维码"
+                    :max-size="2"
+                  />
                 </div>
-                <div class="qrcode-item">
+                <div class="qrcode-upload-item">
                   <label>公众号二维码</label>
-                  <el-input v-model="contactForm.gzhQrcode" placeholder="图片路径" />
-                  <div class="qrcode-preview">
-                    <img v-if="contactForm.gzhQrcode" :src="getImageUrl(contactForm.gzhQrcode)" alt="公众号" />
-                    <i v-else class="fab fa-weixin"></i>
-                  </div>
+                  <ImageUploader
+                    v-model="contactForm.gzhQrcode"
+                    category="site-config"
+                    placeholder="点击或拖拽上传公众号二维码"
+                    :max-size="2"
+                  />
                 </div>
               </div>
             </div>
@@ -795,14 +796,9 @@ onBeforeUnmount(() => {
 .logo-preview-box { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
 .preview-label { font-size: 13px; color: #666; }
 .logo-preview { width: 100px; height: 50px; background: #f9fafb; border: 1px solid #e8e8e8; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.no-logo { color: #ccc; font-size: 24px; }
-
 .qrcode-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.qrcode-item { display: flex; flex-direction: column; gap: 8px; }
-.qrcode-item label { font-size: 13px; color: #666; font-weight: 500; }
-.qrcode-preview { width: 80px; height: 80px; background: #f9fafb; border: 1px solid #e8e8e8; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; color: #ccc; font-size: 28px; }
-.qrcode-preview img { width: 100%; height: 100%; object-fit: contain; }
+.qrcode-upload-item { display: flex; flex-direction: column; gap: 8px; }
+.qrcode-upload-item label { font-size: 13px; color: #666; font-weight: 500; }
 
 .links-list { display: flex; flex-direction: column; gap: 8px; }
 .link-item { display: flex; align-items: center; gap: 8px; }
