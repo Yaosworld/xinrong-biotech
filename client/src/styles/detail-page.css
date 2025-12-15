@@ -1,0 +1,334 @@
+/**
+ * 详情页通用样式
+ * 
+ * 提供详情页的共享样式，包括：
+ * - 页面基础布局
+ * - 返回按钮
+ * - 玻璃态卡片
+ * - 未找到状态
+ * - 双栏/单栏布局
+ * - 响应式设计
+ */
+
+/* ========================================
+   页面基础布局
+   ======================================== */
+
+.detail-page {
+  min-height: 100vh;
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-content {
+  position: relative;
+  z-index: 1;
+  min-height: calc(100vh - 72px);
+  display: flex;
+  align-items: center;
+}
+
+.container-base {
+  width: 100%;
+}
+
+/* ========================================
+   页面主标题
+   ======================================== */
+
+.page-main-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 2rem;
+  position: relative;
+  padding-bottom: 1rem;
+}
+
+.page-main-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 2px;
+}
+
+/* ========================================
+   返回按钮
+   ======================================== */
+
+.back-button {
+  position: fixed;
+  top: 100px;
+  left: 2rem;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  color: #374151;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 25px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.back-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+}
+
+/* ========================================
+   玻璃态卡片
+   ======================================== */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* ========================================
+   未找到状态
+   ======================================== */
+
+.not-found-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 2rem;
+  position: relative;
+  z-index: 2;
+}
+
+.error-card {
+  text-align: center;
+  padding: 3rem;
+  max-width: 400px;
+}
+
+.error-icon {
+  font-size: 3rem;
+  color: #f59e0b;
+  margin-bottom: 1rem;
+}
+
+.error-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.error-description {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+/* ========================================
+   双栏/单栏布局
+   ======================================== */
+
+.detail-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.detail-layout.single-column {
+  justify-content: center;
+}
+
+/* 左侧面板 */
+.left-panel {
+  flex: 1.2;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 单列布局时的左侧面板 */
+.detail-layout.single-column .left-panel {
+  flex: none;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 右侧面板 */
+.right-panel {
+  flex: 0.8;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+/* ========================================
+   内容区块样式
+   ======================================== */
+
+.section-title-inner {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.description-content {
+  color: #475569;
+  line-height: 1.8;
+}
+
+.paragraph {
+  margin-bottom: 1rem;
+  position: relative;
+  padding-left: 16px;
+}
+
+.paragraph::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 4px;
+  height: 4px;
+  background: #667eea;
+  border-radius: 50%;
+}
+
+.paragraph:last-child {
+  margin-bottom: 0;
+}
+
+/* ========================================
+   状态标签
+   ======================================== */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 20px;
+}
+
+.tag-item {
+  display: inline-flex;
+  padding: 4px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 20px;
+}
+
+/* ========================================
+   按钮样式
+   ======================================== */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* ========================================
+   图片容器
+   ======================================== */
+
+.image-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(102, 126, 234, 0.03);
+  border-radius: 16px;
+  border: 2px dashed rgba(102, 126, 234, 0.15);
+  overflow: hidden;
+}
+
+.image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+/* ========================================
+   工具类
+   ======================================== */
+
+.mr-1 { margin-right: 0.25rem; }
+.mr-2 { margin-right: 0.5rem; }
+.mt-6 { margin-top: 1.5rem; }
+
+/* ========================================
+   响应式设计
+   ======================================== */
+
+@media (max-width: 1024px) {
+  .detail-layout {
+    flex-direction: column;
+  }
+
+  .left-panel,
+  .right-panel {
+    flex: none;
+    width: 100%;
+  }
+
+  .back-button {
+    top: 90px;
+    left: 1rem;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .back-button {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin: 1rem;
+  }
+
+  .page-main-title {
+    font-size: 1.5rem;
+  }
+}
