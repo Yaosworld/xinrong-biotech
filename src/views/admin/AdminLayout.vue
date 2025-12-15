@@ -27,7 +27,15 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { id: 'home', title: '首页设置', icon: 'fas fa-home', path: '/admin/home' },
+  { 
+    id: 'home', 
+    title: '首页管理', 
+    icon: 'fas fa-home',
+    children: [
+      { id: 'home-settings', title: '首页设置', path: '/admin/home/settings' },
+      { id: 'home-images', title: '首页图片库', path: '/admin/home/images' }
+    ]
+  },
   { 
     id: 'products', 
     title: '产品管理', 
@@ -63,7 +71,7 @@ const menuItems = computed(() => {
 })
 
 // 展开的子菜单
-const expandedMenus = ref<string[]>(['products', 'promotions'])
+const expandedMenus = ref<string[]>(['home', 'products', 'promotions'])
 
 // 判断路由是否激活
 const isActive = (path: string) => route.path === path

@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useAdminStore } from '@/stores/adminStore'
 import { adminApi } from '@/api/contentApi'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import ImageUploader from '@/components/admin/ImageUploader.vue'
+import HomeImagePicker from '@/components/admin/HomeImagePicker.vue'
 import VersionHistoryDialog from '../components/VersionHistoryDialog.vue'
 
 const adminStore = useAdminStore()
@@ -24,7 +24,14 @@ const showPublishDialog = ref(false)
 const publishSummary = ref('')
 
 // ==================== 表单数据 ====================
-const bannerImages = ref<Array<{ id: string; url: string }>>([])
+// 横幅数据结构：使用 imageId 关联图片库
+interface BannerItem {
+  id: string           // 横幅位置唯一标识
+  imageId: number | null  // 关联的图片库图片ID
+  url: string          // 图片URL（用于显示）
+  filename?: string    // 文件名
+}
+const bannerImages = ref<BannerItem[]>([])
 const sections = ref({
   products: { badge: '热门产品', title: '精选优质产品' },
   brands: { badge: '品牌矩阵', title: '知名品牌，值得信赖' },
@@ -36,6 +43,17 @@ const originalData = ref<string>('')
 // ==================== 计算属性 ====================
 const currentDataString = computed(() => JSON.stringify({ images: bannerImages.value, sections: sections.value }))
 const hasUnsavedChanges = computed(() => originalData.value !== '' && currentDataString.value !== originalData.value)
+
+// 已使用的图片ID集合（用于防止重复选择）
+const getUsedImageIds = (excludeIndex: number): Set<number> => {
+  const ids = new Set<number>()
+  bannerImages.value.forEach((banner, index) => {
+    if (index !== excludeIndex && banner.imageId) {
+      ids.add(banner.imageId)
+    }
+  })
+  return ids
+}
 
 watch(currentDataString, () => {
   if (editStatus.value !== 'saving' && editStatus.value !== 'publishing') {
@@ -53,12 +71,6 @@ const statusConfig = computed(() => {
 })
 
 // ==================== 默认数据 ====================
-const defaultImages = [
-  { id: '1', url: '/images/home/banner_1.jpg' },
-  { id: '2', url: '/images/home/banner_2.jpg' },
-  { id: '3', url: '/images/home/banner_3.jpg' },
-  { id: '4', url: '/images/home/banner_4.jpg' }
-]
 const defaultSections = {
   products: { badge: '热门产品', title: '精选优质产品' },
   brands: { badge: '品牌矩阵', title: '知名品牌，值得信赖' },
@@ -70,7 +82,20 @@ const loadData = async () => {
   try {
     const content = await adminApi.getOne('home_config', 'main')
     const data = (content.draftData || content.publishedData || {}) as any
-    bannerImages.value = data.images || [...defaultImages]
+    
+    // 兼容旧数据格式（只有url）和新数据格式（有imageId）
+    if (data.images && Array.isArray(data.images)) {
+      bannerImages.value = data.images.map((img: any, index: number) => ({
+        id: img.id || String(Date.now() + index),
+        imageId: img.imageId || null,
+        url: img.url || '',
+        filename: img.filename || ''
+      }))
+    } else {
+      // 没有数据时创建一个空位置
+      bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
+    }
+    
     sections.value = data.sections ? { ...defaultSections, ...data.sections } : { ...defaultSections }
     
     const hasDraft = content.draftData !== null
@@ -83,7 +108,7 @@ const loadData = async () => {
     editStatus.value = 'clean'
   } catch (e) {
     console.warn('加载首页设置失败，使用默认数据:', e)
-    bannerImages.value = [...defaultImages]
+    bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
     sections.value = { ...defaultSections }
     originalData.value = currentDataString.value
     contentStatus.value = 'unpublished'
@@ -93,20 +118,34 @@ const loadData = async () => {
 
 // ==================== 横幅操作 ====================
 const previewIndex = ref(0)
-const uploaderRefs = ref<Record<number, any>>({})
-const addBanner = () => bannerImages.value.push({ id: String(Date.now()), url: '' })
+const pickerRefs = ref<Record<number, any>>({})
+const addBanner = () => bannerImages.value.push({ id: String(Date.now()), imageId: null, url: '', filename: '' })
 
-const triggerUpload = (index: number) => {
-  const uploader = uploaderRefs.value[index]
-  if (uploader?.triggerUpload) {
-    uploader.triggerUpload()
+// 打开图片选择器
+const openImagePicker = (index: number) => {
+  const picker = pickerRefs.value[index]
+  if (picker?.openPicker) {
+    picker.openPicker()
+  }
+}
+
+// 处理图片选择变化
+const handleImageChange = (index: number, imageInfo: { id: number; url: string; filename: string } | null) => {
+  if (imageInfo) {
+    bannerImages.value[index].imageId = imageInfo.id
+    bannerImages.value[index].url = imageInfo.url
+    bannerImages.value[index].filename = imageInfo.filename
+  } else {
+    bannerImages.value[index].imageId = null
+    bannerImages.value[index].url = ''
+    bannerImages.value[index].filename = ''
   }
 }
 
 const removeBanner = async (index: number) => {
-  if (bannerImages.value.length <= 1) { ElMessage.warning('至少保留一张横幅图片'); return }
+  if (bannerImages.value.length <= 1) { ElMessage.warning('至少保留一个横幅位置'); return }
   try {
-    await ElMessageBox.confirm('确定要删除这张横幅图片吗？', '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
+    await ElMessageBox.confirm('确定要删除这个横幅位置吗？', '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
     bannerImages.value.splice(index, 1)
     if (previewIndex.value >= bannerImages.value.length) previewIndex.value = bannerImages.value.length - 1
   } catch {}
@@ -124,7 +163,16 @@ const prevBanner = () => { previewIndex.value = (previewIndex.value - 1 + banner
 const nextBanner = () => { previewIndex.value = (previewIndex.value + 1) % bannerImages.value.length }
 
 // ==================== 保存发布 ====================
-const buildData = () => ({ images: bannerImages.value.filter(b => b.url), sections: sections.value })
+// 构建保存数据，只保存有图片的横幅
+const buildData = () => ({ 
+  images: bannerImages.value.filter(b => b.imageId && b.url).map(b => ({
+    id: b.id,
+    imageId: b.imageId,
+    url: b.url,
+    filename: b.filename
+  })), 
+  sections: sections.value 
+})
 
 const saveData = async () => {
   try {
@@ -228,9 +276,9 @@ onMounted(() => loadData())
             <!-- 图片内容 -->
             <div class="card-content">
               <img v-if="banner.url" :src="banner.url" alt="" />
-              <div v-else class="card-empty">
+              <div v-else class="card-empty" @click.stop="openImagePicker(index)">
                 <i class="fas fa-image"></i>
-                <span>点击上传</span>
+                <span>点击选择图片</span>
               </div>
             </div>
             <!-- 序号 -->
@@ -238,8 +286,8 @@ onMounted(() => loadData())
             <!-- 悬停操作层 -->
             <div class="card-overlay">
               <div class="overlay-actions">
-                <button class="action-btn upload" title="更换图片" @click.stop="triggerUpload(index)">
-                  <i class="fas fa-camera"></i>
+                <button class="action-btn upload" title="选择图片" @click.stop="openImagePicker(index)">
+                  <i class="fas fa-images"></i>
                 </button>
                 <button v-if="index > 0" class="action-btn" title="左移" @click.stop="moveBanner(index, 'up')">
                   <i class="fas fa-arrow-left"></i>
@@ -252,13 +300,15 @@ onMounted(() => loadData())
                 </button>
               </div>
             </div>
-            <!-- 隐藏的上传组件 -->
-            <ImageUploader 
-              :ref="(el: any) => uploaderRefs[index] = el"
-              v-model="bannerImages[index].url" 
-              category="home-banner" 
-              :max-size="5"
-              class="hidden-uploader"
+            <!-- 隐藏的图片选择器 -->
+            <HomeImagePicker 
+              :ref="(el: any) => pickerRefs[index] = el"
+              v-model="bannerImages[index].imageId"
+              :used-image-ids="getUsedImageIds(index)"
+              :current-index="index"
+              placeholder="点击选择横幅图片"
+              class="hidden-picker"
+              @image-change="(info) => handleImageChange(index, info)"
             />
           </div>
         </div>
@@ -553,8 +603,8 @@ onMounted(() => loadData())
   transform: none;
 }
 
-/* 隐藏的上传组件 */
-.hidden-uploader {
+/* 隐藏的图片选择器 */
+.hidden-picker {
   position: absolute;
   width: 0;
   height: 0;

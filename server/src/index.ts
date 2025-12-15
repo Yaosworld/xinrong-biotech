@@ -9,10 +9,12 @@ import adminUsersRouter from './routes/adminUsers'
 import uploadRouter from './routes/upload'
 import categoryImageRouter from './routes/categoryImage'
 import promotionImageRouter from './routes/promotionImage'
+import homeImageRouter from './routes/homeImage'
 import { authenticate } from './middleware/auth'
 import { categoryService } from './services/categoryService'
 import { categoryImageService } from './services/categoryImageService'
 import { promotionImageService } from './services/promotionImageService'
+import { homeImageService } from './services/homeImageService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -34,6 +36,7 @@ app.use('/api/admin/users', adminUsersRouter)
 app.use('/api/admin/upload', authenticate, uploadRouter)
 app.use('/api/admin/category-images', authenticate, categoryImageRouter)
 app.use('/api/admin/promotion-images', authenticate, promotionImageRouter)
+app.use('/api/admin/home-images', authenticate, homeImageRouter)
 app.use('/api/admin', authenticate, adminRouter)
 
 // 健康检查
@@ -61,6 +64,13 @@ async function start() {
     const promoSyncResult = promotionImageService.syncFromFileSystem()
     if (promoSyncResult.added > 0) {
       console.log(`🎉 同步了 ${promoSyncResult.added} 张促销图片到数据库`)
+    }
+    
+    // 初始化首页图片表并同步文件系统
+    homeImageService.initTable()
+    const homeSyncResult = homeImageService.syncFromFileSystem()
+    if (homeSyncResult.added > 0) {
+      console.log(`🏠 同步了 ${homeSyncResult.added} 张首页图片到数据库`)
     }
     
     app.listen(PORT, () => {

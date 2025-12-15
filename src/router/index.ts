@@ -92,10 +92,17 @@ const routes: RouteRecordRaw[] = [
     children: [
       // 首页设置
       {
-        path: 'home',
+        path: 'home/settings',
         name: 'AdminHomeSettings',
         component: () => import('@/views/admin/home/HomeSettings.vue'),
         meta: { title: '首页设置' }
+      },
+      // 首页图片库
+      {
+        path: 'home/images',
+        name: 'AdminHomeImages',
+        component: () => import('@/views/admin/home/HomeImageList.vue'),
+        meta: { title: '首页图片库' }
       },
       // 横幅设置（统一管理所有页面的Banner标语）
       {
