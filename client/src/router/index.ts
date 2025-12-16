@@ -174,6 +174,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/site/SiteSettings.vue'),
         meta: { title: '网站设置' }
       },
+      {
+        path: 'site/images',
+        name: 'AdminSiteImages',
+        component: () => import('@/views/admin/site/SiteImageList.vue'),
+        meta: { title: '网站图片库' }
+      },
       // 账号管理（仅超级管理员）
       {
         path: 'users',

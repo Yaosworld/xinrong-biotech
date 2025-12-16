@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -7,6 +7,17 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// 页面加载状态
+const isReady = ref(false)
+
+onMounted(async () => {
+  // 确保认证状态已初始化
+  if (!authStore.initialized) {
+    await authStore.init()
+  }
+  isReady.value = true
+})
 
 // 修改密码弹窗
 const pwdDialogVisible = ref(false)
@@ -66,7 +77,15 @@ const allMenuItems: MenuItem[] = [
   },
   { id: 'about', title: '关于我们', icon: 'fas fa-info-circle', path: '/admin/about/content' },
   { id: 'banners', title: '横幅标语', icon: 'fas fa-quote-left', path: '/admin/banners' },
-  { id: 'site', title: '网站设置', icon: 'fas fa-cog', path: '/admin/site/settings' },
+  { 
+    id: 'site', 
+    title: '网站设置', 
+    icon: 'fas fa-cog',
+    children: [
+      { id: 'site-settings', title: '基本设置', path: '/admin/site/settings' },
+      { id: 'site-images', title: '网站图片库', path: '/admin/site/images' }
+    ]
+  },
   { 
     id: 'users', 
     title: '账号管理', 
@@ -88,7 +107,28 @@ const menuItems = computed(() => {
 })
 
 // 展开的子菜单
-const expandedMenus = ref<string[]>(['home', 'products', 'promotions', 'brands'])
+const expandedMenus = ref<string[]>(['home', 'products', 'promotions', 'brands', 'site'])
+
+// 获取所有有子菜单的菜单ID
+const menuIdsWithChildren = computed(() => {
+  return menuItems.value.filter(item => item.children).map(item => item.id)
+})
+
+// 是否全部展开
+const isAllExpanded = computed(() => {
+  return menuIdsWithChildren.value.every(id => expandedMenus.value.includes(id))
+})
+
+// 全部展开/收起
+const toggleAllMenus = () => {
+  if (isAllExpanded.value) {
+    // 全部收起
+    expandedMenus.value = []
+  } else {
+    // 全部展开
+    expandedMenus.value = [...menuIdsWithChildren.value]
+  }
+}
 
 // 判断路由是否激活
 const isActive = (path: string) => route.path === path
@@ -196,7 +236,13 @@ async function handleChangePwd() {
 </script>
 
 <template>
-  <div class="admin-layout">
+  <!-- 加载状态 -->
+  <div v-if="!isReady" class="admin-loading">
+    <i class="fas fa-spinner fa-spin"></i>
+    <span>加载中...</span>
+  </div>
+  
+  <div v-else class="admin-layout">
     <!-- 顶部导航 -->
     <header class="admin-header">
       <div class="header-left">
@@ -250,6 +296,14 @@ async function handleChangePwd() {
             <i class="fas fa-flask"></i>
             <span v-if="!sidebarCollapsed">后台管理</span>
           </div>
+          <button 
+            v-if="!sidebarCollapsed" 
+            class="expand-toggle-btn" 
+            @click="toggleAllMenus"
+            :title="isAllExpanded ? '全部收起' : '全部展开'"
+          >
+            <i :class="isAllExpanded ? 'fas fa-compress-alt' : 'fas fa-expand-alt'"></i>
+          </button>
         </div>
 
         <nav class="sidebar-nav">
@@ -319,6 +373,23 @@ async function handleChangePwd() {
 </template>
 
 <style scoped>
+/* 加载状态 */
+.admin-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #f0f2f5;
+  color: #667eea;
+  font-size: 16px;
+}
+
+.admin-loading i {
+  font-size: 32px;
+}
+
 .admin-layout {
   min-height: 100vh;
   background: #f0f2f5;
@@ -468,14 +539,16 @@ async function handleChangePwd() {
 }
 
 .sidebar-header {
-  padding: 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   transition: padding 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .admin-sidebar.collapsed .sidebar-header {
   padding: 20px;
-  display: flex;
   justify-content: center;
 }
 
@@ -487,6 +560,26 @@ async function handleChangePwd() {
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.expand-toggle-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.expand-toggle-btn:hover {
+  background: rgba(102, 126, 234, 0.3);
+  color: #fff;
 }
 
 .logo i {

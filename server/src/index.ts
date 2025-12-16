@@ -12,6 +12,7 @@ import promotionImageRouter from './routes/promotionImage'
 import homeImageRouter from './routes/homeImage'
 import brandImageRouter from './routes/brandImage'
 import avatarImageRouter from './routes/avatarImage'
+import siteImageRouter from './routes/siteImage'
 import { authenticate } from './middleware/auth'
 import { categoryService } from './services/categoryService'
 import { categoryImageService } from './services/categoryImageService'
@@ -19,6 +20,7 @@ import { promotionImageService } from './services/promotionImageService'
 import { homeImageService } from './services/homeImageService'
 import { brandImageService } from './services/brandImageService'
 import { avatarImageService } from './services/avatarImageService'
+import { siteImageService } from './services/siteImageService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -43,6 +45,7 @@ app.use('/api/admin/promotion-images', authenticate, promotionImageRouter)
 app.use('/api/admin/home-images', authenticate, homeImageRouter)
 app.use('/api/admin/brand-images', authenticate, brandImageRouter)
 app.use('/api/admin/avatar-images', authenticate, avatarImageRouter)
+app.use('/api/admin/site-images', authenticate, siteImageRouter)
 app.use('/api/admin', authenticate, adminRouter)
 
 // 健康检查
@@ -91,6 +94,13 @@ async function start() {
     const avatarSyncResult = avatarImageService.syncFromFileSystem()
     if (avatarSyncResult.added > 0) {
       console.log(`👤 同步了 ${avatarSyncResult.added} 张头像图片到数据库`)
+    }
+    
+    // 初始化网站图片表并同步文件系统
+    siteImageService.initTable()
+    const siteSyncResult = siteImageService.syncFromFileSystem()
+    if (siteSyncResult.added > 0) {
+      console.log(`🌐 同步了 ${siteSyncResult.added} 张网站图片到数据库`)
     }
     
     app.listen(PORT, () => {

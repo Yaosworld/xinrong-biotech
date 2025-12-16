@@ -6,7 +6,7 @@ import { useAdminStore } from '@/stores/adminStore'
 import { adminApi } from '@/api/contentApi'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VersionHistoryDialog from '../components/VersionHistoryDialog.vue'
-import ImageUploader from '@/components/admin/ImageUploader.vue'
+import SiteImagePicker from '@/components/admin/SiteImagePicker.vue'
 
 const siteStore = useSiteStore()
 const adminStore = useAdminStore()
@@ -417,11 +417,10 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="form-item full-width">
                   <label>公司 Logo</label>
-                  <ImageUploader
+                  <SiteImagePicker
                     v-model="companyForm.logo"
-                    category="site-config"
-                    placeholder="点击或拖拽上传 Logo"
-                    :max-size="2"
+                    placeholder="点击选择 Logo 图片"
+                    label="选择公司 Logo"
                   />
                 </div>
               </div>
@@ -491,20 +490,18 @@ onBeforeUnmount(() => {
               <div class="qrcode-section mt-4">
                 <div class="qrcode-upload-item">
                   <label>微信客服二维码</label>
-                  <ImageUploader
+                  <SiteImagePicker
                     v-model="contactForm.wechatQrcode"
-                    category="site-config"
-                    placeholder="点击或拖拽上传微信二维码"
-                    :max-size="2"
+                    placeholder="点击选择微信二维码"
+                    label="选择微信客服二维码"
                   />
                 </div>
                 <div class="qrcode-upload-item">
                   <label>公众号二维码</label>
-                  <ImageUploader
+                  <SiteImagePicker
                     v-model="contactForm.gzhQrcode"
-                    category="site-config"
-                    placeholder="点击或拖拽上传公众号二维码"
-                    :max-size="2"
+                    placeholder="点击选择公众号二维码"
+                    label="选择公众号二维码"
                   />
                 </div>
               </div>

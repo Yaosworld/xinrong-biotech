@@ -44,6 +44,19 @@ const resetPwdVisible = ref(false)
 const resetPwdId = ref<number | null>(null)
 const newPassword = ref('')
 
+// 头像预览
+const avatarPreviewVisible = ref(false)
+const avatarPreviewUrl = ref('')
+const avatarPreviewName = ref('')
+
+function previewAvatar(user: AdminUser) {
+  if (user.avatarUrl) {
+    avatarPreviewUrl.value = user.avatarUrl
+    avatarPreviewName.value = user.displayName || user.username
+    avatarPreviewVisible.value = true
+  }
+}
+
 async function loadUsers() {
   loading.value = true
   try {
@@ -220,7 +233,7 @@ onMounted(() => loadUsers())
     <el-table :data="users" v-loading="loading" stripe>
       <el-table-column label="头像" width="70">
         <template #default="{ row }">
-          <div class="avatar-cell">
+          <div class="avatar-cell" :class="{ clickable: row.avatarUrl }" @click="previewAvatar(row)">
             <img v-if="row.avatarUrl" :src="row.avatarUrl" class="avatar-img" />
             <i v-else class="fas fa-user-circle avatar-placeholder"></i>
           </div>
@@ -309,6 +322,16 @@ onMounted(() => loadUsers())
         <el-button type="primary" @click="handleResetPwd">确定</el-button>
       </template>
     </el-dialog>
+    
+    <!-- 头像预览弹窗 -->
+    <el-dialog v-model="avatarPreviewVisible" title="头像预览" width="300px">
+      <div class="avatar-preview-dialog">
+        <img :src="avatarPreviewUrl" :alt="avatarPreviewName" />
+      </div>
+      <template #footer>
+        <span class="preview-name">{{ avatarPreviewName }}</span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -338,15 +361,46 @@ onMounted(() => loadUsers())
   justify-content: center;
 }
 
+.avatar-cell.clickable {
+  cursor: pointer;
+}
+
+.avatar-cell.clickable:hover .avatar-img {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 .avatar-img {
   width: 36px;
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
+  transition: all 0.2s;
 }
 
 .avatar-placeholder {
   font-size: 36px;
   color: #c0c4cc;
+}
+
+.avatar-preview-dialog {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.avatar-preview-dialog img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.preview-name {
+  display: block;
+  text-align: center;
+  width: 100%;
+  color: #909399;
+  font-size: 14px;
 }
 </style>

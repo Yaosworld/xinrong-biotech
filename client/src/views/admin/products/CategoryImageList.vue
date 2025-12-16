@@ -621,6 +621,9 @@ onMounted(() => {
 .preview-filename {
   color: #909399;
   font-size: 13px;
+  display: block;
+  text-align: center;
+  width: 100%;
 }
 
 /* 选择模式下的卡片样式 */
