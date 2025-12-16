@@ -115,10 +115,18 @@ const handleFileChange = async (event: Event) => {
 // 删除图片
 const deleteImage = async (img: HomeImage) => {
   try {
+    const warningMessage = img.usageCount > 0 
+      ? `该图片正在首页使用中（${img.usageCount} 处），删除后将自动从首页移除。此操作不可恢复。`
+      : '此操作不可恢复。'
+    
     await ElMessageBox.confirm(
-      `确定要删除图片「${img.filename}」吗？${img.usageCount > 0 ? `该图片被使用 ${img.usageCount} 次。` : ''}此操作不可恢复。`,
+      `确定要删除图片「${img.filename}」吗？${warningMessage}`,
       '删除确认',
-      { type: 'warning' }
+      { 
+        type: img.usageCount > 0 ? 'error' : 'warning',
+        confirmButtonText: img.usageCount > 0 ? '确认删除' : '删除',
+        confirmButtonClass: img.usageCount > 0 ? 'el-button--danger' : ''
+      }
     )
     
     const token = localStorage.getItem('admin_token') || ''
@@ -129,7 +137,7 @@ const deleteImage = async (img: HomeImage) => {
     
     const result = await res.json()
     if (result.success) {
-      ElMessage.success('删除成功')
+      ElMessage.success(img.usageCount > 0 ? '删除成功，已自动更新首页配置' : '删除成功')
       await loadImages()
     } else {
       ElMessage.error(result.error || '删除失败')
@@ -139,29 +147,13 @@ const deleteImage = async (img: HomeImage) => {
   }
 }
 
-// 同步文件系统
-const syncFileSystem = async () => {
-  try {
-    const token = localStorage.getItem('admin_token') || ''
-    const res = await fetch('/api/admin/home-images/sync', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    
-    const result = await res.json()
-    if (result.success) {
-      ElMessage.success(`同步完成：新增 ${result.added} 张，已存在 ${result.existing} 张`)
-      await loadImages()
-    }
-  } catch (e) {
-    ElMessage.error('同步失败')
-  }
-}
-
 // 图片加载失败处理
 const handleImageError = (e: Event) => {
   const img = e.target as HTMLImageElement
-  img.src = '/images/common/placeholder.png'
+  // 防止占位图也失败导致无限循环
+  if (!img.src.includes('placeholder')) {
+    img.src = '/images/common/placeholder.png'
+  }
 }
 
 // 预览图片
@@ -259,9 +251,6 @@ onMounted(() => {
         </div>
       </div>
       <div class="header-actions">
-        <el-button @click="syncFileSystem">
-          <i class="fas fa-sync-alt mr-1"></i> 同步文件
-        </el-button>
         <el-button 
           :type="selectionMode ? 'warning' : 'default'" 
           @click="toggleSelectionMode"
@@ -443,7 +432,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
-  min-height: 300px;
+  align-content: start;
 }
 
 .empty-state {

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { queryOne, queryAll, run, lastInsertRowId } from '../db'
 import { authService } from './authService'
+import { avatarImageService } from './avatarImageService'
 
 export const adminUserService = {
   // 获取管理员列表
@@ -25,7 +26,7 @@ export const adminUserService = {
     
     const list = queryAll(
       `SELECT id, username, role, display_name, email, phone, status, 
-              last_login_at, created_at
+              avatar_id, last_login_at, created_at
        FROM admins 
        WHERE ${whereClause}
        ORDER BY id ASC
@@ -42,6 +43,8 @@ export const adminUserService = {
         email: item.email,
         phone: item.phone,
         status: item.status,
+        avatarId: item.avatar_id,
+        avatarUrl: avatarImageService.getImageUrl(item.avatar_id),
         lastLoginAt: item.last_login_at,
         createdAt: item.created_at
       })),
@@ -102,7 +105,7 @@ export const adminUserService = {
   },
 
   // 更新管理员信息
-  update(id: number, data: { displayName?: string; email?: string; phone?: string; role?: string }, operatorId: number) {
+  update(id: number, data: { displayName?: string; email?: string; phone?: string; role?: string; avatarId?: number | null }, operatorId: number) {
     const user = queryOne('SELECT id FROM admins WHERE id = ?', [id])
     if (!user) return { success: false, error: '用户不存在' }
     
@@ -113,6 +116,7 @@ export const adminUserService = {
     if (data.email !== undefined) { updates.push('email = ?'); params.push(data.email) }
     if (data.phone !== undefined) { updates.push('phone = ?'); params.push(data.phone) }
     if (data.role !== undefined) { updates.push('role = ?'); params.push(data.role) }
+    if (data.avatarId !== undefined) { updates.push('avatar_id = ?'); params.push(data.avatarId) }
     
     if (updates.length === 0) return { success: true }
     

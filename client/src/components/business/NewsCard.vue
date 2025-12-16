@@ -129,10 +129,10 @@ const goToDetail = () => {
       <div>
         <!-- 发布日期和状态标签 -->
         <div class="flex items-center justify-between text-sm mb-2">
-          <!-- 发布日期（左对齐） -->
+          <!-- 发布日期（左对齐）- 显示前台展示日期 -->
           <span class="text-dark-400">
             <i class="fas fa-calendar-alt mr-1.5"></i>
-            发布：{{ promotion.start_date ? formatDate(promotion.start_date) : '-' }}
+            发布于：{{ promotion.publish_date ? formatDate(promotion.publish_date) : (promotion.start_date ? formatDate(promotion.start_date) : '-') }}
           </span>
           <!-- 状态标签（右对齐） -->
           <span :class="['time-status-badge', timeStatusClass]">

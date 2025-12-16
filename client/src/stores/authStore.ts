@@ -8,6 +8,7 @@ export interface AdminUser {
   role: 'super_admin' | 'admin'
   displayName: string
   email?: string
+  avatarUrl?: string | null
   lastLoginAt?: string
 }
 
@@ -21,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!user.value)
   const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
   const displayName = computed(() => user.value?.displayName || user.value?.username || '')
+  const avatarUrl = computed(() => user.value?.avatarUrl || null)
   
   // 初始化
   async function init() {
@@ -69,7 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
   
   return {
     user, loading, initialized,
-    isLoggedIn, isSuperAdmin, displayName,
+    isLoggedIn, isSuperAdmin, displayName, avatarUrl,
     init, login, logout, changePassword
   }
 })

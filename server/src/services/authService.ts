@@ -16,6 +16,7 @@ export interface LoginResult {
       username: string
       role: string
       displayName: string
+      avatarUrl: string | null
     }
     expiresIn: number
   }
@@ -122,6 +123,15 @@ export const authService = {
     
     this.logAction(user.id, 'login', null, null, null, ip || null)
     
+    // 获取头像 URL
+    let avatarUrl = null
+    if (user.avatar_id) {
+      const avatar = queryOne('SELECT filename FROM avatar_images WHERE id = ?', [user.avatar_id])
+      if (avatar) {
+        avatarUrl = `/uploads/images/avatars/${avatar.filename}`
+      }
+    }
+    
     return {
       success: true,
       data: {
@@ -130,7 +140,8 @@ export const authService = {
           id: user.id,
           username: user.username,
           role: user.role,
-          displayName: user.display_name || user.username
+          displayName: user.display_name || user.username,
+          avatarUrl
         },
         expiresIn: 86400
       }

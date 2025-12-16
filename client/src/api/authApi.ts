@@ -103,7 +103,7 @@ export const adminUserApi = {
     return res.json()
   },
   
-  async update(id: number, data: { displayName?: string; email?: string; phone?: string; role?: string }) {
+  async update(id: number, data: { displayName?: string; email?: string; phone?: string; role?: string; avatarId?: number | null }) {
     const res = await authFetch(`${API_BASE}/admin/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)

@@ -28,7 +28,7 @@ const columns = computed(() => [
     label: '封面', 
     width: 70, 
     type: 'promotion-image' as const, 
-    imageType: 'cover',
+    imageType: 'cover' as const,
     // 动态获取封面URL
     getValue: (row: any) => row.cover_url || ''
   },
@@ -37,18 +37,17 @@ const columns = computed(() => [
     label: '海报', 
     width: 70, 
     type: 'promotion-image' as const, 
-    imageType: 'poster',
+    imageType: 'poster' as const,
     // 动态获取海报URL
     getValue: (row: any) => row.poster_url || ''
   },
   { key: 'title', label: '标题', width: { min: 140, flex: 2 }, required: true },
   { key: 'summary', label: '摘要', width: { min: 120, flex: 3 }, truncate: 30, required: true },
   { key: 'description', label: '详情', width: { min: 120, flex: 4 }, type: 'textarea' as const, truncate: 35 },
+  { key: 'publish_date', label: '发布日期', width: 95, type: 'date' as const, sortable: true, required: true, placeholder: '前台展示日期' },
   { key: 'start_date', label: '开始日期', width: 95, type: 'date' as const, sortable: true, required: true },
   { key: 'end_date', label: '结束日期', width: 95, type: 'date' as const, sortable: true, required: true },
-  { key: 'tags', label: '标签', width: { min: 100, flex: 1 }, type: 'tags' as const, truncate: 20 },
-  { key: 'icon_class', label: '图标类名', showInTable: false, required: false },
-  { key: 'publish_date', label: '发布日期', type: 'date' as const, showInTable: false }
+  { key: 'tags', label: '标签', width: { min: 100, flex: 1 }, type: 'tags' as const, truncate: 20 }
 ])
 
 // 生成活动ID - 统一使用字符串格式 "A001"
@@ -98,11 +97,11 @@ const loadAdminData = async () => {
       .map(item => {
         const data = item.draftData || item.publishedData
         if (data) {
-          return { ...data, id: String(data.id) }
+          return { ...data, id: String((data as any).id) }
         }
         return null
       })
-      .filter(Boolean)
+      .filter((item): item is NonNullable<typeof item> => item !== null)
   } catch (e) {
     console.warn('Admin API 加载失败，降级到前台 Store:', e)
     await promotionStore.loadPromotions()

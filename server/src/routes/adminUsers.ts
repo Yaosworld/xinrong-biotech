@@ -61,9 +61,9 @@ router.post('/', async (req, res) => {
 // 更新管理员信息
 router.put('/:id', (req, res) => {
   const id = Number(req.params.id)
-  const { displayName, email, phone, role } = req.body
+  const { displayName, email, phone, role, avatarId } = req.body
   
-  const result = adminUserService.update(id, { displayName, email, phone, role }, req.user!.userId)
+  const result = adminUserService.update(id, { displayName, email, phone, role, avatarId }, req.user!.userId)
   
   if (result.success) {
     res.json({ success: true, message: '更新成功' })

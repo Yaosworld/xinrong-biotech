@@ -1,69 +1,70 @@
 /**
  * 促销活动图片服务
  * 
- * 管理促销活动的封面图和海报图资源
+ * 继承 BaseImageService，实现促销图片的特定逻辑
  * 
- * 设计原则：
- * 1. 图片表独立存储图片元数据（ID、文件名、路径、类型）
- * 2. 促销活动通过 coverId/posterId 关联图片
- * 3. 一张图片可以被多个活动使用（多对多关系，与分类图片不同）
- * 4. 图片分为两种类型：cover（封面）和 poster（海报）
- * 5. 不支持SVG文件（安全考虑）
+ * 特点：
+ * 1. shared 使用模式（多对多关系）
+ * 2. 允许删除被使用的图片
+ * 3. 支持图片类型（cover/poster）
+ * 4. 通过 usageCount 标识使用次数
  */
 import db from '../db'
-import fs from 'fs'
-import path from 'path'
+import {
+  BaseImageService,
+  BaseImage,
+  UsageInfo,
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_IMAGE_EXTENSIONS
+} from './base'
 
-// 图片存储目录
-const UPLOAD_BASE = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads')
-const PROMOTION_IMAGE_DIR = 'images/promotions'
+// 导出常量（保持向后兼容）
+export { ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_EXTENSIONS }
 
-// 允许的图片类型
-export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-
-// 图片类型
+/** 图片类型 */
 export type PromotionImageType = 'cover' | 'poster'
 
-export interface PromotionImage {
-  id: number
-  filename: string
-  originalName: string
-  path: string
-  url: string
+/** 促销图片接口 */
+export interface PromotionImage extends BaseImage {
   imageType: PromotionImageType
-  usageCount: number  // 被多少个活动使用
-  createdAt: string
+  usageCount: number
 }
 
-export const promotionImageService = {
+/**
+ * 促销图片服务类
+ */
+class PromotionImageServiceImpl extends BaseImageService<PromotionImage> {
+  constructor() {
+    super({
+      tableName: 'promotion_images',
+      imageDir: 'images/promotions',
+      contentType: 'promotion',
+      usageMode: 'shared',
+      allowDeleteWhenUsed: true,
+      hasImageType: true,
+      imageTypes: ['cover', 'poster'],
+      imageTypeField: 'image_type'
+    })
+  }
+
+  
   /**
-   * 初始化图片表
-   * 注意：filename + image_type 组合唯一，允许封面和海报使用相同文件名
+   * 初始化表（覆盖基类方法，处理表结构迁移）
    */
   initTable(): void {
-    // 检查表是否存在
     const tableExists = db.queryOne(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='promotion_images'"
     )
     
     if (tableExists) {
-      // 检查表结构是否需要迁移（旧表有 filename UNIQUE，新表需要 filename + image_type UNIQUE）
-      // 通过检查是否能插入相同 filename 但不同 image_type 来判断
       const needsMigration = this.checkNeedsMigration()
       
       if (needsMigration) {
         console.log('📦 迁移促销图片表结构...')
-        // 备份数据
         const existingData = db.queryAll('SELECT * FROM promotion_images')
-        
-        // 删除旧表
         db.getDb().run('DROP TABLE promotion_images')
+        super.initTable()
         
-        // 创建新表
-        this.createTable()
-        
-        // 恢复数据（只恢复 cover 类型的，因为旧表只有 cover）
         for (const row of existingData) {
           try {
             db.run(`
@@ -78,22 +79,16 @@ export const promotionImageService = {
         console.log('✅ 促销图片表迁移完成')
       }
     } else {
-      this.createTable()
+      super.initTable()
     }
-  },
-
-  /**
-   * 检查是否需要迁移表结构
-   */
-  checkNeedsMigration(): boolean {
+  }
+  
+  private checkNeedsMigration(): boolean {
     try {
-      // 尝试获取表的 SQL 定义
       const tableInfo = db.queryOne(
         "SELECT sql FROM sqlite_master WHERE type='table' AND name='promotion_images'"
       )
       if (tableInfo && tableInfo.sql) {
-        // 如果表定义中包含 "filename TEXT NOT NULL UNIQUE" 而不是 "UNIQUE(filename, image_type)"
-        // 则需要迁移
         const sql = tableInfo.sql as string
         return sql.includes('filename TEXT NOT NULL UNIQUE') || 
                !sql.includes('UNIQUE(filename, image_type)')
@@ -102,32 +97,89 @@ export const promotionImageService = {
       // 忽略错误
     }
     return false
-  },
-
+  }
+  
   /**
-   * 创建图片表
+   * 删除图片（重写父类方法）
+   * 删除时同时清理促销活动中的引用
    */
-  createTable(): void {
-    db.getDb().run(`
-      CREATE TABLE IF NOT EXISTS promotion_images (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        filename TEXT NOT NULL,
-        original_name TEXT NOT NULL,
-        path TEXT NOT NULL,
-        image_type TEXT NOT NULL DEFAULT 'cover',
-        created_at TEXT DEFAULT (datetime('now', 'localtime')),
-        UNIQUE(filename, image_type)
-      )
-    `)
-    db.getDb().run(`CREATE INDEX IF NOT EXISTS idx_promotion_images_filename ON promotion_images(filename)`)
-    db.getDb().run(`CREATE INDEX IF NOT EXISTS idx_promotion_images_type ON promotion_images(image_type)`)
-    db.saveDb()
-  },
-
+  delete(id: number): { success: boolean; error?: string } {
+    // 先调用父类删除图片文件和数据库记录
+    const result = super.delete(id)
+    
+    if (result.success) {
+      // 清理促销活动中对该图片的引用
+      this.cleanupImageReferences(id)
+    }
+    
+    return result
+  }
+  
   /**
-   * 获取图片使用统计（imageId -> 使用次数）
+   * 清理促销活动中对指定图片的引用
    */
-  getUsageStats(): Map<number, number> {
+  private cleanupImageReferences(imageId: number): void {
+    try {
+      const promotionRows = db.queryAll(`
+        SELECT id, draft_data, published_data FROM contents 
+        WHERE content_type = 'promotion' AND status != 'deleted'
+      `)
+      
+      let updatedCount = 0
+      
+      for (const row of promotionRows) {
+        let needsUpdate = false
+        
+        // 清理草稿数据
+        if (row.draft_data) {
+          const draftPromo = JSON.parse(row.draft_data)
+          if (draftPromo.coverId === imageId) {
+            draftPromo.coverId = null
+            draftPromo.cover_url = ''
+            needsUpdate = true
+          }
+          if (draftPromo.posterId === imageId) {
+            draftPromo.posterId = null
+            draftPromo.poster_url = ''
+            needsUpdate = true
+          }
+          if (needsUpdate) {
+            db.run(`UPDATE contents SET draft_data = ? WHERE id = ?`, [JSON.stringify(draftPromo), row.id])
+          }
+        }
+        
+        // 清理已发布数据
+        if (row.published_data) {
+          const publishedPromo = JSON.parse(row.published_data)
+          let publishedNeedsUpdate = false
+          if (publishedPromo.coverId === imageId) {
+            publishedPromo.coverId = null
+            publishedPromo.cover_url = ''
+            publishedNeedsUpdate = true
+          }
+          if (publishedPromo.posterId === imageId) {
+            publishedPromo.posterId = null
+            publishedPromo.poster_url = ''
+            publishedNeedsUpdate = true
+          }
+          if (publishedNeedsUpdate) {
+            db.run(`UPDATE contents SET published_data = ? WHERE id = ?`, [JSON.stringify(publishedPromo), row.id])
+            needsUpdate = true
+          }
+        }
+        
+        if (needsUpdate) updatedCount++
+      }
+      
+      if (updatedCount > 0) {
+        console.log(`[PromotionImageService] 已清理图片 ${imageId} 在 ${updatedCount} 个促销活动中的引用`)
+      }
+    } catch (error) {
+      console.error('[PromotionImageService] 清理图片引用失败:', error)
+    }
+  }
+  
+  getUsageMap(): Map<number, number> {
     const promotionRows = db.queryAll(`
       SELECT draft_data, published_data FROM contents 
       WHERE content_type = 'promotion' AND status != 'deleted'
@@ -153,245 +205,40 @@ export const promotionImageService = {
     })
     
     return usageMap
-  },
-
-  /**
-   * 获取所有图片（按类型筛选）
-   */
-  getAll(imageType?: PromotionImageType): PromotionImage[] {
-    let sql = `
-      SELECT id, filename, original_name as originalName, path, image_type as imageType, created_at as createdAt
-      FROM promotion_images
-    `
-    const params: any[] = []
-    
-    if (imageType) {
-      sql += ' WHERE image_type = ?'
-      params.push(imageType)
-    }
-    
-    sql += ' ORDER BY created_at DESC'
-    
-    const rows = db.queryAll(sql, params)
-    const usageStats = this.getUsageStats()
-    
-    return rows.map(row => {
-      const uploadPath = path.join(UPLOAD_BASE, PROMOTION_IMAGE_DIR, row.imageType + 's', row.filename)
-      const isUploaded = fs.existsSync(uploadPath)
-      const url = isUploaded 
-        ? `/uploads/${PROMOTION_IMAGE_DIR}/${row.imageType}s/${row.filename}`
-        : `/images/promotions/${row.imageType}s/${row.filename}`
-      
-      return {
-        ...row,
-        url,
-        usageCount: usageStats.get(row.id) || 0
-      }
-    })
-  },
-
-  /**
-   * 根据ID获取图片
-   */
-  getById(id: number): PromotionImage | null {
-    const row = db.queryOne(`
-      SELECT id, filename, original_name as originalName, path, image_type as imageType, created_at as createdAt
-      FROM promotion_images WHERE id = ?
-    `, [id])
-    
-    if (!row) return null
-    
-    const usageStats = this.getUsageStats()
-    const uploadPath = path.join(UPLOAD_BASE, PROMOTION_IMAGE_DIR, row.imageType + 's', row.filename)
-    const isUploaded = fs.existsSync(uploadPath)
-    const url = isUploaded 
-      ? `/uploads/${PROMOTION_IMAGE_DIR}/${row.imageType}s/${row.filename}`
-      : `/images/promotions/${row.imageType}s/${row.filename}`
-    
+  }
+  
+  getUsageInfo(imageId: number): UsageInfo {
+    const usageMap = this.getUsageMap()
+    const usageCount = usageMap.get(imageId) || 0
     return {
-      ...row,
-      url,
-      usageCount: usageStats.get(id) || 0
+      isUsed: usageCount > 0,
+      usageCount
     }
-  },
-
-  /**
-   * 添加图片记录
-   */
-  add(filename: string, originalName: string, imageType: PromotionImageType): PromotionImage {
-    const filePath = `${PROMOTION_IMAGE_DIR}/${imageType}s/${filename}`
-    
-    // 检查同类型下文件名是否已存在
-    const existing = db.queryOne(
-      'SELECT id FROM promotion_images WHERE filename = ? AND image_type = ?', 
-      [filename, imageType]
-    )
-    if (existing) {
-      throw new Error(`${imageType === 'cover' ? '封面' : '海报'}图片 "${filename}" 已存在`)
-    }
-    
-    db.run(`
-      INSERT INTO promotion_images (filename, original_name, path, image_type)
-      VALUES (?, ?, ?, ?)
-    `, [filename, originalName, filePath, imageType])
-    
-    const id = db.lastInsertRowId()
-    
-    return {
-      id,
-      filename,
-      originalName,
-      path: filePath,
-      url: `/uploads/${filePath}`,
-      imageType,
-      usageCount: 0,
-      createdAt: new Date().toISOString()
-    }
-  },
-
-  /**
-   * 删除图片（同时删除文件和记录）
-   * 注意：即使图片被使用也可以删除（与分类图片不同）
-   */
-  delete(id: number): { success: boolean; error?: string } {
-    const image = this.getById(id)
-    if (!image) {
-      return { success: false, error: '图片不存在' }
-    }
-    
-    // 删除文件
-    const fullPath = path.join(UPLOAD_BASE, PROMOTION_IMAGE_DIR, image.imageType + 's', image.filename)
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath)
-    }
-    
-    // 删除记录
-    db.run('DELETE FROM promotion_images WHERE id = ?', [id])
-    
-    return { success: true }
-  },
-
-  /**
-   * 同步文件系统中的图片到数据库
-   */
-  syncFromFileSystem(): { added: number; existing: number; skipped: number } {
-    let added = 0
-    let existing = 0
-    let skipped = 0
-    
-    const allowedPattern = /\.(jpg|jpeg|png|gif|webp)$/i
-    
-    // 同步两种类型的图片
-    const types: PromotionImageType[] = ['cover', 'poster']
-    
-    for (const imageType of types) {
-      // 检查 uploads 目录
-      const uploadDir = path.join(UPLOAD_BASE, PROMOTION_IMAGE_DIR, imageType + 's')
-      if (fs.existsSync(uploadDir)) {
-        const files = fs.readdirSync(uploadDir)
-        for (const filename of files) {
-          if (!allowedPattern.test(filename)) {
-            if (/\.svg$/i.test(filename)) skipped++
-            continue
-          }
-          
-          const exists = db.queryOne('SELECT id FROM promotion_images WHERE filename = ?', [filename])
-          if (exists) {
-            existing++
-          } else {
-            try {
-              this.add(filename, filename, imageType)
-              added++
-            } catch (e) {
-              console.warn(`同步图片 ${filename} 失败:`, e)
-            }
-          }
-        }
-      }
-      
-      // 检查 public 目录
-      const publicDir = path.join(__dirname, '../../../public/images/promotions', imageType + 's')
-      if (fs.existsSync(publicDir)) {
-        const files = fs.readdirSync(publicDir)
-        for (const filename of files) {
-          if (!allowedPattern.test(filename)) {
-            if (/\.svg$/i.test(filename)) skipped++
-            continue
-          }
-          
-          const exists = db.queryOne('SELECT id FROM promotion_images WHERE filename = ?', [filename])
-          if (exists) {
-            existing++
-          } else {
-            try {
-              this.addPreset(filename, imageType)
-              added++
-            } catch (e) {
-              console.warn(`同步预设图片 ${filename} 失败:`, e)
-            }
-          }
-        }
-      }
-    }
-    
-    return { added, existing, skipped }
-  },
-
-  /**
-   * 添加预设图片记录（public目录中的图片）
-   */
-  addPreset(filename: string, imageType: PromotionImageType): PromotionImage {
-    const filePath = `images/promotions/${imageType}s/${filename}`
-    
-    // 检查同类型下文件名是否已存在
-    const existing = db.queryOne(
-      'SELECT id FROM promotion_images WHERE filename = ? AND image_type = ?', 
-      [filename, imageType]
-    )
-    if (existing) {
-      throw new Error(`${imageType === 'cover' ? '封面' : '海报'}图片 "${filename}" 已存在`)
-    }
-    
-    db.run(`
-      INSERT INTO promotion_images (filename, original_name, path, image_type)
-      VALUES (?, ?, ?, ?)
-    `, [filename, filename, filePath, imageType])
-    
-    const id = db.lastInsertRowId()
-    
-    return {
-      id,
-      filename,
-      originalName: filename,
-      path: filePath,
-      url: `/images/promotions/${imageType}s/${filename}`,
-      imageType,
-      usageCount: 0,
-      createdAt: new Date().toISOString()
-    }
-  },
-
-  /**
-   * 获取图片URL（根据ID）
-   */
+  }
+  
   getImageUrl(imageId: number | null): string {
     if (!imageId) return ''
     const image = this.getById(imageId)
     return image?.url || ''
-  },
-
-  /**
-   * 验证文件类型是否允许
-   */
-  isAllowedType(mimetype: string): boolean {
-    return ALLOWED_IMAGE_TYPES.includes(mimetype)
-  },
-
-  /**
-   * 验证文件扩展名是否允许
-   */
-  isAllowedExtension(filename: string): boolean {
-    const ext = path.extname(filename).toLowerCase()
-    return ALLOWED_IMAGE_EXTENSIONS.includes(ext)
   }
+}
+
+// 创建单例实例
+const promotionImageServiceInstance = new PromotionImageServiceImpl()
+
+// 导出服务对象（保持向后兼容的 API）
+export const promotionImageService = {
+  initTable: () => promotionImageServiceInstance.initTable(),
+  getAll: (imageType?: PromotionImageType) => promotionImageServiceInstance.getAll(imageType),
+  getById: (id: number) => promotionImageServiceInstance.getById(id),
+  add: (filename: string, originalName: string, imageType: PromotionImageType) => 
+    promotionImageServiceInstance.add(filename, originalName, imageType),
+  addPreset: (filename: string, imageType: PromotionImageType) => 
+    promotionImageServiceInstance.addPreset(filename, imageType),
+  delete: (id: number) => promotionImageServiceInstance.delete(id),
+  syncFromFileSystem: () => promotionImageServiceInstance.syncFromFileSystem(),
+  getUsageStats: () => promotionImageServiceInstance.getUsageMap(),
+  getImageUrl: (imageId: number | null) => promotionImageServiceInstance.getImageUrl(imageId),
+  isAllowedType: (mimetype: string) => promotionImageServiceInstance.isAllowedType(mimetype),
+  isAllowedExtension: (filename: string) => promotionImageServiceInstance.isAllowedExtension(filename)
 }

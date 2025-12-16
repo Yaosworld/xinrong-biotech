@@ -13,24 +13,8 @@ const bannerStore = useBannerStore()
 // 从 store 获取横幅标语
 const brandSlogans = computed(() => bannerStore.getSlogans('brands'))
 
-// 从 store 获取默认统计数据
-const defaultStats = computed(() => bannerStore.getDefaultStats('brands'))
-
-// 动态统计数据
-const dynamicStats = computed(() => [
-  { key: 'domesticCount', number: `${brandStore.domesticBrands.length}+`, label: '国内品牌' },
-  { key: 'internationalCount', number: `${brandStore.internationalBrands.length}+`, label: '国际品牌' }
-])
-
-// 优先使用动态数据，如果没有数据则使用默认数据
-const stats = computed(() => {
-  // 如果品牌数据已加载且有数据，使用动态统计数据
-  if (brandStore.brands.length > 0 || brandStore.ownBrands.length > 0) {
-    return dynamicStats.value
-  }
-  // 否则使用默认统计数据
-  return defaultStats.value
-})
+// 从 store 获取统计数据（完全由后台配置控制）
+const stats = computed(() => bannerStore.getDefaultStats('brands'))
 
 // 使用store中的computed属性
 const ownBrands = computed(() => brandStore.ownBrands)

@@ -558,7 +558,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
-  min-height: 300px;
+  align-content: start;
 }
 
 .empty-state {

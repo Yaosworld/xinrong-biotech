@@ -41,6 +41,80 @@ class HomeImageServiceImpl extends BaseImageService<HomeImage> {
   }
   
   /**
+   * 删除图片（重写父类方法）
+   * 删除时同时清理首页配置中的引用
+   */
+  delete(id: number): { success: boolean; error?: string } {
+    // 先调用父类删除图片文件和数据库记录
+    const result = super.delete(id)
+    
+    if (result.success) {
+      // 清理首页配置中对该图片的引用
+      this.cleanupImageReferences(id)
+    }
+    
+    return result
+  }
+  
+  /**
+   * 清理首页配置中对指定图片的引用
+   */
+  private cleanupImageReferences(imageId: number): void {
+    try {
+      const configRow = db.queryOne(`
+        SELECT draft_data, published_data FROM contents 
+        WHERE content_type = 'home_config' AND content_key = 'main'
+      `)
+      
+      if (!configRow) return
+      
+      let updated = false
+      
+      // 清理草稿数据
+      if (configRow.draft_data) {
+        const draftConfig = JSON.parse(configRow.draft_data)
+        if (draftConfig.images && Array.isArray(draftConfig.images)) {
+          const originalLength = draftConfig.images.length
+          draftConfig.images = draftConfig.images.filter(
+            (img: { imageId?: number }) => img.imageId !== imageId
+          )
+          if (draftConfig.images.length !== originalLength) {
+            db.run(`
+              UPDATE contents SET draft_data = ? 
+              WHERE content_type = 'home_config' AND content_key = 'main'
+            `, [JSON.stringify(draftConfig)])
+            updated = true
+          }
+        }
+      }
+      
+      // 清理已发布数据
+      if (configRow.published_data) {
+        const publishedConfig = JSON.parse(configRow.published_data)
+        if (publishedConfig.images && Array.isArray(publishedConfig.images)) {
+          const originalLength = publishedConfig.images.length
+          publishedConfig.images = publishedConfig.images.filter(
+            (img: { imageId?: number }) => img.imageId !== imageId
+          )
+          if (publishedConfig.images.length !== originalLength) {
+            db.run(`
+              UPDATE contents SET published_data = ? 
+              WHERE content_type = 'home_config' AND content_key = 'main'
+            `, [JSON.stringify(publishedConfig)])
+            updated = true
+          }
+        }
+      }
+      
+      if (updated) {
+        console.log(`[HomeImageService] 已清理图片 ${imageId} 在首页配置中的引用`)
+      }
+    } catch (error) {
+      console.error('[HomeImageService] 清理图片引用失败:', error)
+    }
+  }
+  
+  /**
    * 获取图片使用次数映射（通过 imageId）
    */
   getUsageMap(): Map<number, number> {

@@ -166,7 +166,10 @@ const syncFileSystem = async () => {
 // 图片加载失败处理
 const handleImageError = (e: Event) => {
   const img = e.target as HTMLImageElement
-  img.src = '/images/common/placeholder.png'
+  // 防止占位图也失败导致无限循环
+  if (!img.src.includes('placeholder')) {
+    img.src = '/images/common/placeholder.png'
+  }
 }
 
 // 预览图片
@@ -446,7 +449,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
-  min-height: 300px;
+  align-content: start;
 }
 
 .empty-state {

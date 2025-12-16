@@ -55,11 +55,28 @@ const allMenuItems: MenuItem[] = [
       { id: 'promotions-images', title: '活动图片库', path: '/admin/promotions/images' }
     ]
   },
-  { id: 'brands', title: '品牌管理', icon: 'fas fa-award', path: '/admin/brands/list' },
+  { 
+    id: 'brands', 
+    title: '品牌管理', 
+    icon: 'fas fa-award',
+    children: [
+      { id: 'brands-list', title: '品牌列表', path: '/admin/brands/list' },
+      { id: 'brands-images', title: '品牌图片库', path: '/admin/brands/images' }
+    ]
+  },
   { id: 'about', title: '关于我们', icon: 'fas fa-info-circle', path: '/admin/about/content' },
   { id: 'banners', title: '横幅标语', icon: 'fas fa-quote-left', path: '/admin/banners' },
   { id: 'site', title: '网站设置', icon: 'fas fa-cog', path: '/admin/site/settings' },
-  { id: 'users', title: '账号管理', icon: 'fas fa-users-cog', path: '/admin/users', requiresSuperAdmin: true }
+  { 
+    id: 'users', 
+    title: '账号管理', 
+    icon: 'fas fa-users-cog',
+    requiresSuperAdmin: true,
+    children: [
+      { id: 'users-list', title: '管理员列表', path: '/admin/users' },
+      { id: 'users-avatars', title: '头像图片库', path: '/admin/users/avatars' }
+    ]
+  }
 ]
 
 // 根据权限过滤菜单
@@ -71,7 +88,7 @@ const menuItems = computed(() => {
 })
 
 // 展开的子菜单
-const expandedMenus = ref<string[]>(['home', 'products', 'promotions'])
+const expandedMenus = ref<string[]>(['home', 'products', 'promotions', 'brands'])
 
 // 判断路由是否激活
 const isActive = (path: string) => route.path === path
@@ -198,7 +215,8 @@ async function handleChangePwd() {
         <el-dropdown trigger="click" @command="handleUserCommand">
           <div class="user-info">
             <div class="user-avatar">
-              <i class="fas fa-user"></i>
+              <img v-if="authStore.avatarUrl" :src="authStore.avatarUrl" alt="头像" class="avatar-img" />
+              <i v-else class="fas fa-user"></i>
             </div>
             <span class="user-name">{{ authStore.displayName }}</span>
             <i class="fas fa-chevron-down user-arrow"></i>
@@ -401,6 +419,13 @@ async function handleChangePwd() {
   justify-content: center;
   color: #fff;
   font-size: 14px;
+  overflow: hidden;
+}
+
+.user-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-name {

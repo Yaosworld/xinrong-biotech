@@ -10,11 +10,15 @@ import uploadRouter from './routes/upload'
 import categoryImageRouter from './routes/categoryImage'
 import promotionImageRouter from './routes/promotionImage'
 import homeImageRouter from './routes/homeImage'
+import brandImageRouter from './routes/brandImage'
+import avatarImageRouter from './routes/avatarImage'
 import { authenticate } from './middleware/auth'
 import { categoryService } from './services/categoryService'
 import { categoryImageService } from './services/categoryImageService'
 import { promotionImageService } from './services/promotionImageService'
 import { homeImageService } from './services/homeImageService'
+import { brandImageService } from './services/brandImageService'
+import { avatarImageService } from './services/avatarImageService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -37,6 +41,8 @@ app.use('/api/admin/upload', authenticate, uploadRouter)
 app.use('/api/admin/category-images', authenticate, categoryImageRouter)
 app.use('/api/admin/promotion-images', authenticate, promotionImageRouter)
 app.use('/api/admin/home-images', authenticate, homeImageRouter)
+app.use('/api/admin/brand-images', authenticate, brandImageRouter)
+app.use('/api/admin/avatar-images', authenticate, avatarImageRouter)
 app.use('/api/admin', authenticate, adminRouter)
 
 // 健康检查
@@ -71,6 +77,20 @@ async function start() {
     const homeSyncResult = homeImageService.syncFromFileSystem()
     if (homeSyncResult.added > 0) {
       console.log(`🏠 同步了 ${homeSyncResult.added} 张首页图片到数据库`)
+    }
+    
+    // 初始化品牌图片表并同步文件系统
+    brandImageService.initTable()
+    const brandSyncResult = brandImageService.syncFromFileSystem()
+    if (brandSyncResult.added > 0) {
+      console.log(`🏷️ 同步了 ${brandSyncResult.added} 张品牌图片到数据库`)
+    }
+    
+    // 初始化头像图片表并同步文件系统
+    avatarImageService.initTable()
+    const avatarSyncResult = avatarImageService.syncFromFileSystem()
+    if (avatarSyncResult.added > 0) {
+      console.log(`👤 同步了 ${avatarSyncResult.added} 张头像图片到数据库`)
     }
     
     app.listen(PORT, () => {

@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminUserApi } from '@/api/authApi'
+import AvatarImagePicker from '@/components/admin/AvatarImagePicker.vue'
 
 interface AdminUser {
   id: number
@@ -10,6 +11,8 @@ interface AdminUser {
   displayName: string | null
   email: string | null
   phone: string | null
+  avatarId: number | null
+  avatarUrl?: string
   status: 'active' | 'disabled'
   lastLoginAt: string | null
   createdAt: string
@@ -31,7 +34,9 @@ const form = reactive({
   displayName: '',
   role: 'admin' as 'super_admin' | 'admin',
   email: '',
-  phone: ''
+  phone: '',
+  avatarId: null as number | null,
+  avatarUrl: ''
 })
 
 // 重置密码弹窗
@@ -43,10 +48,17 @@ async function loadUsers() {
   loading.value = true
   try {
     const res = await adminUserApi.getList({ page: pagination.value.page, pageSize: pagination.value.pageSize })
+    console.log('Admin users API response:', res)
     if (res.success) {
       users.value = res.data
       pagination.value.total = res.pagination.total
+    } else {
+      // 显示错误信息
+      ElMessage.error(res.error?.message || '获取管理员列表失败')
     }
+  } catch (err: any) {
+    console.error('Admin users API error:', err)
+    ElMessage.error('网络错误，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -56,7 +68,7 @@ function openCreate() {
   dialogTitle.value = '新增管理员'
   isEdit.value = false
   editingId.value = null
-  Object.assign(form, { username: '', password: '', displayName: '', role: 'admin', email: '', phone: '' })
+  Object.assign(form, { username: '', password: '', displayName: '', role: 'admin', email: '', phone: '', avatarId: null, avatarUrl: '' })
   dialogVisible.value = true
 }
 
@@ -70,9 +82,22 @@ function openEdit(user: AdminUser) {
     displayName: user.displayName || '',
     role: user.role,
     email: user.email || '',
-    phone: user.phone || ''
+    phone: user.phone || '',
+    avatarId: user.avatarId,
+    avatarUrl: user.avatarUrl || ''
   })
   dialogVisible.value = true
+}
+
+// 处理头像变更
+function handleAvatarChange(imageInfo: { id: number | null; url: string; filename: string } | null) {
+  if (imageInfo) {
+    form.avatarId = imageInfo.id
+    form.avatarUrl = imageInfo.url
+  } else {
+    form.avatarId = null
+    form.avatarUrl = ''
+  }
 }
 
 async function handleSubmit() {
@@ -93,7 +118,8 @@ async function handleSubmit() {
         displayName: form.displayName,
         email: form.email,
         phone: form.phone,
-        role: form.role
+        role: form.role,
+        avatarId: form.avatarId
       })
       if (res.success) {
         ElMessage.success('更新成功')
@@ -192,6 +218,14 @@ onMounted(() => loadUsers())
     </div>
     
     <el-table :data="users" v-loading="loading" stripe>
+      <el-table-column label="头像" width="70">
+        <template #default="{ row }">
+          <div class="avatar-cell">
+            <img v-if="row.avatarUrl" :src="row.avatarUrl" class="avatar-img" />
+            <i v-else class="fas fa-user-circle avatar-placeholder"></i>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="username" label="用户名" width="120" />
       <el-table-column prop="displayName" label="显示名称" width="140">
         <template #default="{ row }">{{ row.displayName || '-' }}</template>
@@ -236,6 +270,13 @@ onMounted(() => loadUsers())
         </el-form-item>
         <el-form-item label="显示名称">
           <el-input v-model="form.displayName" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="头像">
+          <AvatarImagePicker
+            v-model="form.avatarId"
+            placeholder="点击选择头像"
+            @image-change="handleAvatarChange"
+          />
         </el-form-item>
         <el-form-item label="角色" required>
           <el-radio-group v-model="form.role">
@@ -289,5 +330,23 @@ onMounted(() => loadUsers())
   margin: 0;
   font-size: 18px;
   color: #333;
+}
+
+.avatar-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  font-size: 36px;
+  color: #c0c4cc;
 }
 </style>

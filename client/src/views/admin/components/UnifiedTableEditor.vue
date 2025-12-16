@@ -11,6 +11,7 @@ import DuplicateReportDialog from './DuplicateReportDialog.vue'
 import ImageUploader from '@/components/admin/ImageUploader.vue'
 import CategoryImagePicker from '@/components/admin/CategoryImagePicker.vue'
 import PromotionImagePicker from '@/components/admin/PromotionImagePicker.vue'
+import BrandImagePicker from '@/components/admin/BrandImagePicker.vue'
 import { ExcelExporter, type ExportColumn, type ExportMode } from '@/utils/excelExporter'
 import { DuplicateDetector, type DuplicateCheckResult } from '@/utils/duplicateDetector'
 
@@ -31,7 +32,7 @@ interface ColumnConfig {
   sortable?: boolean
   editable?: boolean
   fixed?: 'left' | 'right'
-  type?: 'text' | 'number' | 'select' | 'date' | 'boolean' | 'image' | 'textarea' | 'tags' | 'category-image'
+  type?: 'text' | 'number' | 'select' | 'date' | 'boolean' | 'image' | 'textarea' | 'tags' | 'category-image' | 'promotion-image' | 'brand-image'
   options?: { label: string; value: string | number | boolean }[]
   truncate?: number
   showInTable?: boolean
@@ -40,6 +41,8 @@ interface ColumnConfig {
   imageStyle?: 'cover' | 'contain'
   placeholder?: string
   uploadCategory?: UploadCategory  // 图片上传分类
+  imageType?: 'cover' | 'poster' | 'logo' | 'certificate'  // 图片类型（促销：cover/poster，品牌：logo/certificate）
+  getValue?: (row: any) => any  // 自定义取值函数
 }
 
 interface CategoryConfig {
@@ -563,12 +566,55 @@ const handlePromotionImageChange = (key: string, imageInfo: { id: number | null;
   }
 }
 
+// 处理品牌图片变更，同步更新对应的 URL 字段
+const handleBrandImageChange = (key: string, imageInfo: { id: number | null; url: string; filename: string } | null) => {
+  if (imageInfo) {
+    // 根据 key 更新对应的 URL 字段
+    if (key === 'logoId') {
+      editFormData.value.logo_url = imageInfo.url
+    } else if (key === 'certificateId') {
+      editFormData.value.certificate_url = imageInfo.url
+    }
+  } else {
+    if (key === 'logoId') {
+      editFormData.value.logo_url = ''
+    } else if (key === 'certificateId') {
+      editFormData.value.certificate_url = ''
+    }
+  }
+}
+
 const saveEditForm = () => {
   // 验证必填字段
   const requiredCols = props.columns.filter(col => col.required && col.editable !== false)
   for (const col of requiredCols) {
     if (col.type !== 'boolean' && !editFormData.value[col.key]) {
       ElMessage.warning(`请填写 ${col.label}`)
+      return
+    }
+  }
+  
+  // 日期逻辑验证
+  const publishDateCol = props.columns.find(col => col.key === 'publish_date' && col.type === 'date')
+  const startDateCol = props.columns.find(col => col.key === 'start_date' && col.type === 'date')
+  const endDateCol = props.columns.find(col => col.key === 'end_date' && col.type === 'date')
+  
+  // 验证：开始日期 < 结束日期
+  if (startDateCol && endDateCol && editFormData.value.start_date && editFormData.value.end_date) {
+    const startDate = new Date(editFormData.value.start_date)
+    const endDate = new Date(editFormData.value.end_date)
+    if (startDate >= endDate) {
+      ElMessage.warning('开始日期必须早于结束日期')
+      return
+    }
+  }
+  
+  // 验证：发布日期 ≤ 开始日期（发布日期是前台展示日期，应该在活动开始前或当天）
+  if (publishDateCol && startDateCol && editFormData.value.publish_date && editFormData.value.start_date) {
+    const publishDate = new Date(editFormData.value.publish_date)
+    const startDate = new Date(editFormData.value.start_date)
+    if (publishDate > startDate) {
+      ElMessage.warning('发布日期不能晚于开始日期（活动开始前需要先展示）')
       return
     }
   }
@@ -1432,6 +1478,14 @@ onBeforeUnmount(() => {
             <span v-else class="no-image">暂无</span>
           </template>
           
+          <!-- 品牌图片（通过 getValue 或 logo_url/certificate_url 显示） -->
+          <template v-else-if="col.type === 'brand-image'">
+            <div v-if="getCellValue(row, col)" class="image-cell image-contain" @click="handlePreviewImage(getCellValue(row, col))">
+              <img :src="getImageUrl(getCellValue(row, col))" :alt="col.label" @error="(e: Event) => handleImageError(e, row, col)" />
+            </div>
+            <span v-else class="no-image">暂无</span>
+          </template>
+          
           <!-- 布尔 -->
           <template v-else-if="col.type === 'boolean'">
             <el-tag :type="row[col.key] ? 'success' : 'info'" size="small">
@@ -1585,6 +1639,16 @@ onBeforeUnmount(() => {
                 :image-type="(col as any).imageType || 'cover'"
                 :placeholder="col.placeholder || `点击选择${(col as any).imageType === 'poster' ? '海报' : '封面'}图片`"
                 @image-change="(info: any) => handlePromotionImageChange(col.key, info)"
+              />
+            </template>
+            
+            <!-- 品牌图片选择器 -->
+            <template v-else-if="col.type === 'brand-image'">
+              <BrandImagePicker
+                v-model="editFormData[col.key]"
+                :image-type="(col as any).imageType || 'logo'"
+                :placeholder="col.placeholder || `点击选择${(col as any).imageType === 'certificate' ? '授权证书' : 'Logo'}图片`"
+                @image-change="(info: any) => handleBrandImageChange(col.key, info)"
               />
             </template>
             

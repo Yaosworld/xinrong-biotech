@@ -149,6 +149,35 @@
   - 更新路由文件中的导入路径
   - TypeScript 编译通过，无诊断错误
 
+### 2025-12-16（品牌图片库功能）
+- ✅ 完成品牌图片库功能
+  - 创建 `brandImageService.ts` 后端服务（支持 logo/certificate 两种类型）
+  - 创建 `brandImage.ts` 路由
+  - 创建 `BrandImageList.vue` 前端管理页面
+  - 更新 `AdminLayout.vue` 添加品牌二级菜单（品牌列表、品牌图片库）
+  - 修复 `buildImageUrl` 方法，正确处理 `certs/` 目录（而非 `certificates/`）
+  - 添加删除图片时自动清理品牌引用的逻辑
+  - 修复占位图路径问题（创建 `placeholder.png`）
+  - 添加图片加载失败的无限循环保护
+- ✅ 品牌列表与图片库集成
+  - 创建 `BrandImagePicker.vue` 组件（从图片库选择 Logo/证书）
+  - 更新 `UnifiedTableEditor.vue` 支持 `brand-image` 类型
+  - 修改 `BrandsList.vue` 使用图片选择器（logoId/certificateId）
+  - 扩展 `ColumnConfig.imageType` 支持 logo/certificate 类型
+
+### 2025-12-16（管理员头像功能）
+- ✅ 完成管理员头像图片库功能
+  - 创建 `avatarImageService.ts` 后端服务
+  - 创建 `avatarImage.ts` 路由
+  - 创建 `AvatarImageList.vue` 前端头像图片库页面
+  - 创建 `AvatarImagePicker.vue` 头像选择器组件
+  - 更新 `admins` 表添加 `avatar_id` 字段
+  - 更新 `adminUserService.ts` 支持头像字段
+  - 更新 `UserManagement.vue` 添加头像显示和选择功能
+  - 更新 `AdminLayout.vue` 账号管理改为二级菜单（管理员列表、头像图片库）
+  - 更新路由配置添加头像图片库路由
+  - 创建 `public/images/avatars/` 目录
+
 ### 2025-12-15（续）
 - ✅ 完成第三阶段：前端详情页重构
   - 创建 `src/styles/detail-page.css` 共享样式文件（~200行）

@@ -90,6 +90,7 @@ async function initDb(): Promise<SqlJsDatabase> {
       display_name    TEXT,
       email           TEXT,
       phone           TEXT,
+      avatar_id       INTEGER,
       status          TEXT DEFAULT 'active',
       login_attempts  INTEGER DEFAULT 0,
       locked_until    TEXT,
@@ -124,6 +125,9 @@ async function initDb(): Promise<SqlJsDatabase> {
   db.run(`CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action)`)
   db.run(`CREATE INDEX IF NOT EXISTS idx_admin_logs_time ON admin_logs(created_at)`)
   
+  // 数据库迁移：为旧表添加缺失的列
+  migrateAdminsTable(db)
+  
   // 保存数据库
   saveDb()
   
@@ -133,6 +137,20 @@ async function initDb(): Promise<SqlJsDatabase> {
   console.log('📦 Database initialized at:', dbPath)
   
   return db
+}
+
+// 数据库迁移：为 admins 表添加缺失的列
+function migrateAdminsTable(database: SqlJsDatabase) {
+  // 检查 avatar_id 列是否存在
+  const tableInfo = database.exec("PRAGMA table_info(admins)")
+  if (tableInfo.length > 0) {
+    const columns = tableInfo[0].values.map((row: any) => row[1])
+    
+    if (!columns.includes('avatar_id')) {
+      console.log('🔄 迁移: 为 admins 表添加 avatar_id 列')
+      database.run('ALTER TABLE admins ADD COLUMN avatar_id INTEGER')
+    }
+  }
 }
 
 // 初始化默认超级管理员

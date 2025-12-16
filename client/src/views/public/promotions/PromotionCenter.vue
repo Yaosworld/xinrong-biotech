@@ -16,29 +16,8 @@ const bannerStore = useBannerStore()
 // 从 store 获取横幅标语
 const promotionSlogans = computed(() => bannerStore.getSlogans('promotions'))
 
-// 从 store 获取默认统计数据
-const defaultStats = computed(() => bannerStore.getDefaultStats('promotions'))
-
-// 动态统计数据
-const dynamicStats = computed(() => {
-  const activePromotions = promotionStore.activePromotions.length
-
-  return [
-    { key: 'active', number: `${activePromotions}+`, label: '进行中活动' },
-    { key: 'categories', number: '5+', label: '活动分类' },
-    { key: 'views', number: '10K+', label: '浏览次数' }
-  ]
-})
-
-// 优先使用动态数据，如果没有数据则使用默认数据
-const stats = computed(() => {
-  // 如果活动数据已加载且有数据，使用动态统计数据
-  if (promotionStore.promotions.length > 0) {
-    return dynamicStats.value
-  }
-  // 否则使用默认统计数据
-  return defaultStats.value
-})
+// 从 store 获取统计数据（完全由后台配置控制）
+const stats = computed(() => bannerStore.getDefaultStats('promotions'))
 
 // 搜索关键词
 const searchQuery = ref('')

@@ -102,9 +102,32 @@ export const usePromotionStore = defineStore('promotion', () => {
   // Getters
   // ========================================
   
+  /**
+   * 检查促销活动是否已发布（发布日期已到）
+   * 发布日期是管理员设置的前台展示日期
+   */
+  function isPublished(promotion: Promotion): boolean {
+    // 如果没有设置发布日期，默认已发布（向后兼容）
+    if (!promotion.publish_date) return true
+    
+    const beijingNow = getBeijingTime()
+    beijingNow.setHours(0, 0, 0, 0)
+    
+    const publishDate = getBeijingTime(new Date(promotion.publish_date))
+    publishDate.setHours(0, 0, 0, 0)
+    
+    return beijingNow >= publishDate
+  }
+
+  // 已发布的促销活动（发布日期已到）
+  const publishedPromotions = computed(() => {
+    return promotions.value.filter(isPublished)
+  })
+
   // 处理后的促销活动（带状态）- 使用缓存优化
+  // 只处理已发布的活动（发布日期已到的）
   const processedPromotions = computed(() => {
-    return promotions.value.map(promotion => {
+    return publishedPromotions.value.map(promotion => {
       const { status, statusText } = calculateStatus(promotion)
       return {
         ...promotion,

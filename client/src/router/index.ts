@@ -139,6 +139,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/brands/BrandsList.vue'),
         meta: { title: '品牌列表' }
       },
+      // 品牌图片库
+      {
+        path: 'brands/images',
+        name: 'AdminBrandImages',
+        component: () => import('@/views/admin/brands/BrandImageList.vue'),
+        meta: { title: '品牌图片库' }
+      },
       // 促销管理
       {
         path: 'promotions/list',
@@ -174,6 +181,15 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/users/UserManagement.vue'),
         meta: { 
           title: '账号管理',
+          requiresSuperAdmin: true
+        }
+      },
+      {
+        path: 'users/avatars',
+        name: 'AdminAvatars',
+        component: () => import('@/views/admin/users/AvatarImageList.vue'),
+        meta: { 
+          title: '头像图片库',
           requiresSuperAdmin: true
         }
       }

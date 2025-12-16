@@ -38,7 +38,7 @@ router.post('/logout', authenticate, (req, res) => {
 // 获取当前用户信息
 router.get('/me', authenticate, (req, res) => {
   const user = queryOne(
-    `SELECT id, username, role, display_name, email, last_login_at FROM admins WHERE id = ?`,
+    `SELECT id, username, role, display_name, email, avatar_id, last_login_at FROM admins WHERE id = ?`,
     [req.user!.userId]
   )
   
@@ -49,6 +49,15 @@ router.get('/me', authenticate, (req, res) => {
     })
   }
   
+  // 获取头像 URL
+  let avatarUrl = null
+  if (user.avatar_id) {
+    const avatar = queryOne('SELECT filename FROM avatar_images WHERE id = ?', [user.avatar_id])
+    if (avatar) {
+      avatarUrl = `/uploads/images/avatars/${avatar.filename}`
+    }
+  }
+  
   res.json({
     success: true,
     data: {
@@ -57,6 +66,7 @@ router.get('/me', authenticate, (req, res) => {
       role: user.role,
       displayName: user.display_name || user.username,
       email: user.email,
+      avatarUrl,
       lastLoginAt: user.last_login_at
     }
   })

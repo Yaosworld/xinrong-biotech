@@ -21,23 +21,8 @@ const categories = computed(() => categoryStore.categories)
 // 从 store 获取横幅标语
 const productSlogans = computed(() => bannerStore.getSlogans('products'))
 
-// 从 store 获取默认统计数据
-const defaultStats = computed(() => bannerStore.getDefaultStats('products'))
-
-// 动态统计数据 - 使用后端返回的总数
-const dynamicStats = computed(() => [
-  { key: 'products', number: `${productStore.pagination.total}+`, label: '商品种类' },
-  { key: 'categories', number: `${categories.value.length}+`, label: '产品类别' },
-  { key: 'brands', number: `${productStore.allBrands.length}+`, label: '合作品牌' }
-])
-
-// 优先使用动态数据，如果没有数据则使用默认数据
-const stats = computed(() => {
-  if (productStore.pagination.total > 0 || productStore.allBrands.length > 0) {
-    return dynamicStats.value
-  }
-  return defaultStats.value
-})
+// 从 store 获取统计数据（完全由后台配置控制）
+const stats = computed(() => bannerStore.getDefaultStats('products'))
 
 // 搜索关键词
 const searchQuery = ref('')
