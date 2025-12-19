@@ -225,7 +225,9 @@ export function createImageRouter(service: ImageService, config: ImageRouteConfi
         ? (req.query.type as string) || config.defaultImageType 
         : undefined
       
-      const image = service.add(req.file.filename, req.file.originalname, imageType)
+      // 解码原始文件名（处理中文编码）
+      const originalName = decodeFilename(req.file.originalname)
+      const image = service.add(req.file.filename, originalName, imageType)
       res.json({ success: true, data: image })
     } catch (e) {
       // 如果添加记录失败，删除已上传的文件
@@ -262,10 +264,13 @@ export function createImageRouter(service: ImageService, config: ImageRouteConfi
       
       for (const file of files) {
         try {
-          const image = service.add(file.filename, file.originalname, imageType)
+          // 解码原始文件名（处理中文编码）
+          const originalName = decodeFilename(file.originalname)
+          const image = service.add(file.filename, originalName, imageType)
           results.push(image)
         } catch (e) {
-          errors.push(`${file.originalname}: ${(e as Error).message}`)
+          const originalName = decodeFilename(file.originalname)
+          errors.push(`${originalName}: ${(e as Error).message}`)
           // 删除上传失败的文件
           const filePath = getUploadedFilePath(config, file.filename, imageType)
           if (fs.existsSync(filePath)) {
@@ -303,6 +308,56 @@ export function createImageRouter(service: ImageService, config: ImageRouteConfi
       } else {
         res.status(400).json({ success: false, error: result.error })
       }
+    } catch (e) {
+      res.status(500).json({ success: false, error: (e as Error).message })
+    }
+  })
+  
+  // ========================================
+  // POST /batch-delete - 批量删除图片
+  // ========================================
+  router.post('/batch-delete', (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body
+      if (!Array.isArray(ids) || ids.length === 0) {
+        res.status(400).json({ success: false, error: '请提供要删除的图片ID列表' })
+        return
+      }
+      
+      let successCount = 0
+      let failCount = 0
+      const errors: string[] = []
+      
+      for (const id of ids) {
+        const numId = parseInt(id, 10)
+        if (isNaN(numId)) {
+          failCount++
+          errors.push(`无效的ID: ${id}`)
+          continue
+        }
+        
+        const image = service.getById(numId)
+        if (!image) {
+          failCount++
+          errors.push(`图片不存在: ${id}`)
+          continue
+        }
+        
+        const result = service.delete(numId)
+        if (result.success) {
+          successCount++
+        } else {
+          failCount++
+          errors.push(`${image.filename}: ${result.error}`)
+        }
+      }
+      
+      res.json({
+        success: true,
+        successCount,
+        failCount,
+        errors: errors.length > 0 ? errors : undefined
+      })
     } catch (e) {
       res.status(500).json({ success: false, error: (e as Error).message })
     }

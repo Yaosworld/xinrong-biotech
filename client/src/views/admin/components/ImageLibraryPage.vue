@@ -195,7 +195,7 @@ const deleteImage = async (img: ImageItem) => {
       : ''
     
     await ElMessageBox.confirm(
-      `确定要删除图片「${img.filename}」吗？${usageInfo}此操作不可恢复。`,
+      `确定要删除图片「${img.originalName || img.filename}」吗？${usageInfo}此操作不可恢复。`,
       '删除确认',
       { type: 'warning' }
     )
@@ -243,7 +243,7 @@ const handleImageError = (e: Event) => {
 
 const previewImage = (img: ImageItem) => {
   previewUrl.value = img.url
-  previewFilename.value = img.filename
+  previewFilename.value = img.originalName || img.filename
   previewVisible.value = true
 }
 
@@ -277,7 +277,7 @@ const downloadImage = async (img: ImageItem) => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = img.filename
+    a.download = img.originalName || img.filename
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -430,7 +430,7 @@ onMounted(() => {
           :style="aspectRatioStyle"
           @click.stop="!selectionMode && previewImage(img)"
         >
-          <img :src="img.url" :alt="img.filename" @error="handleImageError" />
+          <img :src="img.url" :alt="img.filename" loading="lazy" @error="handleImageError" />
           <div v-if="isImageUsed(img)" class="used-badge">
             <i class="fas fa-link"></i> {{ getUsageLabel(img) }}
           </div>
@@ -451,7 +451,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="image-info">
-          <span class="filename" :title="img.filename">{{ img.filename }}</span>
+          <span class="filename" :title="img.originalName || img.filename">{{ img.originalName || img.filename }}</span>
           <div class="actions">
             <el-button
               v-if="config.usageMode === 'shared' || !img.usedByCategoryId"

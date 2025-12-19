@@ -8,6 +8,7 @@
  * 3. 删除未使用的图片
  */
 import { ref, computed, onMounted } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface CategoryImage {
@@ -121,7 +122,7 @@ const deleteImage = async (img: CategoryImage) => {
   
   try {
     await ElMessageBox.confirm(
-      `确定要删除图片「${img.filename}」吗？此操作不可恢复。`,
+      `确定要删除图片「${img.originalName || img.filename}」吗？此操作不可恢复。`,
       '删除确认',
       { type: 'warning' }
     )
@@ -175,7 +176,7 @@ const handleImageError = (e: Event) => {
 // 预览图片
 const previewImage = (img: CategoryImage) => {
   previewUrl.value = img.url
-  previewFilename.value = img.filename
+  previewFilename.value = img.originalName || img.filename
   previewVisible.value = true
 }
 
@@ -213,7 +214,7 @@ const downloadImage = async (img: CategoryImage) => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = img.filename
+    a.download = img.originalName || img.filename
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -244,6 +245,68 @@ const downloadSelected = async () => {
   
   ElMessage.success(`已下载 ${selectedList.length} 张图片`)
 }
+
+// 批量删除
+const deleteSelected = async () => {
+  if (selectedImages.value.size === 0) {
+    ElMessage.warning('请先选择要删除的图片')
+    return
+  }
+  
+  const selectedList = images.value.filter(img => selectedImages.value.has(img.id))
+  const usedCount = selectedList.filter(img => img.usedByCategoryId).length
+  
+  if (usedCount > 0) {
+    ElMessage.warning(`选中的图片中有 ${usedCount} 张正在使用中，无法删除`)
+    return
+  }
+  
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedList.length} 张图片吗？此操作不可恢复。`,
+      '批量删除确认',
+      { type: 'warning' }
+    )
+    
+    const token = localStorage.getItem('admin_token') || ''
+    const res = await fetch('/api/admin/category-images/batch-delete', {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids: Array.from(selectedImages.value) })
+    })
+    
+    const result = await res.json()
+    if (result.success) {
+      ElMessage.success(`成功删除 ${result.successCount} 张图片${result.failCount > 0 ? `，${result.failCount} 张失败` : ''}`)
+      selectedImages.value.clear()
+      selectionMode.value = false
+      await loadImages()
+    } else {
+      ElMessage.error(result.error || '删除失败')
+    }
+  } catch {
+    // 用户取消
+  }
+}
+
+// 停止所有图片加载（路由离开时调用）
+const stopImageLoading = () => {
+  const container = document.querySelector('.image-grid')
+  if (container) {
+    const imgs = container.querySelectorAll('img')
+    imgs.forEach(img => {
+      img.src = ''
+    })
+  }
+}
+
+// 路由离开时停止图片加载，释放连接
+onBeforeRouteLeave(() => {
+  stopImageLoading()
+})
 
 onMounted(() => {
   loadImages()
@@ -292,6 +355,14 @@ onMounted(() => {
             <i class="fas fa-download mr-1"></i> 
             下载 ({{ selectedImages.size }})
           </el-button>
+          <el-button 
+            type="danger" 
+            :disabled="selectedImages.size === 0"
+            @click="deleteSelected"
+          >
+            <i class="fas fa-trash mr-1"></i> 
+            删除 ({{ selectedImages.size }})
+          </el-button>
         </template>
         <el-button type="primary" :loading="uploading" @click="triggerUpload">
           <i class="fas fa-cloud-upload-alt mr-1"></i> 上传图片
@@ -325,7 +396,7 @@ onMounted(() => {
         @click="selectionMode ? toggleImageSelection(img) : null"
       >
         <div class="image-preview" @click.stop="!selectionMode && previewImage(img)">
-          <img :src="img.url" :alt="img.filename" @error="handleImageError" />
+          <img :src="img.url" :alt="img.filename" loading="lazy" @error="handleImageError" />
           <div v-if="img.usedByCategoryId" class="used-badge">
             <i class="fas fa-link"></i> {{ img.usedByCategoryId }}
           </div>
@@ -348,7 +419,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="image-info">
-          <span class="filename" :title="img.filename">{{ img.filename }}</span>
+          <span class="filename" :title="img.originalName || img.filename">{{ img.originalName || img.filename }}</span>
           <div class="actions">
             <el-button
               v-if="!img.usedByCategoryId"

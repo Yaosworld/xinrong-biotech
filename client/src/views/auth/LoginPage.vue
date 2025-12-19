@@ -65,7 +65,7 @@ function goHome() {
       </div>
       
       <h1 class="login-title">后台管理系统</h1>
-      <p class="login-subtitle">生物科技企业官网</p>
+      <p class="login-subtitle">广州信荣生物科技有限公司</p>
       
       <form class="login-form" @submit.prevent="handleLogin">
         <div class="form-item">

@@ -5,6 +5,7 @@
  * 管理网站设置相关的图片资源（Logo、二维码等）
  */
 import { ref, computed, onMounted } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface SiteImage {
@@ -25,6 +26,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const previewVisible = ref(false)
 const previewUrl = ref('')
 const previewFilename = ref('')
+
+// 选择模式
+const selectionMode = ref(false)
+const selectedImages = ref<Set<number>>(new Set())
 
 // 统计信息
 const stats = computed(() => {
@@ -113,7 +118,7 @@ const deleteImage = async (img: SiteImage) => {
       : '此操作不可恢复。'
     
     await ElMessageBox.confirm(
-      `确定要删除图片「${img.filename}」吗？${warningMessage}`,
+      `确定要删除图片「${img.originalName || img.filename}」吗？${warningMessage}`,
       '删除确认',
       { type: img.usageCount > 0 ? 'error' : 'warning' }
     )
@@ -157,9 +162,134 @@ const handleImageError = (e: Event) => {
 // 预览图片
 const previewImage = (img: SiteImage) => {
   previewUrl.value = img.url
-  previewFilename.value = img.filename
+  previewFilename.value = img.originalName || img.filename
   previewVisible.value = true
 }
+
+// 切换选择模式
+const toggleSelectionMode = () => {
+  selectionMode.value = !selectionMode.value
+  if (!selectionMode.value) {
+    selectedImages.value.clear()
+  }
+}
+
+// 切换图片选择
+const toggleImageSelection = (img: SiteImage) => {
+  if (selectedImages.value.has(img.id)) {
+    selectedImages.value.delete(img.id)
+  } else {
+    selectedImages.value.add(img.id)
+  }
+}
+
+// 全选/取消全选
+const toggleSelectAll = () => {
+  if (selectedImages.value.size === images.value.length) {
+    selectedImages.value.clear()
+  } else {
+    selectedImages.value = new Set(images.value.map(img => img.id))
+  }
+}
+
+// 下载单张图片
+const downloadImage = async (img: SiteImage) => {
+  try {
+    const response = await fetch(img.url)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = img.originalName || img.filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('下载失败')
+  }
+}
+
+// 批量下载
+const downloadSelected = async () => {
+  if (selectedImages.value.size === 0) {
+    ElMessage.warning('请先选择要下载的图片')
+    return
+  }
+  
+  const selectedList = images.value.filter(img => selectedImages.value.has(img.id))
+  ElMessage.info(`开始下载 ${selectedList.length} 张图片...`)
+  
+  for (let i = 0; i < selectedList.length; i++) {
+    await downloadImage(selectedList[i])
+    if (i < selectedList.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 300))
+    }
+  }
+  
+  ElMessage.success(`已下载 ${selectedList.length} 张图片`)
+}
+
+// 批量删除
+const deleteSelected = async () => {
+  if (selectedImages.value.size === 0) {
+    ElMessage.warning('请先选择要删除的图片')
+    return
+  }
+  
+  const selectedList = images.value.filter(img => selectedImages.value.has(img.id))
+  const usedCount = selectedList.filter(img => img.usageCount > 0).length
+  
+  const warningMessage = usedCount > 0 
+    ? `其中 ${usedCount} 张正在网站设置中使用，删除后需要重新设置。`
+    : ''
+  
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedList.length} 张图片吗？${warningMessage}此操作不可恢复。`,
+      '批量删除确认',
+      { type: usedCount > 0 ? 'error' : 'warning' }
+    )
+    
+    const token = localStorage.getItem('admin_token') || ''
+    const res = await fetch('/api/admin/site-images/batch-delete', {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids: Array.from(selectedImages.value) })
+    })
+    
+    const result = await res.json()
+    if (result.success) {
+      ElMessage.success(`成功删除 ${result.successCount} 张图片${result.failCount > 0 ? `，${result.failCount} 张失败` : ''}`)
+      selectedImages.value.clear()
+      selectionMode.value = false
+      await loadImages()
+    } else {
+      ElMessage.error(result.error || '删除失败')
+    }
+  } catch {
+    // 用户取消
+  }
+}
+
+// 停止所有图片加载（路由离开时调用）
+const stopImageLoading = () => {
+  const container = document.querySelector('.image-grid')
+  if (container) {
+    const imgs = container.querySelectorAll('img')
+    imgs.forEach(img => {
+      img.src = ''
+    })
+  }
+}
+
+// 路由离开时停止图片加载，释放连接
+onBeforeRouteLeave(() => {
+  stopImageLoading()
+})
 
 onMounted(() => {
   loadImages()
@@ -185,6 +315,35 @@ onMounted(() => {
         </div>
       </div>
       <div class="header-actions">
+        <el-button 
+          :type="selectionMode ? 'warning' : 'default'" 
+          @click="toggleSelectionMode"
+        >
+          <i class="fas fa-check-square mr-1"></i> 
+          {{ selectionMode ? '取消选择' : '批量下载' }}
+        </el-button>
+        <template v-if="selectionMode">
+          <el-button @click="toggleSelectAll">
+            <i class="fas fa-check-double mr-1"></i>
+            {{ selectedImages.size === images.length ? '取消全选' : '全选' }}
+          </el-button>
+          <el-button 
+            type="success" 
+            :disabled="selectedImages.size === 0"
+            @click="downloadSelected"
+          >
+            <i class="fas fa-download mr-1"></i> 
+            下载 ({{ selectedImages.size }})
+          </el-button>
+          <el-button 
+            type="danger" 
+            :disabled="selectedImages.size === 0"
+            @click="deleteSelected"
+          >
+            <i class="fas fa-trash mr-1"></i> 
+            删除 ({{ selectedImages.size }})
+          </el-button>
+        </template>
         <el-button type="primary" :loading="uploading" @click="triggerUpload">
           <i class="fas fa-cloud-upload-alt mr-1"></i> 上传图片
         </el-button>
@@ -216,17 +375,30 @@ onMounted(() => {
         v-for="img in sortedImages"
         :key="img.id"
         class="image-card"
-        :class="{ used: img.usageCount > 0 }"
+        :class="{ 
+          used: img.usageCount > 0,
+          selected: selectionMode && selectedImages.has(img.id)
+        }"
+        @click="selectionMode ? toggleImageSelection(img) : null"
       >
-        <div class="image-preview" @click="previewImage(img)">
-          <img :src="img.url" :alt="img.filename" @error="handleImageError" />
+        <div class="image-preview" @click.stop="!selectionMode && previewImage(img)">
+          <img :src="img.url" :alt="img.filename" loading="lazy" @error="handleImageError" />
           <div v-if="img.usageCount > 0" class="usage-badge">
             <i class="fas fa-link"></i> 使用中
           </div>
-          <div class="hover-actions">
+          <!-- 选择模式下的勾选框 -->
+          <div v-if="selectionMode" class="selection-checkbox" @click.stop="toggleImageSelection(img)">
+            <i :class="selectedImages.has(img.id) ? 'fas fa-check-circle' : 'far fa-circle'"></i>
+          </div>
+          <div v-if="!selectionMode" class="hover-actions">
             <el-tooltip content="放大预览" placement="top">
               <button class="action-btn" @click.stop="previewImage(img)">
                 <i class="fas fa-search-plus"></i>
+              </button>
+            </el-tooltip>
+            <el-tooltip content="下载图片" placement="top">
+              <button class="action-btn" @click.stop="downloadImage(img)">
+                <i class="fas fa-download"></i>
               </button>
             </el-tooltip>
             <el-tooltip content="复制路径" placement="top">
@@ -237,7 +409,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="image-info">
-          <span class="filename" :title="img.filename">{{ img.filename }}</span>
+          <span class="filename" :title="img.originalName || img.filename">{{ img.originalName || img.filename }}</span>
           <div class="actions">
             <el-button
               type="danger"
@@ -380,6 +552,37 @@ onMounted(() => {
 
 .image-card.used {
   border: 2px solid #409eff;
+}
+
+/* 选中状态 */
+.image-card.selected {
+  border: 2px solid #67c23a;
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2);
+}
+
+/* 选择复选框 */
+.selection-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.selection-checkbox i {
+  font-size: 20px;
+  color: #67c23a;
+}
+
+.selection-checkbox .fa-circle {
+  color: #c0c4cc;
 }
 
 .image-preview {

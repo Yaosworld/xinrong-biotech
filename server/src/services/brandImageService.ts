@@ -60,7 +60,7 @@ class BrandImageServiceImpl extends BaseImageService<BrandImage> {
    */
   protected buildImageUrl(filename: string, imageType?: string): string {
     const subDir = imageType ? TYPE_TO_DIR[imageType as BrandImageType] : 'logos'
-    return `/images/brands/${subDir}/${filename}`
+    return `/uploads/images/brands/${subDir}/${filename}`
   }
   
   /**

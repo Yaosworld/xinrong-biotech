@@ -199,8 +199,7 @@ export const useSiteStore = defineStore('site', () => {
 
   // 获取版权信息
   const copyright = computed(() => {
-    const year = new Date().getFullYear()
-    return `© ${year} ${company.value.name} 版权所有`
+    return `© 2025 ${company.value.name} 版权所有`
   })
 
   // 悬浮面板完整数据（组合 contact 信息）

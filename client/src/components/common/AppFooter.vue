@@ -136,6 +136,29 @@ const copyright = computed(() => siteStore.copyright)
     <div class="bg-dark-900 py-4">
       <div class="container-base text-center text-sm text-dark-500">
         <p>{{ copyright }}</p>
+        <p class="mt-2 flex items-center justify-center gap-4 flex-wrap">
+          <a 
+            href="https://beian.miit.gov.cn/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="hover:text-white transition-colors"
+          >
+            ICP备案号：粤ICP备2025507620号
+          </a>
+          <span class="flex items-center gap-1">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm4 10H8v-1c0-1.33 2.67-2 4-2s4 .67 4 2v1z"/>
+            </svg>
+            <a 
+              href="http://www.beian.gov.cn/portal/registerSystemInfo" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="hover:text-white transition-colors"
+            >
+              粤公网安备 44xxxxxxxxx号
+            </a>
+          </span>
+        </p>
       </div>
     </div>
   </footer>

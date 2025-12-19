@@ -249,7 +249,7 @@ router.beforeEach(async (to, _from, next) => {
   }
   
   // 设置页面标题
-  const baseTitle = '生物科技企业官网'
+  const baseTitle = '广州信荣生物科技有限公司'
   const pageTitle = to.meta.title as string
   document.title = pageTitle ? `${pageTitle} - ${baseTitle}` : baseTitle
   
