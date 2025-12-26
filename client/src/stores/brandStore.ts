@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Brand } from '@/types'
+import type { Brand, BrandType } from '@/types'
 import { contentApi } from '@/api/contentApi'
 
 export const useBrandStore = defineStore('brand', () => {
@@ -13,20 +13,60 @@ export const useBrandStore = defineStore('brand', () => {
   const initialized = ref(false)
 
   // ========================================
+  // 辅助函数：获取品牌类型（兼容旧数据）
+  // ========================================
+  function getBrandType(brand: Brand): BrandType {
+    // 优先使用新字段
+    if (brand.brand_type) return brand.brand_type
+    // 兼容旧数据：is_own_brand=true 映射为 'own'，否则为 'partner'
+    return brand.is_own_brand === true ? 'own' : 'partner'
+  }
+
+  // ========================================
   // Getters
   // ========================================
 
-  // 自主品牌列表（按 sort_order 排序）
+  // 按类型获取品牌列表
+  const getBrandsByType = (type: BrandType) => {
+    return computed(() => {
+      return brands.value
+        .filter(brand => getBrandType(brand) === type)
+        .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
+    })
+  }
+
+  // 自主品牌列表
   const ownBrands = computed(() => {
     return brands.value
-      .filter(brand => brand.is_own_brand === true)
+      .filter(brand => getBrandType(brand) === 'own')
       .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
   })
 
-  // 代理品牌列表（按 sort_order 排序）
+  // 独家代理品牌列表
+  const exclusiveBrands = computed(() => {
+    return brands.value
+      .filter(brand => getBrandType(brand) === 'exclusive')
+      .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
+  })
+
+  // 一级代理品牌列表
+  const primaryBrands = computed(() => {
+    return brands.value
+      .filter(brand => getBrandType(brand) === 'primary')
+      .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
+  })
+
+  // 合作品牌列表
+  const partnerBrands = computed(() => {
+    return brands.value
+      .filter(brand => getBrandType(brand) === 'partner')
+      .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
+  })
+
+  // 代理品牌列表（兼容旧代码：非自主品牌）
   const agentBrands = computed(() => {
     return brands.value
-      .filter(brand => brand.is_own_brand !== true)
+      .filter(brand => getBrandType(brand) !== 'own')
       .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
   })
 
@@ -45,14 +85,30 @@ export const useBrandStore = defineStore('brand', () => {
     return [...brands.value].sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
   })
 
+  // 获取各分类的品牌数量
+  const brandCountByType = computed(() => {
+    const counts: Record<BrandType, number> = {
+      own: 0,
+      exclusive: 0,
+      primary: 0,
+      partner: 0
+    }
+    brands.value.forEach(brand => {
+      const type = getBrandType(brand)
+      counts[type]++
+    })
+    return counts
+  })
+
   // 调整品牌排序（上移/下移）
   function moveBrand(brandId: string, direction: 'up' | 'down') {
     const brand = brands.value.find(b => b.id === brandId)
     if (!brand) return
 
-    // 获取同类品牌列表（自主品牌或代理品牌）
+    const brandType = getBrandType(brand)
+    // 获取同类品牌列表
     const sameCategoryBrands = brands.value
-      .filter(b => b.is_own_brand === brand.is_own_brand)
+      .filter(b => getBrandType(b) === brandType)
       .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
 
     const currentIndex = sameCategoryBrands.findIndex(b => b.id === brandId)
@@ -70,21 +126,16 @@ export const useBrandStore = defineStore('brand', () => {
 
   // 重新计算排序值（确保连续且不重复）
   function recalculateSortOrder() {
-    // 分别处理自主品牌和代理品牌
-    const ownList = brands.value
-      .filter(b => b.is_own_brand === true)
-      .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
+    const types: BrandType[] = ['own', 'exclusive', 'primary', 'partner']
     
-    const agentList = brands.value
-      .filter(b => b.is_own_brand !== true)
-      .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
-
-    ownList.forEach((brand, index) => {
-      brand.sort_order = index + 1
-    })
-
-    agentList.forEach((brand, index) => {
-      brand.sort_order = index + 1
+    types.forEach(type => {
+      const list = brands.value
+        .filter(b => getBrandType(b) === type)
+        .sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
+      
+      list.forEach((brand, index) => {
+        brand.sort_order = index + 1
+      })
     })
   }
 
@@ -149,10 +200,15 @@ export const useBrandStore = defineStore('brand', () => {
 
     // Getters
     ownBrands,
+    exclusiveBrands,
+    primaryBrands,
+    partnerBrands,
     agentBrands,
     domesticBrands,
     internationalBrands,
     sortedBrands,
+    brandCountByType,
+    getBrandsByType,
 
     // Actions
     loadBrands,

@@ -33,7 +33,14 @@
       >
         <div class="tooltip-title">{{ panelData.email.title }}</div>
         <div class="tooltip-content">
-          {{ panelData.email.content }}
+          <div class="contact-item">
+            <span class="contact-label">邮箱：</span>
+            <span class="contact-value">{{ panelData.email.content }}</span>
+          </div>
+          <div class="contact-item" v-if="panelData.email.qq">
+            <span class="contact-label">QQ：</span>
+            <span class="contact-value">{{ panelData.email.qq }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -188,7 +195,7 @@ const backToTop = () => {
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
-  min-width: 200px;
+  white-space: nowrap;
   z-index: 1000;
 }
 
@@ -238,6 +245,25 @@ const backToTop = () => {
 }
 
 .phone-number {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.contact-item {
+  margin-bottom: 5px;
+}
+
+.contact-item:last-child {
+  margin-bottom: 0;
+}
+
+.contact-label {
+  font-weight: 600;
+  color: #333;
+  margin-right: 5px;
+}
+
+.contact-value {
   color: #2563eb;
   font-weight: 500;
 }

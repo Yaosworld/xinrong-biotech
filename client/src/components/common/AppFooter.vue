@@ -104,6 +104,12 @@ const copyright = computed(() => siteStore.copyright)
         <div>
           <h3 class="font-semibold mb-4">联系我们</h3>
           <div class="space-y-3">
+            <!-- QQ -->
+            <div v-if="contact.qq" class="flex items-center gap-2 text-sm text-dark-400">
+              <i class="fab fa-qq"></i>
+              <span>{{ contact.qq }}</span>
+            </div>
+
             <!-- 手机号码 -->
             <div class="space-y-1">
               <div 

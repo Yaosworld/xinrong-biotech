@@ -9,6 +9,7 @@ import { contentApi } from '@/api/contentApi'
 export interface ContactInfo {
   phones: string[]
   email: string
+  qq: string
   address: string
   wechatQrcode: string
   gzhQrcode: string
@@ -74,6 +75,7 @@ export const useSiteStore = defineStore('site', () => {
   const contact = ref<ContactInfo>({
     phones: ['15919646073', '13422057239'],
     email: '15919646073@139.com',
+    qq: '3566549322',
     address: '广东省广州市黄埔区云埔街道双井东路2号鸫汇商业中心612',
     wechatQrcode: '/images/common/wx-qrcode-contact.png',
     gzhQrcode: '/images/common/gzh-qrcode.jpg',
@@ -94,7 +96,7 @@ export const useSiteStore = defineStore('site', () => {
   // ========================================
   const footerLinks = ref<FooterLink[]>([
     { name: '产品中心', path: '/products' },
-    { name: '资讯中心', path: '/promotions' },
+    { name: '资讯中心', path: '/news' },
     { name: '品牌中心', path: '/brands' },
     { name: '关于我们', path: '/about' }
   ])
@@ -109,7 +111,7 @@ export const useSiteStore = defineStore('site', () => {
     },
     email: {
       emoji: '✉️',
-      title: '邮箱地址'
+      title: '联系方式'
     },
     social: {
       emoji: '💬',
@@ -213,7 +215,8 @@ export const useSiteStore = defineStore('site', () => {
     },
     email: {
       ...floatingPanel.value.email,
-      content: contact.value.email
+      content: contact.value.email,
+      qq: contact.value.qq
     },
     social: {
       ...floatingPanel.value.social,

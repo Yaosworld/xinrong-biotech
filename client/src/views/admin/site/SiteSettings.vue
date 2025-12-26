@@ -34,7 +34,7 @@ const companyForm = ref({
 
 // 表单数据 - 联系信息
 const contactForm = ref({
-  phones: ['', ''], email: '', address: '',
+  phones: ['', ''], email: '', qq: '', address: '',
   wechatQrcode: '', gzhQrcode: '', workTime: ''
 })
 
@@ -110,6 +110,7 @@ const loadData = async () => {
     contactForm.value = {
       phones: data.contact?.phones ? [...data.contact.phones] : ['', ''],
       email: data.contact?.email || '',
+      qq: data.contact?.qq || '',
       address: data.contact?.address || '',
       wechatQrcode: data.contact?.wechatQrcode || '',
       gzhQrcode: data.contact?.gzhQrcode || '',
@@ -158,6 +159,7 @@ const loadData = async () => {
     contactForm.value = {
       phones: [...siteStore.contact.phones],
       email: siteStore.contact.email,
+      qq: siteStore.contact.qq,
       address: siteStore.contact.address,
       wechatQrcode: siteStore.contact.wechatQrcode,
       gzhQrcode: siteStore.contact.gzhQrcode,
@@ -475,6 +477,12 @@ onBeforeUnmount(() => {
                   </el-input>
                 </div>
                 <div class="form-item">
+                  <label>QQ号码</label>
+                  <el-input v-model="contactForm.qq" placeholder="请输入QQ号码">
+                    <template #prefix><i class="fab fa-qq"></i></template>
+                  </el-input>
+                </div>
+                <div class="form-item">
                   <label>工作时间</label>
                   <el-input v-model="contactForm.workTime" placeholder="如：周一至周五 8:00 - 17:30">
                     <template #prefix><i class="fas fa-clock"></i></template>
@@ -581,24 +589,36 @@ onBeforeUnmount(() => {
         <div v-if="previewMode === 'floating'" class="preview-content floating-preview">
           <div class="floating-panel-row">
             <div class="float-group">
-              <div class="float-item phone">📞</div>
+              <div class="float-item phone"><i class="fas fa-phone-alt"></i></div>
               <div class="float-tooltip">
                 <div class="tooltip-title">联系电话</div>
-                <div class="tooltip-phones">
-                  <div v-for="(phone, i) in previewPhones" :key="i">号码 {{ i + 1 }}：<span class="phone-num">{{ phone }}</span></div>
-                  <div v-if="previewPhones.length === 0">暂无电话</div>
+                <div class="tooltip-content-list">
+                  <div v-for="(phone, i) in previewPhones" :key="i" class="tooltip-item">
+                    <span class="item-label">号码 {{ i + 1 }}：</span>
+                    <span class="item-value">{{ phone }}</span>
+                  </div>
+                  <div v-if="previewPhones.length === 0" class="tooltip-item">暂无电话</div>
                 </div>
               </div>
             </div>
             <div class="float-group">
-              <div class="float-item email">✉️</div>
+              <div class="float-item email"><i class="fas fa-envelope"></i></div>
               <div class="float-tooltip">
-                <div class="tooltip-title">邮箱地址</div>
-                <div>{{ contactForm.email || 'email@example.com' }}</div>
+                <div class="tooltip-title">联系方式</div>
+                <div class="tooltip-content-list">
+                  <div class="tooltip-item">
+                    <span class="item-label">邮箱：</span>
+                    <span class="item-value">{{ contactForm.email || 'email@example.com' }}</span>
+                  </div>
+                  <div v-if="contactForm.qq" class="tooltip-item">
+                    <span class="item-label">QQ：</span>
+                    <span class="item-value">{{ contactForm.qq }}</span>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="float-group">
-              <div class="float-item social">💬</div>
+              <div class="float-item social"><i class="fab fa-weixin"></i></div>
               <div class="float-tooltip">
                 <div class="tooltip-title">扫码关注</div>
                 <div class="tooltip-qr">
@@ -608,10 +628,10 @@ onBeforeUnmount(() => {
               </div>
             </div>
             <div class="float-group">
-              <div class="float-item top">⬆️</div>
+              <div class="float-item top"><i class="fas fa-arrow-up"></i></div>
               <div class="float-tooltip">
                 <div class="tooltip-title">返回顶部</div>
-                <div>点击回到页面顶部</div>
+                <div class="tooltip-content-list">点击回到页面顶部</div>
               </div>
             </div>
           </div>
@@ -843,17 +863,20 @@ onBeforeUnmount(() => {
 .floating-preview { display: flex; justify-content: center; align-items: center; }
 .floating-panel-row { display: flex; gap: 40px; align-items: flex-start; }
 .float-group { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.float-item { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; border: 3px solid #333; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.float-item { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; border: 3px solid #080808; box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: white; }
 .float-item.phone { background: linear-gradient(45deg, #10b981, #1cc285); }
 .float-item.email { background: linear-gradient(45deg, #f59e0b, #fbbf24); }
 .float-item.social { background: linear-gradient(45deg, #d84040, #d84040); }
 .float-item.top { background: linear-gradient(45deg, #6366f1, #8b5cf6); }
-.float-tooltip { background: #fff; padding: 12px 16px; border-radius: 10px; border: 2px solid #333; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 140px; font-size: 12px; text-align: center; }
-.tooltip-title { font-weight: 600; color: #333; margin-bottom: 6px; font-size: 13px; }
-.tooltip-phones { color: #666; text-align: left; }
-.phone-num { color: #2563eb; font-weight: 500; }
-.tooltip-qr { width: 80px; height: 80px; background: #f0f0f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin: 8px auto 0; overflow: hidden; }
-.tooltip-qr img { width: 100%; height: 100%; object-fit: contain; }
+.float-tooltip { background: #fff; padding: 15px 20px; border-radius: 12px; border: 2px solid #080808; box-shadow: 0 8px 30px rgba(0,0,0,0.15); font-size: 14px; text-align: left; white-space: nowrap; }
+.tooltip-title { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 16px; }
+.tooltip-content-list { color: #666; line-height: 1.5; }
+.tooltip-item { margin-bottom: 5px; }
+.tooltip-item:last-child { margin-bottom: 0; }
+.item-label { font-weight: 600; color: #333; margin-right: 5px; }
+.item-value { color: #2563eb; font-weight: 500; }
+.tooltip-qr { width: 120px; height: 120px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 8px auto 0; overflow: hidden; }
+.tooltip-qr img { width: 100%; height: 100%; object-fit: cover; }
 .tooltip-qr i { font-size: 32px; color: #07c160; }
 
 /* 联系弹窗预览 */

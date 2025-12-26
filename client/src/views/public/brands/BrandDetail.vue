@@ -7,6 +7,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBrandStore } from '@/stores/brandStore'
+import { BRAND_TYPE_CONFIG, type BrandType } from '@/types'
 import DetailPageLayout from '@/components/common/DetailPageLayout.vue'
 
 const route = useRoute()
@@ -21,6 +22,17 @@ const loading = ref(true)
 // 当前品牌
 const brand = computed(() => {
   return brandStore.getBrandById(brandId.value)
+})
+
+// 获取品牌类型（兼容旧数据）
+const brandType = computed((): BrandType => {
+  if (brand.value?.brand_type) return brand.value.brand_type
+  return brand.value?.is_own_brand === true ? 'own' : 'partner'
+})
+
+// 品牌类型标签
+const brandTypeBadge = computed(() => {
+  return BRAND_TYPE_CONFIG[brandType.value]?.label || ''
 })
 
 // 判断是否有有效的证书图片
@@ -86,9 +98,9 @@ onMounted(async () => {
             <div class="brand-titles">
               <div class="flex items-center gap-3 flex-wrap">
                 <h1 class="brand-title">{{ brand?.name }}</h1>
-                <span v-if="brand?.is_own_brand" class="own-brand-badge">
+                <span v-if="brandTypeBadge" class="own-brand-badge">
                   <i class="fas fa-star mr-1"></i>
-                  自主品牌
+                  {{ brandTypeBadge }}
                 </span>
               </div>
               <p v-if="brand?.country" class="brand-subtitle">

@@ -2,11 +2,21 @@
  * 图片路由工厂
  * 
  * 创建通用的图片管理路由，减少重复代码
+ * 支持上传后自动转换为 WebP 格式
  */
 import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
+
+// 动态导入 sharp（可能未安装）
+let sharp: any = null
+try {
+  sharp = require('sharp')
+  console.log('✅ Sharp 已加载，支持 WebP 转换')
+} catch {
+  console.warn('⚠️ Sharp 未安装，图片将保持原格式。安装命令: cd server && npm install sharp')
+}
 
 // ========================================
 // 类型定义
@@ -66,38 +76,87 @@ function decodeFilename(originalname: string): string {
 
 /**
  * 生成安全的文件名
+ * @param convertToWebp 是否转换为 WebP（会改变扩展名）
+ * 
+ * 文件名格式: 原名_时间戳_随机数.扩展名
+ * 这样可以避免浏览器缓存问题（同名文件被删除后重新上传）
  */
 function generateSafeFilename(
   originalName: string, 
   uploadDir: string, 
-  prefix: string = 'image'
+  prefix: string = 'image',
+  convertToWebp: boolean = false
 ): string {
-  const ext = path.extname(originalName).toLowerCase()
-  let baseName = path.basename(originalName, ext)
+  const originalExt = path.extname(originalName).toLowerCase()
+  // 如果要转换为 WebP，使用 .webp 扩展名
+  const ext = convertToWebp && originalExt !== '.webp' && originalExt !== '.gif' ? '.webp' : originalExt
+  
+  let baseName = path.basename(originalName, originalExt)
     .replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_')
     .substring(0, 50)
   
-  // 如果处理后文件名为空或只有下划线，使用时间戳
+  // 如果处理后文件名为空或只有下划线，使用前缀
   if (!baseName || /^_+$/.test(baseName)) {
-    baseName = `${prefix}_${Date.now()}`
+    baseName = prefix
   }
   
-  let filename = `${baseName}${ext}`
-  let fullPath = path.join(uploadDir, filename)
-  
-  // 检查文件名是否已存在，添加计数器
-  let counter = 1
-  while (fs.existsSync(fullPath)) {
-    filename = `${baseName}_${counter}${ext}`
-    fullPath = path.join(uploadDir, filename)
-    counter++
-  }
+  // 添加时间戳和随机字符串，确保文件名唯一，避免浏览器缓存问题
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 6)
+  const filename = `${baseName}_${timestamp}_${random}${ext}`
   
   return filename
 }
 
 /**
+ * 将图片转换为 WebP 格式
+ * @returns 转换后的文件名，如果转换失败返回原文件名
+ */
+async function convertToWebp(
+  sourcePath: string,
+  targetDir: string,
+  targetFilename: string,
+  quality: number = 85
+): Promise<{ filename: string; converted: boolean }> {
+  if (!sharp) {
+    return { filename: path.basename(sourcePath), converted: false }
+  }
+  
+  const ext = path.extname(sourcePath).toLowerCase()
+  
+  // GIF 保持原格式（保留动画）
+  if (ext === '.gif') {
+    return { filename: path.basename(sourcePath), converted: false }
+  }
+  
+  // 已经是 WebP 不需要转换
+  if (ext === '.webp') {
+    return { filename: path.basename(sourcePath), converted: false }
+  }
+  
+  try {
+    const targetPath = path.join(targetDir, targetFilename)
+    
+    await sharp(sourcePath)
+      .webp({ quality })
+      .toFile(targetPath)
+    
+    // 删除原文件
+    if (fs.existsSync(sourcePath)) {
+      fs.unlinkSync(sourcePath)
+    }
+    
+    return { filename: targetFilename, converted: true }
+  } catch (error) {
+    console.error('WebP 转换失败:', error)
+    // 转换失败，保留原文件
+    return { filename: path.basename(sourcePath), converted: false }
+  }
+}
+
+/**
  * 创建 multer 配置
+ * 使用临时文件名保存，后续处理时再转换为 WebP
  */
 function createMulterConfig(config: ImageRouteConfig) {
   const storage = multer.diskStorage({
@@ -116,20 +175,11 @@ function createMulterConfig(config: ImageRouteConfig) {
       cb(null, dir)
     },
     filename: (req, file, cb) => {
+      // 使用临时文件名（保留原扩展名），后续转换时再改名
       const originalName = decodeFilename(file.originalname)
-      let uploadDir = path.join(UPLOAD_BASE, config.imageDir)
-      
-      if (config.hasImageType) {
-        const imageType = (req.query.type as string) || config.defaultImageType || 'default'
-        uploadDir = path.join(uploadDir, `${imageType}s`)
-      }
-      
-      const filename = generateSafeFilename(
-        originalName, 
-        uploadDir, 
-        config.filenamePrefix || 'image'
-      )
-      cb(null, filename)
+      const ext = path.extname(originalName).toLowerCase()
+      const tempFilename = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}${ext}`
+      cb(null, tempFilename)
     }
   })
   
@@ -144,6 +194,52 @@ function createMulterConfig(config: ImageRouteConfig) {
       }
     }
   })
+}
+
+/**
+ * 处理上传的文件：转换为 WebP 并重命名
+ */
+async function processUploadedFile(
+  file: Express.Multer.File,
+  config: ImageRouteConfig,
+  imageType?: string
+): Promise<{ filename: string; originalName: string }> {
+  const originalName = decodeFilename(file.originalname)
+  let uploadDir = path.join(UPLOAD_BASE, config.imageDir)
+  
+  if (config.hasImageType && imageType) {
+    uploadDir = path.join(uploadDir, `${imageType}s`)
+  }
+  
+  const sourcePath = file.path
+  const originalExt = path.extname(originalName).toLowerCase()
+  const shouldConvert = !!sharp && originalExt !== '.webp' && originalExt !== '.gif'
+  
+  // 生成目标文件名（如果要转换，扩展名改为 .webp）
+  const targetFilename = generateSafeFilename(
+    originalName,
+    uploadDir,
+    config.filenamePrefix || 'image',
+    shouldConvert
+  )
+  
+  // 如果转换了格式，originalName 也要改成 .webp 扩展名
+  let displayName = originalName
+  if (shouldConvert) {
+    const baseName = path.basename(originalName, originalExt)
+    displayName = `${baseName}.webp`
+  }
+  
+  if (shouldConvert) {
+    // 转换为 WebP
+    const result = await convertToWebp(sourcePath, uploadDir, targetFilename)
+    return { filename: result.filename, originalName: displayName }
+  } else {
+    // 不转换，只重命名
+    const targetPath = path.join(uploadDir, targetFilename)
+    fs.renameSync(sourcePath, targetPath)
+    return { filename: targetFilename, originalName: displayName }
+  }
 }
 
 /**
@@ -214,31 +310,34 @@ export function createImageRouter(service: ImageService, config: ImageRouteConfi
   // ========================================
   // POST /upload - 上传单张图片
   // ========================================
-  router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
+  router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+    let processedFilename: string | null = null
+    const imageType = config.hasImageType 
+      ? (req.query.type as string) || config.defaultImageType 
+      : undefined
+    
     try {
       if (!req.file) {
         res.status(400).json({ success: false, error: '没有上传文件' })
         return
       }
       
-      const imageType = config.hasImageType 
-        ? (req.query.type as string) || config.defaultImageType 
-        : undefined
+      // 处理上传的文件（转换为 WebP 并重命名）
+      const { filename, originalName } = await processUploadedFile(req.file, config, imageType)
+      processedFilename = filename
       
-      // 解码原始文件名（处理中文编码）
-      const originalName = decodeFilename(req.file.originalname)
-      const image = service.add(req.file.filename, originalName, imageType)
+      const image = service.add(filename, originalName, imageType)
       res.json({ success: true, data: image })
     } catch (e) {
       // 如果添加记录失败，删除已上传的文件
-      if (req.file) {
-        const imageType = config.hasImageType 
-          ? (req.query.type as string) || config.defaultImageType 
-          : undefined
-        const filePath = getUploadedFilePath(config, req.file.filename, imageType)
+      if (processedFilename) {
+        const filePath = getUploadedFilePath(config, processedFilename, imageType)
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath)
         }
+      } else if (req.file && fs.existsSync(req.file.path)) {
+        // 删除临时文件
+        fs.unlinkSync(req.file.path)
       }
       res.status(500).json({ success: false, error: (e as Error).message })
     }
@@ -247,7 +346,7 @@ export function createImageRouter(service: ImageService, config: ImageRouteConfi
   // ========================================
   // POST /batch-upload - 批量上传图片
   // ========================================
-  router.post('/batch-upload', upload.array('files', 20), (req: Request, res: Response) => {
+  router.post('/batch-upload', upload.array('files', 20), async (req: Request, res: Response) => {
     try {
       const files = req.files as Express.Multer.File[]
       if (!files || files.length === 0) {
@@ -263,18 +362,25 @@ export function createImageRouter(service: ImageService, config: ImageRouteConfi
       const errors: string[] = []
       
       for (const file of files) {
+        let processedFilename: string | null = null
         try {
-          // 解码原始文件名（处理中文编码）
-          const originalName = decodeFilename(file.originalname)
-          const image = service.add(file.filename, originalName, imageType)
+          // 处理上传的文件（转换为 WebP 并重命名）
+          const { filename, originalName } = await processUploadedFile(file, config, imageType)
+          processedFilename = filename
+          
+          const image = service.add(filename, originalName, imageType)
           results.push(image)
         } catch (e) {
           const originalName = decodeFilename(file.originalname)
           errors.push(`${originalName}: ${(e as Error).message}`)
           // 删除上传失败的文件
-          const filePath = getUploadedFilePath(config, file.filename, imageType)
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath)
+          if (processedFilename) {
+            const filePath = getUploadedFilePath(config, processedFilename, imageType)
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath)
+            }
+          } else if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path)
           }
         }
       }

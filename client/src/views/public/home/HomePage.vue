@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { useCategoryStore } from '@/stores/categoryStore'
@@ -24,9 +24,6 @@ const categories = computed(() => categoryStore.categories)
 // 从 store 获取区块标题配置
 const sections = computed(() => homeBannerStore.sections)
 
-// 搜索相关
-const searchInputValue = ref('')
-
 // 热门产品（取所有产品排序后的前8个，不受筛选条件影响）
 const featuredProducts = computed(() => {
   // 创建一个临时的排序后的产品列表，不受筛选条件影响
@@ -45,28 +42,16 @@ const featuredProducts = computed(() => {
   return allProducts.slice(0, 8)
 })
 
-// 推荐品牌（自有品牌优先，然后是国外知名品牌，总共取前10个）
+// 推荐品牌（自主品牌优先，然后是独家代理、一级代理，最后是合作品牌，总共取前10个）
 const featuredBrands = computed(() => {
-  // 获取自有品牌
+  // 按优先级获取品牌：自主 > 独家代理 > 一级代理 > 合作
   const ownBrands = brandStore.ownBrands
-  // 获取国外知名品牌（非自有品牌且非中国品牌）
-  const internationalBrands = brandStore.brands.filter(brand =>
-    brand.is_own_brand !== true && brand.country !== '中国'
-  )
+  const exclusiveBrands = brandStore.exclusiveBrands
+  const primaryBrands = brandStore.primaryBrands
+  const partnerBrands = brandStore.partnerBrands
 
-  // 将自有品牌和国外品牌合并，自有品牌在前
-  const combinedBrands = [...ownBrands, ...internationalBrands]
-
-  // 如果数量不足10个，再添加国内代理品牌
-  if (combinedBrands.length < 10) {
-    const domesticAgentBrands = brandStore.brands.filter(brand =>
-      brand.is_own_brand !== true && brand.country === '中国'
-    )
-    combinedBrands.push(...domesticAgentBrands)
-  }
-
-  // 按排序顺序排序
-  combinedBrands.sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999))
+  // 合并所有品牌，按优先级排序
+  const combinedBrands = [...ownBrands, ...exclusiveBrands, ...primaryBrands, ...partnerBrands]
 
   // 返回前10个
   return combinedBrands.slice(0, 10)
@@ -100,19 +85,6 @@ onMounted(async () => {
   ])
 })
 
-// 搜索方法
-const handleSearch = () => {
-  const query = searchInputValue.value.trim()
-  if (query) {
-    router.push({
-      path: '/products',
-      query: { search: query }
-    })
-  } else {
-    router.push('/products')
-  }
-}
-
 // 导航方法
 const goTo = (path: string) => {
   router.push(path)
@@ -122,24 +94,7 @@ const goTo = (path: string) => {
 <template>
   <div class="home-page">
     <!-- 图片轮播横幅 -->
-    <HomeBanner>
-      <!-- 搜索框 -->
-      <div class="mx-auto px-8" style="width: 800px;">
-        <div class="hero-search-box">
-          <i class="fas fa-search hero-search-icon"></i>
-          <input
-            v-model="searchInputValue"
-            type="text"
-            placeholder="搜索产品名称、品牌、货号..."
-            class="hero-search-input"
-            @keyup.enter="handleSearch"
-          />
-          <button class="hero-search-btn" @click="handleSearch">
-            搜索
-          </button>
-        </div>
-      </div>
-    </HomeBanner>
+    <HomeBanner />
 
     <!-- 产品分类快捷入口 -->
     <section class="py-10 bg-white">
@@ -240,51 +195,3 @@ const goTo = (path: string) => {
 
   </div>
 </template>
-
-<style scoped>
-/* 主页横幅搜索框样式 */
-.hero-search-box {
-  @apply flex items-center bg-black rounded-lg;
-  @apply px-6 py-4 shadow-2xl;
-  @apply transition-all duration-300 hover:bg-black;
-  position: relative;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-}
-
-.hero-search-icon {
-  @apply text-white/80 text-xl ml-4 mr-4;
-}
-
-.hero-search-input {
-  @apply flex-1 bg-transparent text-white placeholder-white/70;
-  @apply px-0 py-3 text-lg focus:outline-none;
-  @apply caret-white;
-}
-
-.hero-search-btn {
-  @apply px-10 py-3.5 bg-gray-800 hover:bg-gray-700;
-  @apply text-white rounded font-medium text-base;
-  @apply transition-all duration-200 hover:transform hover:scale-105;
-}
-
-/* 添加发光效果 */
-.hero-search-box:focus-within {
-  border-color: rgba(255, 255, 255, 1);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-}
-
-/* 确保在不同背景图片上都有良好的可读性 */
-@media (prefers-contrast: high) {
-  .hero-search-box {
-    border-color: rgba(255, 255, 255, 1);
-  }
-
-  .hero-search-input {
-    @apply text-white placeholder-white/70;
-  }
-
-  .hero-search-icon {
-    @apply text-white/90;
-  }
-}
-</style>

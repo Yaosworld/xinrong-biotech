@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useBrandStore } from '@/stores/brandStore'
 import { useBannerStore } from '@/stores/bannerStore'
+import { BRAND_TYPE_CONFIG, type BrandType } from '@/types'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
 import BrandCard from '@/components/business/BrandCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -10,15 +11,60 @@ import EmptyState from '@/components/common/EmptyState.vue'
 const brandStore = useBrandStore()
 const bannerStore = useBannerStore()
 
+// 当前选中的分类标签（默认选中第一个分类）
+const activeTab = ref<BrandType | 'all'>('own')
+
+// 品牌分类标签配置
+const brandTabs = computed(() => {
+  const tabs: { key: BrandType | 'all'; label: string; count: number }[] = []
+  
+  // 按顺序添加各分类（只显示有品牌的分类）
+  const types: BrandType[] = ['own', 'exclusive', 'primary', 'partner']
+  types.forEach(type => {
+    const count = brandStore.brandCountByType[type]
+    if (count > 0) {
+      tabs.push({
+        key: type,
+        label: BRAND_TYPE_CONFIG[type].label,
+        count
+      })
+    }
+  })
+  
+  // 全部品牌放在最后
+  tabs.push({ key: 'all', label: '全部品牌', count: brandStore.brands.length })
+  
+  return tabs
+})
+
+// 当前显示的品牌列表
+const displayBrands = computed(() => {
+  if (activeTab.value === 'all') {
+    return brandStore.sortedBrands
+  }
+  
+  switch (activeTab.value) {
+    case 'own': return brandStore.ownBrands
+    case 'exclusive': return brandStore.exclusiveBrands
+    case 'primary': return brandStore.primaryBrands
+    case 'partner': return brandStore.partnerBrands
+    default: return brandStore.sortedBrands
+  }
+})
+
+// 当前分类的标题信息
+const currentTypeInfo = computed(() => {
+  if (activeTab.value === 'all') {
+    return { badge: '全部品牌', subtitle: '优质品牌，值得信赖' }
+  }
+  return BRAND_TYPE_CONFIG[activeTab.value]
+})
+
 // 从 store 获取横幅标语
 const brandSlogans = computed(() => bannerStore.getSlogans('brands'))
 
-// 从 store 获取统计数据（完全由后台配置控制）
+// 从 store 获取统计数据
 const stats = computed(() => bannerStore.getDefaultStats('brands'))
-
-// 使用store中的computed属性
-const ownBrands = computed(() => brandStore.ownBrands)
-const partnerBrands = computed(() => brandStore.agentBrands)
 
 onMounted(async () => {
   await brandStore.loadBrands()
@@ -33,32 +79,31 @@ onMounted(async () => {
       :stats="stats"
     />
     
-    <!-- 自主品牌区 -->
-    <section v-if="ownBrands.length > 0" class="py-12 bg-dark-50">
+    <!-- 品牌分类标签 -->
+    <section class="py-8 bg-white border-b border-gray-100 sticky top-[72px] z-40">
       <div class="container-base">
-        <div class="text-center mb-8">
-          <span class="section-badge">自主品牌</span>
-          <h2 class="section-title">自主研发，品质保证</h2>
-        </div>
-        
-        <!-- 自主品牌使用水平居中布局 -->
-        <div class="flex flex-wrap justify-center gap-4">
-          <div
-            v-for="brand in ownBrands"
-            :key="brand.id"
+        <div class="flex flex-wrap justify-center gap-3">
+          <button
+            v-for="tab in brandTabs"
+            :key="tab.key"
+            @click="activeTab = tab.key"
+            class="brand-tab"
+            :class="{ active: activeTab === tab.key }"
           >
-            <BrandCard :brand="brand" />
-          </div>
+            <span class="tab-label">{{ tab.label }}</span>
+            <span class="tab-count">{{ tab.count }}</span>
+          </button>
         </div>
       </div>
     </section>
     
-    <!-- 甄选品牌区 -->
-    <section class="py-12">
+    <!-- 品牌展示区 -->
+    <section class="py-12 bg-dark-50">
       <div class="container-base">
+        <!-- 分类标题 -->
         <div class="text-center mb-8">
-          <span class="section-badge">甄选品牌</span>
-          <h2 class="section-title">全球知名品牌，值得信赖</h2>
+          <span class="section-badge">{{ currentTypeInfo.badge }}</span>
+          <h2 class="section-title">{{ currentTypeInfo.subtitle }}</h2>
         </div>
         
         <!-- 加载状态 -->
@@ -68,16 +113,16 @@ onMounted(async () => {
         
         <!-- 空状态 -->
         <EmptyState
-          v-else-if="partnerBrands.length === 0 && ownBrands.length === 0"
+          v-else-if="displayBrands.length === 0"
           icon="fas fa-award"
           title="暂无品牌数据"
-          description="品牌数据正在完善中"
+          description="该分类下暂无品牌"
         />
         
         <!-- 品牌网格 -->
         <div v-else class="brands-grid">
           <BrandCard
-            v-for="brand in partnerBrands"
+            v-for="brand in displayBrands"
             :key="brand.id"
             :brand="brand"
           />
@@ -88,7 +133,40 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* 品牌网格 - 使用 flex 布局实现居中 */
 .brands-grid {
-  @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* 品牌分类标签样式 */
+.brand-tab {
+  @apply px-5 py-2.5 rounded-full border-2 border-gray-200 bg-white text-gray-600 
+         font-medium transition-all duration-300 flex items-center gap-2;
+}
+
+.brand-tab:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.brand-tab.active {
+  @apply text-white border-transparent;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow: 0 4px 14px rgba(118, 75, 162, 0.35);
+}
+
+.tab-label {
+  @apply text-sm;
+}
+
+.tab-count {
+  @apply text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500;
+}
+
+.brand-tab.active .tab-count {
+  @apply bg-white/20 text-white;
 }
 </style>

@@ -491,8 +491,10 @@ const openAddPanel = () => {
   // 如果有分类，设置当前分类的默认值
   if (props.categories && currentCategory.value) {
     const cat = props.categories.find(c => c.key === currentCategory.value)
-    if (cat?.key === 'own') editFormData.value.is_own_brand = true
-    else if (cat?.key === 'agent') editFormData.value.is_own_brand = false
+    // 设置 brand_type 字段（新架构）
+    if (cat?.key) {
+      editFormData.value.brand_type = cat.key
+    }
   }
   
   // 如果有排序，设置排序值

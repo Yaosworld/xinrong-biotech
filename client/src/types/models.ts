@@ -29,6 +29,21 @@ export interface Product {
 }
 
 /**
+ * 品牌分类类型
+ */
+export type BrandType = 'own' | 'exclusive' | 'primary' | 'partner'
+
+/**
+ * 品牌分类配置
+ */
+export const BRAND_TYPE_CONFIG: Record<BrandType, { label: string; badge: string; subtitle: string }> = {
+  own: { label: '自主品牌', badge: '自主品牌', subtitle: '自主研发，品质保证' },
+  exclusive: { label: '独家代理', badge: '独家代理', subtitle: '独家授权，正品保障' },
+  primary: { label: '一级代理', badge: '一级代理', subtitle: '厂家直供，价格优势' },
+  partner: { label: '合作品牌', badge: '合作品牌', subtitle: '全球知名品牌，值得信赖' }
+}
+
+/**
  * 品牌接口
  * 
  * 字段命名规范：
@@ -46,7 +61,7 @@ export interface Brand {
   certificate_url?: string    // 品牌授权证书图片路径
   
   // === 分类字段 ===
-  is_own_brand?: boolean      // 是否为自主品牌（true=自主品牌，false/undefined=代理品牌）
+  brand_type?: BrandType      // 品牌分类：own=自主品牌, exclusive=独家代理, primary=一级代理, partner=合作品牌
   country?: string            // 品牌国家/地区
   
   // === 展示字段 ===
@@ -55,6 +70,8 @@ export interface Brand {
   sort_order?: number         // 排序顺序（越小越靠前）
   
   // === 兼容旧字段（逐步废弃，仅用于数据迁移） ===
+  /** @deprecated 使用 brand_type 替代 */
+  is_own_brand?: boolean
   /** @deprecated 使用 id 替代 */
   brand_id?: string
   /** @deprecated 使用 name 替代 */

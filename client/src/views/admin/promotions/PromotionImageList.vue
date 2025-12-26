@@ -35,8 +35,8 @@ const previewVisible = ref(false)
 const previewUrl = ref('')
 const previewFilename = ref('')
 
-// 选择模式（用于批量下载）
-const selectionMode = ref(false)
+// 选择模式: 'none' | 'download' | 'delete'
+const selectionMode = ref<'none' | 'download' | 'delete'>('none')
 const selectedImages = ref<Set<number>>(new Set())
 
 // 统计信息
@@ -83,7 +83,7 @@ const loadImages = async () => {
 const switchType = (type: ImageType) => {
   currentType.value = type
   selectedImages.value.clear()
-  selectionMode.value = false
+  selectionMode.value = 'none'
   loadImages()
 }
 
@@ -182,12 +182,22 @@ const previewImage = (img: PromotionImage) => {
   previewVisible.value = true
 }
 
-// 切换选择模式
-const toggleSelectionMode = () => {
-  selectionMode.value = !selectionMode.value
-  if (!selectionMode.value) {
-    selectedImages.value.clear()
-  }
+// 进入下载选择模式
+const enterDownloadMode = () => {
+  selectionMode.value = 'download'
+  selectedImages.value.clear()
+}
+
+// 进入删除选择模式
+const enterDeleteMode = () => {
+  selectionMode.value = 'delete'
+  selectedImages.value.clear()
+}
+
+// 退出选择模式
+const exitSelectionMode = () => {
+  selectionMode.value = 'none'
+  selectedImages.value.clear()
 }
 
 // 切换图片选择
@@ -281,7 +291,7 @@ const deleteSelected = async () => {
     if (result.success) {
       ElMessage.success(`成功删除 ${result.successCount} 张图片${result.failCount > 0 ? `，${result.failCount} 张失败` : ''}`)
       selectedImages.value.clear()
-      selectionMode.value = false
+      selectionMode.value = 'none'
       await loadImages()
     } else {
       ElMessage.error(result.error || '删除失败')
@@ -339,35 +349,45 @@ onMounted(() => {
         </div>
       </div>
       <div class="header-actions">
-        <el-button 
-          :type="selectionMode ? 'warning' : 'default'" 
-          @click="toggleSelectionMode"
-        >
-          <i class="fas fa-check-square mr-1"></i> 
-          {{ selectionMode ? '取消选择' : '批量下载' }}
-        </el-button>
-        <template v-if="selectionMode">
+        <!-- 非选择模式：显示批量下载和批量删除按钮 -->
+        <template v-if="selectionMode === 'none'">
+          <el-button @click="enterDownloadMode">
+            <i class="fas fa-download mr-1"></i> 批量下载
+          </el-button>
+          <el-button type="danger" @click="enterDeleteMode">
+            <i class="fas fa-trash mr-1"></i> 批量删除
+          </el-button>
+        </template>
+        
+        <!-- 选择模式：显示全选、取消、确认按钮 -->
+        <template v-else>
           <el-button @click="toggleSelectAll">
             <i class="fas fa-check-double mr-1"></i>
             {{ selectedImages.size === images.length ? '取消全选' : '全选' }}
           </el-button>
+          <el-button @click="exitSelectionMode">
+            <i class="fas fa-times mr-1"></i> 取消
+          </el-button>
           <el-button 
+            v-if="selectionMode === 'download'"
             type="success" 
             :disabled="selectedImages.size === 0"
             @click="downloadSelected"
           >
             <i class="fas fa-download mr-1"></i> 
-            下载 ({{ selectedImages.size }})
+            确认下载 ({{ selectedImages.size }})
           </el-button>
           <el-button 
+            v-if="selectionMode === 'delete'"
             type="danger" 
             :disabled="selectedImages.size === 0"
             @click="deleteSelected"
           >
             <i class="fas fa-trash mr-1"></i> 
-            删除 ({{ selectedImages.size }})
+            确认删除 ({{ selectedImages.size }})
           </el-button>
         </template>
+        
         <el-button type="primary" :loading="uploading" @click="triggerUpload">
           <i class="fas fa-cloud-upload-alt mr-1"></i> 上传{{ typeLabel }}图片
         </el-button>
@@ -395,21 +415,21 @@ onMounted(() => {
         class="image-card"
         :class="{ 
           used: img.usageCount > 0,
-          selected: selectionMode && selectedImages.has(img.id)
+          selected: selectionMode !== 'none' && selectedImages.has(img.id)
         }"
-        @click="selectionMode ? toggleImageSelection(img) : null"
+        @click="selectionMode !== 'none' ? toggleImageSelection(img) : null"
       >
-        <div class="image-preview" @click.stop="!selectionMode && previewImage(img)">
+        <div class="image-preview" @click.stop="selectionMode === 'none' && previewImage(img)">
           <img :src="img.url" :alt="img.filename" loading="lazy" @error="handleImageError" />
           <div v-if="img.usageCount > 0" class="usage-badge">
             <i class="fas fa-link"></i> {{ img.usageCount }}
           </div>
           <!-- 选择模式下的勾选框 -->
-          <div v-if="selectionMode" class="selection-checkbox" @click.stop="toggleImageSelection(img)">
+          <div v-if="selectionMode !== 'none'" class="selection-checkbox" @click.stop="toggleImageSelection(img)">
             <i :class="selectedImages.has(img.id) ? 'fas fa-check-circle' : 'far fa-circle'"></i>
           </div>
           <!-- 悬浮操作按钮 -->
-          <div v-if="!selectionMode" class="hover-actions">
+          <div v-if="selectionMode === 'none'" class="hover-actions">
             <el-tooltip content="放大预览" placement="top">
               <button class="action-btn" @click.stop="previewImage(img)">
                 <i class="fas fa-search-plus"></i>

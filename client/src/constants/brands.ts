@@ -3,6 +3,8 @@
  * 统一管理品牌配置，避免硬编码
  */
 
+import type { BrandType } from '@/types'
+
 /**
  * 国家/地区选项
  * 按使用频率排序
@@ -28,11 +30,25 @@ export const COUNTRY_OPTIONS = [
 export type CountryValue = typeof COUNTRY_OPTIONS[number]['value']
 
 /**
- * 品牌分类配置
+ * 品牌类型选项（用于下拉选择）
+ */
+export const BRAND_TYPE_OPTIONS = [
+  { label: '自主品牌', value: 'own' },
+  { label: '独家代理', value: 'exclusive' },
+  { label: '一级代理', value: 'primary' },
+  { label: '合作品牌', value: 'partner' }
+] as const
+
+/**
+ * 品牌分类配置（用于表格分类筛选）
  */
 export const BRAND_CATEGORIES = [
-  { key: 'own', label: '自主品牌', filter: (item: { is_own_brand?: boolean }) => item.is_own_brand === true },
-  { key: 'agent', label: '代理品牌', filter: (item: { is_own_brand?: boolean }) => item.is_own_brand !== true }
+  { key: 'own', label: '自主品牌', filter: (item: { brand_type?: BrandType; is_own_brand?: boolean }) => 
+    item.brand_type === 'own' || (item.brand_type === undefined && item.is_own_brand === true) },
+  { key: 'exclusive', label: '独家代理', filter: (item: { brand_type?: BrandType }) => item.brand_type === 'exclusive' },
+  { key: 'primary', label: '一级代理', filter: (item: { brand_type?: BrandType }) => item.brand_type === 'primary' },
+  { key: 'partner', label: '合作品牌', filter: (item: { brand_type?: BrandType; is_own_brand?: boolean }) => 
+    item.brand_type === 'partner' || (item.brand_type === undefined && item.is_own_brand !== true) }
 ] as const
 
 /**

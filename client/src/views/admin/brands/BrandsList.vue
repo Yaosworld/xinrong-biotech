@@ -4,7 +4,7 @@ import { useBrandStore } from '@/stores/brandStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
 import { adminApi } from '@/api/contentApi'
-import { COUNTRY_OPTIONS, BRAND_CATEGORIES, generateBrandId } from '@/constants/brands'
+import { COUNTRY_OPTIONS, BRAND_CATEGORIES, BRAND_TYPE_OPTIONS, generateBrandId } from '@/constants/brands'
 
 const brandStore = useBrandStore()
 const adminStore = useAdminStore()
@@ -18,6 +18,7 @@ const brands = computed(() => localBrands.value)
 
 // 使用常量配置
 const countryOptions = [...COUNTRY_OPTIONS]
+const brandTypeOptions = [...BRAND_TYPE_OPTIONS]
 const categories = [...BRAND_CATEGORIES]
 
 // 列配置
@@ -42,7 +43,7 @@ const columns = computed(() => [
     // 动态获取证书 URL
     getValue: (row: any) => row.certificate_url || ''
   },
-  { key: 'is_own_brand', label: '自有', width: 55, type: 'boolean' as const, placeholder: '切换后品牌将移动到对应分类' },
+  { key: 'brand_type', label: '品牌分类', width: 100, type: 'select' as const, options: brandTypeOptions, placeholder: '选择品牌分类' },
   { key: 'country', label: '国家', width: 65, type: 'select' as const, options: countryOptions },
   { key: 'description', label: '品牌简介', width: { min: 200, flex: 1 }, type: 'textarea' as const, truncate: 80 },
   { key: 'website', label: '官方网站', showInTable: false }
@@ -81,12 +82,25 @@ const loadAdminData = async () => {
   try {
     // 从 Admin API 加载（优先使用草稿数据）
     const result = await adminApi.getList('brand', { pageSize: 9999 })
-    localBrands.value = result.data.map(item => item.draftData || item.publishedData)
+    localBrands.value = result.data.map(item => {
+      const data = item.draftData || item.publishedData
+      // 兼容旧数据：将 is_own_brand 转换为 brand_type
+      if (data && !(data as any).brand_type && (data as any).is_own_brand !== undefined) {
+        (data as any).brand_type = (data as any).is_own_brand === true ? 'own' : 'partner'
+      }
+      return data
+    })
   } catch (e) {
     console.warn('Admin API 加载失败，降级到前台 Store:', e)
     // 降级到前台 Store
     await brandStore.loadBrands()
-    localBrands.value = [...brandStore.brands]
+    localBrands.value = brandStore.brands.map(brand => {
+      // 兼容旧数据
+      if (!brand.brand_type && brand.is_own_brand !== undefined) {
+        return { ...brand, brand_type: brand.is_own_brand === true ? 'own' : 'partner' }
+      }
+      return { ...brand }
+    })
   } finally {
     loading.value = false
   }
