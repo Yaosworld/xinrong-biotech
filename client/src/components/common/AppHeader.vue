@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSiteStore } from '@/stores/siteStore'
 
@@ -9,17 +9,6 @@ const siteStore = useSiteStore()
 
 // Logo图片加载状态
 const logoError = ref(false)
-
-// 从 store 获取联系信息
-const primaryPhone = computed(() => siteStore.contact.phones[0] || '')
-const email = computed(() => siteStore.contact.email || '')
-const qq = computed(() => siteStore.contact.qq || '')
-const wechatQrcode = computed(() => {
-  const url = siteStore.contact.wechatQrcode || ''
-  if (!url) return ''
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
-  return url.startsWith('/') ? url : `/${url}`
-})
 
 // 导航菜单
 const navItems = [
@@ -97,7 +86,7 @@ onUnmounted(() => {
     <div class="header-container">
       <div class="header-layout">
         <!-- 左侧：Logo -->
-        <router-link to="/" class="flex items-center gap-3 group flex-shrink-0">
+        <router-link to="/" class="header-brand flex items-center gap-3 group flex-shrink-0">
           <div class="w-14 h-14 overflow-hidden bg-white flex items-center justify-center transition-transform group-hover:scale-105">
             <img
               v-if="!logoError"
@@ -108,19 +97,15 @@ onUnmounted(() => {
             />
             <span v-else class="text-gradient-600 font-bold text-xl">XR</span>
           </div>
-          <div class="hidden sm:block logo-text-area">
-            <div class="company-name-cn">{{ siteStore.company.name || '信荣生物' }}</div>
-            <div class="company-name-en">{{ siteStore.company.englishName || 'XINRONG BIOTECHNOLOGY' }}</div>
-          </div>
         </router-link>
 
         <!-- 中间：导航 -->
-        <nav class="hidden lg:flex items-center justify-center gap-4">
+        <nav class="hidden lg:flex items-center justify-center gap-3">
           <router-link
             v-for="item in navItems"
             :key="item.path"
             :to="item.path"
-            class="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200"
+            class="flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-base font-medium transition-all duration-200"
             :class="getNavLinkClasses(item.path)"
           >
             <i :class="item.icon" class="text-base"></i>
@@ -128,8 +113,8 @@ onUnmounted(() => {
           </router-link>
         </nav>
 
-        <!-- 右侧：搜索框 + 联系信息 -->
-        <div class="hidden lg:flex items-center gap-4 flex-shrink-0">
+        <!-- 右侧：搜索框 -->
+        <div class="hidden lg:flex items-center flex-shrink-0">
           <!-- 搜索框 -->
           <div class="header-search-box">
             <i class="fas fa-search text-dark-400 text-sm"></i>
@@ -143,30 +128,6 @@ onUnmounted(() => {
             <button class="header-search-btn" @click="handleSearch">
               搜索
             </button>
-          </div>
-          
-          <!-- 分隔线 -->
-          <div class="h-10 w-px bg-dark-200"></div>
-          
-          <!-- 联系方式 -->
-          <div class="contact-info">
-            <div class="contact-item">
-              <i class="fab fa-qq text-gradient-600"></i>
-              <span>{{ qq }}</span>
-            </div>
-            <div class="contact-item">
-              <i class="fas fa-phone-alt text-gradient-600"></i>
-              <span>{{ primaryPhone }}</span>
-            </div>
-          </div>
-          <!-- 微信二维码 -->
-          <div class="qrcode-box group">
-            <img 
-              v-if="wechatQrcode" 
-              :src="wechatQrcode" 
-              alt="微信客服" 
-              class="qrcode-img"
-            />
           </div>
         </div>
 
@@ -209,25 +170,6 @@ onUnmounted(() => {
             </button>
           </div>
           
-          <!-- 移动端联系信息 -->
-          <div class="mobile-contact-box mb-4">
-            <div class="flex items-center gap-3">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 text-sm text-dark-600 mb-1">
-                  <i class="fas fa-phone-alt text-gradient-600"></i>
-                  <span>手机：{{ primaryPhone }}</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm text-dark-600">
-                  <i class="fab fa-qq text-gradient-600"></i>
-                  <span>QQ：{{ qq }}</span>
-                </div>
-              </div>
-              <div class="w-12 h-12 rounded-lg overflow-hidden border border-dark-200">
-                <img v-if="wechatQrcode" :src="wechatQrcode" alt="微信客服" class="w-full h-full object-cover" />
-              </div>
-            </div>
-          </div>
-          
           <router-link
             v-for="item in navItems"
             :key="item.path"
@@ -248,23 +190,24 @@ onUnmounted(() => {
 <style scoped>
 /* Header 容器 - 更宽的布局 */
 .header-container {
-  max-width: 1600px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 40px;
 }
 
 @media (min-width: 1400px) {
   .header-container {
-    padding: 0 40px;
+    max-width: 1480px;
+    padding: 0 56px;
   }
 }
 
 /* 三栏布局 */
 .header-layout {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 2rem;
+  justify-content: space-between;
+  gap: 1rem;
   height: 72px;
 }
 
@@ -274,80 +217,21 @@ onUnmounted(() => {
   }
 }
 
+@media (min-width: 1024px) {
+  .header-layout {
+    justify-content: center;
+    gap: 3.5rem;
+  }
+}
+
 @media (min-width: 1400px) {
   .header-layout {
-    gap: 3rem;
+    gap: 4rem;
   }
 }
 
-/* Logo 文本区域 */
-.logo-text-area {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.company-name-cn {
-  @apply font-bold text-dark-800 transition-colors;
-  font-size: 1.125rem;
-  text-align: justify;
-  text-align-last: justify;
-  width: 100%;
-}
-
-.group:hover .company-name-cn {
-  @apply text-gradient-600;
-}
-
-.company-name-en {
-  @apply text-dark-400;
-  font-size: 8px;
-  white-space: nowrap;
-}
-
-@media (min-width: 768px) {
-  .company-name-cn {
-    font-size: 1.25rem;
-  }
-  .company-name-en {
-    font-size: 9px;
-  }
-}
-
-/* 联系信息区域 */
-.contact-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.contact-item {
-  @apply flex items-center gap-2 text-xs text-dark-600;
-}
-
-.contact-item i {
-  @apply text-xs;
-  width: 14px;
-}
-
-/* 二维码区域 */
-.qrcode-box {
-  @apply flex flex-col items-center;
-  @apply border border-dark-200 rounded-lg p-1;
-  @apply transition-all duration-200;
-}
-
-.qrcode-box:hover {
-  @apply border-gradient-400 shadow-sm;
-}
-
-.qrcode-img {
-  @apply w-12 h-12 object-cover rounded;
-}
-
-/* 移动端联系信息 */
-.mobile-contact-box {
-  @apply px-4 py-3 bg-dark-50 rounded-xl border border-dark-200;
+.header-brand {
+  flex: 0 0 auto;
 }
 
 /* 桌面端搜索框 */
@@ -355,7 +239,7 @@ onUnmounted(() => {
   @apply flex items-center gap-2 px-4 py-2;
   @apply bg-dark-50 border border-dark-200 rounded-full;
   @apply transition-all duration-200;
-  width: 280px;
+  width: 260px;
 }
 
 .header-search-box:focus-within {

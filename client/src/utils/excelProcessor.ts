@@ -488,13 +488,16 @@ export class ExcelProcessor {
         categoryId,
         brand: row.brand || undefined,
         sku: row.sku || undefined,
+        price: row.price
+          ? String(row.price).trim()
+          : row.currentPrice != null && row.currentPrice !== ''
+            ? String(row.currentPrice).trim()
+            : row.originalPrice != null && row.originalPrice !== ''
+              ? String(row.originalPrice).trim()
+              : undefined,
         specs: row.specs || '',
         unit: row.unit || undefined,
-        desc: row.desc || '',
-        originalPrice: row.originalPrice ? Number(row.originalPrice) : undefined,
-        currentPrice: row.currentPrice ? Number(row.currentPrice) : undefined,
-        stock: row.stock ? Number(row.stock) : undefined,
-        isOnSale: this.parseBoolean(row.isOnSale)
+        desc: row.desc || ''
       }
     })
   }

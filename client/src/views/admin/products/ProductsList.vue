@@ -64,6 +64,12 @@ const columns = computed(() => [
   { key: 'sku', label: '货号', width: { min: 110, flex: 2 } },
   { key: 'brand', label: '品牌', width: { min: 100, flex: 1.5 } },
   { 
+    key: 'price', 
+    label: '价格', 
+    width: { min: 140, flex: 1.2 },
+    placeholder: '如：¥299/盒 或 面议'
+  },
+  { 
     key: 'categoryId', 
     label: '分类', 
     width: 120,

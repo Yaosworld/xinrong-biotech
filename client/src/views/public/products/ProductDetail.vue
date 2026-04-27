@@ -8,6 +8,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { useSiteStore } from '@/stores/siteStore'
+import { getCategoryImagePath, getCategoryName } from '@/hooks/useCategoryImage'
 import DetailPageLayout from '@/components/common/DetailPageLayout.vue'
 import ContactModal from '@/components/common/ContactModal.vue'
 
@@ -18,10 +19,34 @@ const siteStore = useSiteStore()
 const productId = computed(() => route.params.id as string)
 const showContactModal = ref(false)
 const loading = ref(true)
+const imageError = ref(false)
 
 // 当前产品
 const product = computed(() => {
   return productStore.getProductById(productId.value)
+})
+
+const productCategoryName = computed(() => {
+  return product.value ? getCategoryName(product.value.categoryId) : '未分类'
+})
+
+const productImageUrl = computed(() => {
+  if (!product.value) return '/images/common/placeholder.png'
+  return getCategoryImagePath(product.value.categoryId)
+})
+
+const normalizedPrice = computed(() => {
+  const rawPrice = product.value?.price
+  if (rawPrice == null) return ''
+  return String(rawPrice).trim()
+})
+
+const hasPrice = computed(() => {
+  return !!normalizedPrice.value
+})
+
+const priceText = computed(() => {
+  return normalizedPrice.value || '暂无，请联系工作人员以了解详情'
 })
 
 // 从 store 获取联系信息
@@ -41,6 +66,10 @@ const openContactModal = () => {
 // 关闭咨询弹窗
 const closeContactModal = () => {
   showContactModal.value = false
+}
+
+const handleImageError = () => {
+  imageError.value = true
 }
 
 onMounted(async () => {
@@ -65,12 +94,19 @@ onMounted(async () => {
     not-found-title="产品未找到"
     not-found-description="抱歉，您查找的产品不存在或已下架"
   >
-    <div class="detail-layout single-column">
-      <!-- 产品信息面板 -->
-      <div class="product-panel glass-card">
-        <!-- 产品名称 -->
-        <h1 class="product-title">{{ product?.name }}</h1>
-        
+    <div class="detail-layout">
+      <!-- 左侧产品信息面板 -->
+      <div class="left-panel glass-card product-info-panel">
+        <div class="product-header">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="product-title">{{ product?.name }}</h1>
+            <span class="product-category-badge">
+              <i class="fas fa-folder-open mr-1"></i>
+              {{ productCategoryName }}
+            </span>
+          </div>
+        </div>
+
         <!-- 信息列表 -->
         <div class="info-list">
           <div class="info-item">
@@ -81,6 +117,13 @@ onMounted(async () => {
           <div class="info-item">
             <span class="info-label">品牌</span>
             <span class="info-value brand-value">{{ product?.brand || '-' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="info-label">价格</span>
+            <span class="info-value" :class="hasPrice ? 'price-value' : 'price-empty-value'">
+              {{ priceText }}
+            </span>
           </div>
 
           <div class="info-item">
@@ -107,6 +150,27 @@ onMounted(async () => {
           </button>
         </div>
       </div>
+
+      <!-- 右侧产品图片面板 -->
+      <div class="right-panel glass-card product-image-panel">
+        <h3 class="section-title-inner">
+          <i class="fas fa-image text-gradient-600"></i>
+          产品图片
+        </h3>
+        <div class="image-container product-image-container">
+          <img
+            v-if="!imageError"
+            :src="productImageUrl"
+            :alt="product?.name || productCategoryName"
+            class="product-image"
+            @error="handleImageError"
+          />
+          <div v-else class="product-image-fallback">
+            <i class="fas fa-image"></i>
+            <span>暂无产品图片</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 联系我们弹窗 -->
@@ -122,23 +186,35 @@ onMounted(async () => {
 @import '@/styles/detail-page.css';
 
 /* 产品特有样式 */
-.product-panel {
-  flex: none;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
+.product-info-panel {
+  flex: 1.05;
+}
+
+.product-image-panel {
+  flex: 0.95;
+}
+
+.product-header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.product-category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 20px;
 }
 
 .product-title {
   font-size: 1.5rem;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  margin: 0;
 }
 
 .info-list {
@@ -179,11 +255,47 @@ onMounted(async () => {
   color: #667eea;
 }
 
+.price-value {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.price-empty-value {
+  color: #64748b;
+  font-weight: 400;
+}
+
 .desc-value {
   color: #475569;
   line-height: 1.6;
   font-size: 0.875rem;
   font-weight: normal;
+}
+
+.product-image-container {
+  min-height: 420px;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.product-image-fallback {
+  width: 100%;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+.product-image-fallback i {
+  font-size: 2rem;
 }
 
 .contact-btn {
@@ -205,9 +317,20 @@ onMounted(async () => {
 
 /* 响应式 */
 @media (max-width: 1024px) {
-  .product-panel {
+  .product-info-panel,
+  .product-image-panel {
     width: 100%;
-    padding: 1.5rem;
+  }
+
+  .product-image-container,
+  .product-image-fallback {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-title {
+    font-size: 1.25rem;
   }
 }
 </style>

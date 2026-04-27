@@ -23,6 +23,7 @@ export interface Product {
   categoryId: string    // 分类ID (外键)
   brand?: string        // 品牌名称
   sku?: string          // 产品SKU编码
+  price?: string | number  // 价格信息，如 "¥299/盒"、"面议"
   specs: string         // 规格参数
   unit?: string         // 销售单位, e.g., "台"
   desc: string          // 产品详细描述
@@ -187,4 +188,3 @@ export interface PaginationInfo {
   startIndex: number
   endIndex: number
 }
-
