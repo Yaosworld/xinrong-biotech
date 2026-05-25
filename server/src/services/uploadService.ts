@@ -9,6 +9,10 @@
  */
 import fs from 'fs'
 import path from 'path'
+import {
+  getProfileForUploadCategory,
+  optimizeUploadedImage
+} from './imageProcessingService'
 
 // 上传目录配置
 const UPLOAD_BASE = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads')
@@ -165,8 +169,10 @@ export const uploadService = {
       fs.mkdirSync(fullDir, { recursive: true })
     }
 
+    const optimized = await optimizeUploadedImage(file, getProfileForUploadCategory(category))
+
     // 使用安全的文件名处理
-    const safeName = this.sanitizeFilename(file.originalName)
+    const safeName = this.sanitizeFilename(optimized.originalName)
     const ext = path.extname(safeName).toLowerCase()
     const baseName = path.basename(safeName, ext).substring(0, 50)
     
@@ -198,7 +204,7 @@ export const uploadService = {
 
     // 写入文件
     try {
-      fs.writeFileSync(fullPath, file.buffer)
+      fs.writeFileSync(fullPath, optimized.buffer)
       
       const url = `/uploads/${targetDir}/${filename}`
       return {
@@ -206,7 +212,7 @@ export const uploadService = {
         filename,
         path: path.join(targetDir, filename),
         url,
-        size: file.size
+        size: optimized.buffer.length
       }
     } catch (error) {
       return { success: false, error: `文件写入失败: ${(error as Error).message}` }

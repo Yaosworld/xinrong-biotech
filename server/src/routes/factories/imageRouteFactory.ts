@@ -2,21 +2,16 @@
  * 图片路由工厂
  * 
  * 创建通用的图片管理路由，减少重复代码
- * 支持上传后自动转换为 WebP 格式
+ * 支持上传后自动优化图片
  */
 import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
-
-// 动态导入 sharp（可能未安装）
-let sharp: any = null
-try {
-  sharp = require('sharp')
-  console.log('✅ Sharp 已加载，支持 WebP 转换')
-} catch {
-  console.warn('⚠️ Sharp 未安装，图片将保持原格式。安装命令: cd server && npm install sharp')
-}
+import {
+  getProfileForImageRoute,
+  optimizeUploadedImage
+} from '../../services/imageProcessingService'
 
 // ========================================
 // 类型定义
@@ -76,20 +71,15 @@ function decodeFilename(originalname: string): string {
 
 /**
  * 生成安全的文件名
- * @param convertToWebp 是否转换为 WebP（会改变扩展名）
- * 
  * 文件名格式: 原名_时间戳_随机数.扩展名
  * 这样可以避免浏览器缓存问题（同名文件被删除后重新上传）
  */
 function generateSafeFilename(
   originalName: string, 
-  uploadDir: string, 
-  prefix: string = 'image',
-  convertToWebp: boolean = false
+  prefix: string = 'image'
 ): string {
   const originalExt = path.extname(originalName).toLowerCase()
-  // 如果要转换为 WebP，使用 .webp 扩展名
-  const ext = convertToWebp && originalExt !== '.webp' && originalExt !== '.gif' ? '.webp' : originalExt
+  const ext = originalExt
   
   let baseName = path.basename(originalName, originalExt)
     .replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_')
@@ -109,54 +99,8 @@ function generateSafeFilename(
 }
 
 /**
- * 将图片转换为 WebP 格式
- * @returns 转换后的文件名，如果转换失败返回原文件名
- */
-async function convertToWebp(
-  sourcePath: string,
-  targetDir: string,
-  targetFilename: string,
-  quality: number = 85
-): Promise<{ filename: string; converted: boolean }> {
-  if (!sharp) {
-    return { filename: path.basename(sourcePath), converted: false }
-  }
-  
-  const ext = path.extname(sourcePath).toLowerCase()
-  
-  // GIF 保持原格式（保留动画）
-  if (ext === '.gif') {
-    return { filename: path.basename(sourcePath), converted: false }
-  }
-  
-  // 已经是 WebP 不需要转换
-  if (ext === '.webp') {
-    return { filename: path.basename(sourcePath), converted: false }
-  }
-  
-  try {
-    const targetPath = path.join(targetDir, targetFilename)
-    
-    await sharp(sourcePath)
-      .webp({ quality })
-      .toFile(targetPath)
-    
-    // 删除原文件
-    if (fs.existsSync(sourcePath)) {
-      fs.unlinkSync(sourcePath)
-    }
-    
-    return { filename: targetFilename, converted: true }
-  } catch (error) {
-    console.error('WebP 转换失败:', error)
-    // 转换失败，保留原文件
-    return { filename: path.basename(sourcePath), converted: false }
-  }
-}
-
-/**
  * 创建 multer 配置
- * 使用临时文件名保存，后续处理时再转换为 WebP
+ * 使用临时文件名保存，后续再进行统一图片优化
  */
 function createMulterConfig(config: ImageRouteConfig) {
   const storage = multer.diskStorage({
@@ -197,7 +141,7 @@ function createMulterConfig(config: ImageRouteConfig) {
 }
 
 /**
- * 处理上传的文件：转换为 WebP 并重命名
+ * 处理上传的文件：优化图片并重命名
  */
 async function processUploadedFile(
   file: Express.Multer.File,
@@ -212,33 +156,30 @@ async function processUploadedFile(
   }
   
   const sourcePath = file.path
-  const originalExt = path.extname(originalName).toLowerCase()
-  const shouldConvert = !!sharp && originalExt !== '.webp' && originalExt !== '.gif'
-  
-  // 生成目标文件名（如果要转换，扩展名改为 .webp）
-  const targetFilename = generateSafeFilename(
-    originalName,
-    uploadDir,
-    config.filenamePrefix || 'image',
-    shouldConvert
+  const sourceBuffer = fs.readFileSync(sourcePath)
+  const optimized = await optimizeUploadedImage(
+    {
+      buffer: sourceBuffer,
+      originalName,
+      mimeType: file.mimetype
+    },
+    getProfileForImageRoute(config.imageDir, imageType)
   )
   
-  // 如果转换了格式，originalName 也要改成 .webp 扩展名
-  let displayName = originalName
-  if (shouldConvert) {
-    const baseName = path.basename(originalName, originalExt)
-    displayName = `${baseName}.webp`
-  }
-  
-  if (shouldConvert) {
-    // 转换为 WebP
-    const result = await convertToWebp(sourcePath, uploadDir, targetFilename)
-    return { filename: result.filename, originalName: displayName }
-  } else {
-    // 不转换，只重命名
+  // 生成目标文件名
+  const targetFilename = generateSafeFilename(
+    optimized.originalName,
+    config.filenamePrefix || 'image'
+  )
+
+  try {
     const targetPath = path.join(uploadDir, targetFilename)
-    fs.renameSync(sourcePath, targetPath)
-    return { filename: targetFilename, originalName: displayName }
+    fs.writeFileSync(targetPath, optimized.buffer)
+    return { filename: targetFilename, originalName: optimized.originalName }
+  } finally {
+    if (fs.existsSync(sourcePath)) {
+      fs.unlinkSync(sourcePath)
+    }
   }
 }
 
