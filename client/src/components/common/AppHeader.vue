@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSiteStore } from '@/stores/siteStore'
 
@@ -9,6 +9,7 @@ const siteStore = useSiteStore()
 
 // Logo图片加载状态
 const logoError = ref(false)
+const company = computed(() => siteStore.company)
 
 // 导航菜单
 const navItems = [
@@ -89,9 +90,9 @@ onUnmounted(() => {
         <router-link to="/" class="header-brand flex items-center gap-3 group flex-shrink-0">
           <div class="w-14 h-14 overflow-hidden bg-white flex items-center justify-center transition-transform group-hover:scale-105">
             <img
-              v-if="!logoError"
-              src="/images/common/logo.png"
-              alt="信荣生物"
+              v-if="siteStore.loaded && company.logo && !logoError"
+              :src="company.logo"
+              :alt="company.shortName || company.name || '站点 Logo'"
               class="w-full h-full object-contain"
               @error="logoError = true"
             />
@@ -105,10 +106,9 @@ onUnmounted(() => {
             v-for="item in navItems"
             :key="item.path"
             :to="item.path"
-            class="flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-base font-medium transition-all duration-200"
+            class="flex items-center px-3.5 py-2.5 rounded-lg text-base font-medium transition-all duration-200"
             :class="getNavLinkClasses(item.path)"
           >
-            <i :class="item.icon" class="text-base"></i>
             <span>{{ item.name }}</span>
           </router-link>
         </nav>
@@ -174,11 +174,10 @@ onUnmounted(() => {
             v-for="item in navItems"
             :key="item.path"
             :to="item.path"
-            class="w-full flex items-center gap-4 px-5 py-4 rounded-lg transition-colors"
+            class="w-full flex items-center px-5 py-4 rounded-lg transition-colors"
             :class="getNavLinkClasses(item.path)"
             @click="navigateTo(item.path)"
           >
-            <i :class="item.icon" class="w-6 text-center text-lg"></i>
             <span class="font-medium text-lg">{{ item.name }}</span>
           </router-link>
         </nav>

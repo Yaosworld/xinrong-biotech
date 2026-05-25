@@ -25,20 +25,28 @@ export interface HomeConfig {
   }
 }
 
-// 默认配置
-const defaultConfig: HomeConfig = {
-  images: [
-    { id: '1', url: '/images/home/banner_1.jpg' },
-    { id: '2', url: '/images/home/banner_2.jpg' },
-    { id: '3', url: '/images/home/banner_3.jpg' },
-    { id: '4', url: '/images/home/banner_4.jpg' }
-  ],
-  sections: {
-    products: { badge: '热门产品', title: '精选优质产品' },
-    brands: { badge: '品牌矩阵', title: '知名品牌，值得信赖' },
-    promotions: { badge: '最新活动', title: '优惠活动动态一手掌握' }
+const createEmptySections = (): HomeConfig['sections'] => ({
+  products: { badge: '', title: '' },
+  brands: { badge: '', title: '' },
+  promotions: { badge: '', title: '' }
+})
+
+const normalizeSections = (
+  sections?: Partial<HomeConfig['sections']>
+): HomeConfig['sections'] => ({
+  products: {
+    badge: sections?.products?.badge || '',
+    title: sections?.products?.title || ''
+  },
+  brands: {
+    badge: sections?.brands?.badge || '',
+    title: sections?.brands?.title || ''
+  },
+  promotions: {
+    badge: sections?.promotions?.badge || '',
+    title: sections?.promotions?.title || ''
   }
-}
+})
 
 // ========================================
 // Store 定义
@@ -49,7 +57,7 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
   // State
   // ========================================
   const banners = ref<HomeBannerItem[]>([])
-  const sections = ref<HomeConfig['sections']>({ ...defaultConfig.sections })
+  const sections = ref<HomeConfig['sections']>(createEmptySections())
   const loading = ref(false)
   const loaded = ref(false)
   const error = ref<string | null>(null)
@@ -68,36 +76,13 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
     error.value = null
 
     try {
-      // 从 API 加载已发布的数据
       const data = await contentApi.getPublishedOne<HomeConfig>('home_config', 'main')
-      if (data) {
-        banners.value = data.images?.length > 0 ? data.images : defaultConfig.images
-        sections.value = data.sections ? { ...defaultConfig.sections, ...data.sections } : { ...defaultConfig.sections }
-        loaded.value = true
-        return { banners: banners.value, sections: sections.value }
-      }
-      throw new Error('No home config data')
-    } catch (e) {
-      // API 失败时降级到静态文件
-      console.warn('API 加载失败，降级到静态文件:', e)
-      try {
-        const response = await fetch('/data/home-config.json')
-        if (response.ok) {
-          const data = await response.json()
-          banners.value = data.images?.length > 0 ? data.images : defaultConfig.images
-          sections.value = data.sections ? { ...defaultConfig.sections, ...data.sections } : { ...defaultConfig.sections }
-          loaded.value = true
-          return { banners: banners.value, sections: sections.value }
-        }
-      } catch {
-        // 静态文件也失败，使用默认数据
-      }
-      
-      // 使用默认数据
-      banners.value = [...defaultConfig.images]
-      sections.value = { ...defaultConfig.sections }
+      banners.value = Array.isArray(data?.images) ? data.images.filter(item => item?.url) : []
+      sections.value = normalizeSections(data?.sections)
       loaded.value = true
-      error.value = '加载首页配置失败，使用默认数据'
+      return { banners: banners.value, sections: sections.value }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : '加载首页配置失败'
       return { banners: banners.value, sections: sections.value }
     } finally {
       loading.value = false
@@ -117,7 +102,7 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
    */
   function clearCache() {
     banners.value = []
-    sections.value = { ...defaultConfig.sections }
+    sections.value = createEmptySections()
     loaded.value = false
     error.value = null
   }

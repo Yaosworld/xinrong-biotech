@@ -18,18 +18,21 @@ const emit = defineEmits<{
   close: []
 }>()
 
-// 默认联系信息
 const defaultContactInfo: ContactInfo = {
-  phone1: '15919646073',
-  phone2: '13422057239',
-  email: '15919646073@139.com',
-  wechatQrcode: '/images/common/wx-qrcode-contact.png',
-  workTime: '周一至周五 8:00 - 17:30'
+  phone1: '',
+  phone2: '',
+  email: '',
+  wechatQrcode: '',
+  workTime: ''
 }
 
 // 合并联系信息
 const mergedContactInfo = computed(() => {
   return { ...defaultContactInfo, ...props.contactInfo }
+})
+
+const phoneNumbers = computed(() => {
+  return [mergedContactInfo.value.phone1, mergedContactInfo.value.phone2].filter(Boolean) as string[]
 })
 
 // 二维码加载状态管理
@@ -71,7 +74,7 @@ const closeModal = () => {
               <!-- 工作时间展示 -->
               <div class="header-work-time">
                 <i class="far fa-clock"></i>
-                <span>服务时间：{{ mergedContactInfo.workTime }}</span>
+                <span>{{ mergedContactInfo.workTime || '服务时间请联系工作人员确认' }}</span>
               </div>
             </div>
 
@@ -93,12 +96,17 @@ const closeModal = () => {
                 <div class="qrcode-wrapper">
                   <div class="qrcode-box">
                     <img
+                      v-if="mergedContactInfo.wechatQrcode"
                       :src="mergedContactInfo.wechatQrcode"
                       alt="微信二维码"
                       class="qrcode-img"
                       @load="handleQrcodeLoad"
                       @error="handleQrcodeError"
                     />
+                    <div v-else class="qrcode-error">
+                      <i class="fas fa-image text-gray-400 text-2xl mb-2"></i>
+                      <span class="text-xs text-gray-400">暂未提供二维码</span>
+                    </div>
                     <!-- 加载失败占位 -->
                     <div v-if="showQrcodePlaceholder" class="qrcode-error">
                       <i class="fas fa-image text-gray-400 text-2xl mb-2"></i>
@@ -122,14 +130,17 @@ const closeModal = () => {
                 </div>
 
                 <div class="action-list">
-                  <!-- 改为 div 且移除点击交互 -->
-                  <div class="info-box">
+                  <div
+                    v-for="phone in phoneNumbers"
+                    :key="phone"
+                    class="info-box"
+                  >
                     <span class="action-icon"><i class="fas fa-mobile-alt"></i></span>
-                    <span class="action-text">{{ mergedContactInfo.phone1 }}</span>
+                    <span class="action-text">{{ phone }}</span>
                   </div>
-                  <div class="info-box">
-                    <span class="action-icon"><i class="fas fa-mobile-alt"></i></span>
-                    <span class="action-text">{{ mergedContactInfo.phone2 }}</span>
+                  <div v-if="phoneNumbers.length === 0" class="info-box empty-info-box">
+                    <span class="action-icon"><i class="fas fa-phone-alt"></i></span>
+                    <span class="action-text">暂未提供联系电话</span>
                   </div>
                 </div>
               </div>
@@ -147,10 +158,13 @@ const closeModal = () => {
                 </div>
 
                 <div class="action-list center-content">
-                  <!-- 改为 div，移除点击，内容不换行 -->
-                  <div class="info-box email-box">
+                  <div v-if="mergedContactInfo.email" class="info-box email-box">
                     <span class="action-icon"><i class="fas fa-at"></i></span>
                     <span class="action-text">{{ mergedContactInfo.email }}</span>
+                  </div>
+                  <div v-else class="info-box email-box empty-info-box">
+                    <span class="action-icon"><i class="fas fa-envelope"></i></span>
+                    <span class="action-text">暂未提供邮箱</span>
                   </div>
                 </div>
               </div>
@@ -488,6 +502,10 @@ const closeModal = () => {
   font-weight: 500;
   width: 100%; 
   cursor: default;
+}
+
+.empty-info-box {
+  color: var(--c-text-secondary);
 }
 
 .action-icon {

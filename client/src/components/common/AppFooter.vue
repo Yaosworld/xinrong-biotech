@@ -12,6 +12,7 @@ const company = computed(() => siteStore.company)
 const contact = computed(() => siteStore.contact)
 const footerLinks = computed(() => siteStore.footerLinks)
 const friendLinks = computed(() => siteStore.friendLinks)
+const footerMeta = computed(() => siteStore.footerMeta)
 const copyright = computed(() => siteStore.copyright)
 </script>
 
@@ -25,7 +26,7 @@ const copyright = computed(() => siteStore.copyright)
             <!-- Logo图标 -->
             <div class="w-11 h-11 overflow-hidden bg-white flex items-center justify-center transition-transform">
               <img
-                v-if="!logoError"
+                v-if="company.logo && !logoError"
                 :src="company.logo"
                 :alt="company.shortName"
                 class="w-full h-full object-contain"
@@ -41,9 +42,9 @@ const copyright = computed(() => siteStore.copyright)
           </div>
 
           <!-- 二维码图片 -->
-          <div class="flex gap-6 mt-6">
+          <div v-if="contact.wechatQrcode || contact.gzhQrcode" class="flex gap-6 mt-6">
             <!-- 微信二维码 -->
-            <div class="flex flex-col items-center">
+            <div v-if="contact.wechatQrcode" class="flex flex-col items-center">
               <div class="w-16 h-16 bg-white rounded-lg p-0.5 shadow-sm">
                 <img
                   :src="contact.wechatQrcode"
@@ -55,7 +56,7 @@ const copyright = computed(() => siteStore.copyright)
             </div>
 
             <!-- 公众号二维码 -->
-            <div class="flex flex-col items-center">
+            <div v-if="contact.gzhQrcode" class="flex flex-col items-center">
               <div class="w-16 h-16 bg-white rounded-lg p-0.5 shadow-sm">
                 <img
                   :src="contact.gzhQrcode"
@@ -111,7 +112,7 @@ const copyright = computed(() => siteStore.copyright)
             </div>
 
             <!-- 手机号码 -->
-            <div class="space-y-1">
+            <div v-if="contact.phones.length > 0" class="space-y-1">
               <div 
                 v-for="phone in contact.phones" 
                 :key="phone"
@@ -123,13 +124,13 @@ const copyright = computed(() => siteStore.copyright)
             </div>
 
             <!-- 邮箱 -->
-            <div class="flex items-center gap-2 text-sm text-dark-400">
+            <div v-if="contact.email" class="flex items-center gap-2 text-sm text-dark-400">
               <i class="fas fa-envelope"></i>
               <span>{{ contact.email }}</span>
             </div>
 
             <!-- 地址 -->
-            <div class="flex items-start gap-2 text-sm text-dark-400">
+            <div v-if="contact.address" class="flex items-start gap-2 text-sm text-dark-400">
               <i class="fas fa-map-marker-alt mt-1"></i>
               <span class="leading-tight">{{ contact.address }}</span>
             </div>
@@ -141,27 +142,31 @@ const copyright = computed(() => siteStore.copyright)
     <!-- 版权信息 -->
     <div class="bg-dark-900 py-4">
       <div class="container-base text-center text-sm text-dark-500">
-        <p>{{ copyright }}</p>
-        <p class="mt-2 flex items-center justify-center gap-4 flex-wrap">
+        <p v-if="copyright">{{ copyright }}</p>
+        <p
+          v-if="footerMeta.icpNumber || footerMeta.publicSecurityNumber"
+          class="mt-2 flex items-center justify-center gap-4 flex-wrap"
+        >
           <a 
-            href="https://beian.miit.gov.cn/" 
+            v-if="footerMeta.icpNumber"
+            :href="footerMeta.icpUrl || 'https://beian.miit.gov.cn/'" 
             target="_blank" 
             rel="noopener noreferrer"
             class="hover:text-white transition-colors"
           >
-            ICP备案号：粤ICP备2025507620号
+            ICP备案号：{{ footerMeta.icpNumber }}
           </a>
-          <span class="flex items-center gap-1">
+          <span v-if="footerMeta.publicSecurityNumber" class="flex items-center gap-1">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm4 10H8v-1c0-1.33 2.67-2 4-2s4 .67 4 2v1z"/>
             </svg>
             <a 
-              href="http://www.beian.gov.cn/portal/registerSystemInfo" 
+              :href="footerMeta.publicSecurityUrl || 'http://www.beian.gov.cn/portal/registerSystemInfo'" 
               target="_blank" 
               rel="noopener noreferrer"
               class="hover:text-white transition-colors"
             >
-              粤公网安备 44xxxxxxxxx号
+              {{ footerMeta.publicSecurityNumber }}
             </a>
           </span>
         </p>

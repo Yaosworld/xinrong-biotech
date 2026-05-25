@@ -1,5 +1,26 @@
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
+interface ApiErrorPayload {
+  success?: boolean
+  error?: {
+    code?: string
+    message?: string
+  }
+  data?: {
+    token?: string
+    user?: {
+      id: number
+      username: string
+      role: 'super_admin' | 'admin'
+      displayName: string
+      email?: string
+      avatarUrl?: string | null
+      lastLoginAt?: string
+    }
+    expiresIn?: number
+  }
+}
+
 // Token 管理
 function getToken(): string | null {
   return localStorage.getItem('admin_token')
@@ -11,6 +32,17 @@ function setToken(token: string): void {
 
 function clearToken(): void {
   localStorage.removeItem('admin_token')
+}
+
+async function readApiPayload(response: Response): Promise<ApiErrorPayload | null> {
+  const raw = await response.text()
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw) as ApiErrorPayload
+  } catch {
+    return null
+  }
 }
 
 // 带认证的请求
@@ -43,7 +75,19 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     })
-    const data = await res.json()
+    const data = await readApiPayload(res)
+
+    if (!data) {
+      return {
+        success: false,
+        error: {
+          code: res.ok ? 'INVALID_RESPONSE' : 'SERVICE_UNAVAILABLE',
+          message: res.ok
+            ? '登录响应格式无效'
+            : '后台服务暂时不可用，请确认 CMS 后端已启动'
+        }
+      }
+    }
     
     if (data.success && data.data?.token) {
       setToken(data.data.token)

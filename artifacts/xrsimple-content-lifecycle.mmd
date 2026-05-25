@@ -1,0 +1,74 @@
+flowchart TB
+
+    seed["public/data/*.json<br/>site-config / about / home-config / brands / products / promotions / banners"]
+    bootstrap["contentBootstrapService.initializePublishedContent()"]
+
+    subgraph CoreTables["核心内容表"]
+        contents[("contents<br/>draft_data / published_data / status / version")]
+        versions[("content_versions<br/>版本快照 + changeSummary")]
+    end
+
+    subgraph Services["内容服务分层"]
+        contentService["contentService<br/>按 contentType 分发"]
+        cmsService["cmsContentService<br/>通用 CMS 内容"]
+        catalogService["catalogContentService<br/>Catalog 类内容"]
+        repo["versionedContentRepository"]
+        structuredService["catalogStructuredStorageService"]
+        structuredTables[("catalog_* 结构化镜像表")]
+    end
+
+    subgraph PublicRead["公开读取"]
+        publicApi["GET /api/content/:type/published"]
+        publicOne["GET /api/content/:type/:key/published"]
+        filterApi["GET /api/content/:type/filter-options"]
+    end
+
+    subgraph AdminWrite["后台写入"]
+        adminList["GET /api/admin/content/:type"]
+        draft["PUT /api/admin/content/:type/:key/draft"]
+        batchDraft["PUT /api/admin/content/:type/batch-draft"]
+        publish["POST /api/admin/content/:type/:key/publish"]
+        batchPublish["POST /api/admin/content/:type/batch-publish"]
+        rollback["POST /api/admin/content/:type/:key/rollback"]
+        delete["DELETE /api/admin/content/:type/:key"]
+    end
+
+    seed --> bootstrap
+    bootstrap --> contents
+
+    publicApi --> contentService
+    publicOne --> contentService
+    filterApi --> contentService
+
+    adminList --> contentService
+    draft --> contentService
+    batchDraft --> contentService
+    publish --> contentService
+    batchPublish --> contentService
+    rollback --> contentService
+    delete --> contentService
+
+    contentService --> cmsService
+    contentService --> catalogService
+
+    cmsService --> repo
+    catalogService --> repo
+    repo --> contents
+    repo --> versions
+
+    publish --> versions
+    batchPublish --> versions
+    rollback --> versions
+
+    catalogService --> structuredService
+    structuredService --> structuredTables
+
+    classDef input fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#111827;
+    classDef api fill:#eef6ff,stroke:#2563eb,stroke-width:2px,color:#111827;
+    classDef svc fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#111827;
+    classDef db fill:#ecfdf5,stroke:#15803d,stroke-width:2px,color:#111827;
+
+    class seed,bootstrap input;
+    class publicApi,publicOne,filterApi,adminList,draft,batchDraft,publish,batchPublish,rollback,delete api;
+    class contentService,cmsService,catalogService,repo,structuredService svc;
+    class contents,versions,structuredTables db;

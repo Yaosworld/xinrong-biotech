@@ -225,7 +225,7 @@ onMounted(async () => {
   height: 40px;
   border: none;
   background: transparent;
-  color: #667eea;
+  color: #05548C;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -236,7 +236,7 @@ onMounted(async () => {
 }
 
 .filter-toggle-btn:hover {
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(5, 84, 140, 0.1);
 }
 
 /* 筛选面板 */
@@ -284,12 +284,12 @@ onMounted(async () => {
 }
 
 .filter-tag:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #05548C;
+  color: #05548C;
 }
 
 .filter-tag.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #05548C;
   border-color: transparent;
   color: #fff;
 }

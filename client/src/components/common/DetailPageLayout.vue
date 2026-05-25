@@ -121,7 +121,7 @@ const handleBack = () => {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
   color: #374151;
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(5, 84, 140, 0.2);
   border-radius: 25px;
   font-weight: 500;
   font-size: 0.9rem;
@@ -131,10 +131,10 @@ const handleBack = () => {
 }
 
 .back-button:hover {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: rgba(102, 126, 234, 0.3);
+  background: rgba(5, 84, 140, 0.1);
+  border-color: rgba(5, 84, 140, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 6px 20px rgba(5, 84, 140, 0.2);
 }
 
 /* 加载状态 */
@@ -162,7 +162,7 @@ const handleBack = () => {
 .glass-card {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(5, 84, 140, 0.1);
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
@@ -210,7 +210,7 @@ const handleBack = () => {
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   border-radius: 2px;
 }
 
@@ -220,7 +220,7 @@ const handleBack = () => {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   color: #fff;
   border: none;
   border-radius: 25px;
@@ -231,7 +231,7 @@ const handleBack = () => {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(5, 84, 140, 0.4);
 }
 
 .mr-2 {

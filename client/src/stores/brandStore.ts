@@ -158,17 +158,7 @@ export const useBrandStore = defineStore('brand', () => {
       brands.value = data
       initialized.value = true
     } catch (e) {
-      // API 失败时降级到静态 JSON
-      console.warn('API 加载失败，降级到静态 JSON:', e)
-      try {
-        const response = await fetch('/data/brands.json')
-        if (response.ok) {
-          brands.value = await response.json()
-          initialized.value = true
-        }
-      } catch {
-        error.value = e instanceof Error ? e.message : '加载品牌数据失败'
-      }
+      error.value = e instanceof Error ? e.message : '加载品牌数据失败'
     } finally {
       loading.value = false
     }

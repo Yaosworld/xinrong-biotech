@@ -40,12 +40,12 @@ router.get('/:type/published', (req: Request, res: Response) => {
 router.get('/:type/:key/published', (req: Request, res: Response) => {
   try {
     const { type, key } = req.params
-    const content = contentService.getOne(type, key)
-    if (!content || !content.publishedData) {
+    const content = contentService.getPublishedOne(type, key)
+    if (!content) {
       res.status(404).json({ error: 'Not found' })
       return
     }
-    res.json(content.publishedData)
+    res.json(content)
   } catch (e) {
     res.status(500).json({ error: (e as Error).message })
   }

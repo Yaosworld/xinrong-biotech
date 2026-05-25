@@ -7,44 +7,44 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 品牌色系 - 紫色系（新设计）
+        // 品牌色系 - 深蓝色系（新设计）
         primary: {
-          50: '#faf5ff',
-          100: '#f3e8ff',
-          200: '#e9d5ff',
-          300: '#d8b4fe',
-          400: '#c084fc',
-          500: '#a855f7',
-          600: '#9333ea',
-          700: '#7c3aed',
-          800: '#6b21a8',
-          900: '#581c87',
+          50: '#e8f4fa',
+          100: '#c5e4f5',
+          200: '#9fd2ef',
+          300: '#6fbde6',
+          400: '#43CEED',
+          500: '#1a9fd4',
+          600: '#0d7fb3',
+          700: '#05548C',
+          800: '#044370',
+          900: '#033254',
         },
-        // 深蓝紫色系（渐变色系）
+        // 深蓝渐变色系
         'gradient': {
-          50: '#f0f4ff',
-          100: '#e0e9ff',
-          200: '#c7d9ff',
-          300: '#a5c4ff',
-          400: '#818cff',
-          500: '#667eea',
-          600: '#5a67d8',
-          700: '#4c51bf',
-          800: '#434190',
-          900: '#3c366b',
+          50: '#e8f8fd',
+          100: '#c5eefb',
+          200: '#9fe3f8',
+          300: '#6fd5f3',
+          400: '#43CEED',
+          500: '#1ab0d6',
+          600: '#0d8ab3',
+          700: '#05548C',
+          800: '#044370',
+          900: '#033254',
         },
-        // 科技蓝紫
+        // 科技蓝
         accent: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
+          50: '#e6f7fc',
+          100: '#cceff9',
+          200: '#99dff3',
+          300: '#66cfed',
+          400: '#43CEED',
+          500: '#1ab8d9',
+          600: '#0d94b3',
+          700: '#05548C',
+          800: '#044370',
+          900: '#033254',
         },
         // 深色背景
         dark: {
@@ -66,12 +66,12 @@ export default {
         display: ['PingFang SC', 'Microsoft YaHei', 'Poppins', 'sans-serif'],
       },
       backgroundImage: {
-        // 紫色渐变背景
-        'gradient-showcase': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a855f7 100%)',
-        'gradient-showcase-2': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+        // 蓝色渐变背景
+        'gradient-showcase': 'linear-gradient(135deg, #05548C 0%, #1a9fd4 50%, #43CEED 100%)',
+        'gradient-showcase-2': 'linear-gradient(135deg, #05548C 0%, #0d8ab3 50%, #43CEED 100%)',
         // 卡片图片占位背景
-        'gradient-card': 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)',
-        'gradient-card-hover': 'linear-gradient(135deg, #c7d2fe 0%, #e9d5ff 100%)',
+        'gradient-card': 'linear-gradient(135deg, #e8f4fa 0%, #c5eefb 100%)',
+        'gradient-card-hover': 'linear-gradient(135deg, #c5e4f5 0%, #9fe3f8 100%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
@@ -109,7 +109,7 @@ export default {
         'card': '0 2px 12px 0 rgba(0, 0, 0, 0.08)',
         'card-hover': '0 8px 24px 0 rgba(0, 0, 0, 0.12)',
         'header': '0 2px 8px 0 rgba(0, 0, 0, 0.06)',
-        'button': '0 4px 14px 0 rgba(124, 58, 237, 0.3)',
+        'button': '0 2px 8px 0 rgba(5, 84, 140, 0.2)',
       },
       borderRadius: {
         'xl': '12px',

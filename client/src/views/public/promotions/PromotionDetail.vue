@@ -236,7 +236,7 @@ onMounted(async () => {
 /* 促销特有样式 */
 .promotion-header {
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  border-bottom: 1px solid rgba(5, 84, 140, 0.1);
 }
 
 .date-range {
@@ -259,7 +259,7 @@ onMounted(async () => {
 
 .promotion-tags {
   padding-top: 1rem;
-  border-top: 1px solid rgba(102, 126, 234, 0.1);
+  border-top: 1px solid rgba(5, 84, 140, 0.1);
 }
 
 .poster-container {
@@ -267,9 +267,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(102, 126, 234, 0.03);
+  background: rgba(5, 84, 140, 0.03);
   border-radius: 16px;
-  border: 2px dashed rgba(102, 126, 234, 0.15);
+  border: 2px dashed rgba(5, 84, 140, 0.15);
   overflow: hidden;
 }
 
@@ -293,14 +293,14 @@ onMounted(async () => {
 .poster-header {
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  border-bottom: 1px solid rgba(5, 84, 140, 0.1);
 }
 
 .poster-image-container {
   display: flex;
   justify-content: center;
   padding: 1rem;
-  background: rgba(102, 126, 234, 0.03);
+  background: rgba(5, 84, 140, 0.03);
   border-radius: 16px;
 }
 

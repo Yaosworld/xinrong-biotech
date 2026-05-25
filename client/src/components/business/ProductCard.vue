@@ -150,8 +150,8 @@ const goToDetail = () => {
 
 .product-card:hover .image-wrapper {
   box-shadow:
-    inset 0 0 0 1px rgba(139, 92, 246, 0.1),
-    0 2px 8px rgba(139, 92, 246, 0.08);
+    inset 0 0 0 1px rgba(5, 84, 140, 0.1),
+    0 2px 8px rgba(5, 84, 140, 0.08);
 }
 
 .image-wrapper img {

@@ -1,0 +1,82 @@
+flowchart TB
+
+    main["main.ts<br/>createApp + Pinia + Router + Element Plus"]
+    app["App.vue"]
+    router["router/index.ts<br/>路由守卫 + 动态标题 + 权限控制"]
+
+    subgraph PublicRoutes["公开页面"]
+        home["HomePage"]
+        productCenter["ProductCenter / ProductDetail"]
+        brandCenter["BrandCenter / BrandDetail"]
+        promotionCenter["PromotionCenter / PromotionDetail"]
+        about["AboutPage"]
+    end
+
+    subgraph AdminRoutes["后台页面"]
+        login["LoginPage"]
+        adminLayout["AdminLayout"]
+        adminModules["首页设置 / 横幅 / 产品 / 分类 / 品牌 / 活动 / 关于 / 网站设置 / 用户管理"]
+    end
+
+    subgraph Stores["Pinia Stores"]
+        authStore["authStore<br/>token -> 当前用户 -> 超管判断"]
+        siteStore["siteStore<br/>站点公司信息 / 联系方式 / 页脚"]
+        contentStores["product / brand / promotion / banner / about / homeBanner / category"]
+        adminStore["adminStore"]
+    end
+
+    subgraph ApiLayer["前端 API 层"]
+        contentApi["contentApi<br/>published list / one / filter options"]
+        authApi["authApi<br/>login / logout / me / password"]
+        uploadApi["uploadApi<br/>upload / list / delete"]
+    end
+
+    subgraph BackendApis["后端 API"]
+        apiContent["/api/content"]
+        apiAuth["/api/auth"]
+        apiAdmin["/api/admin"]
+        apiUpload["/api/admin/upload"]
+    end
+
+    main --> app
+    app --> router
+
+    router --> home
+    router --> productCenter
+    router --> brandCenter
+    router --> promotionCenter
+    router --> about
+    router --> login
+    router --> adminLayout
+    adminLayout --> adminModules
+
+    router --> authStore
+    router --> siteStore
+
+    home --> contentStores
+    productCenter --> contentStores
+    brandCenter --> contentStores
+    promotionCenter --> contentStores
+    about --> contentStores
+    login --> authStore
+    adminModules --> adminStore
+    adminModules --> contentStores
+    adminModules --> uploadApi
+
+    authStore --> authApi
+    siteStore --> contentApi
+    contentStores --> contentApi
+    adminStore --> authApi
+
+    contentApi --> apiContent
+    contentApi --> apiAdmin
+    authApi --> apiAuth
+    uploadApi --> apiUpload
+
+    classDef core fill:#eef6ff,stroke:#2563eb,stroke-width:2px,color:#111827;
+    classDef store fill:#ecfeff,stroke:#0891b2,stroke-width:2px,color:#111827;
+    classDef api fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#111827;
+
+    class main,app,router,home,productCenter,brandCenter,promotionCenter,about,login,adminLayout,adminModules core;
+    class authStore,siteStore,contentStores,adminStore store;
+    class contentApi,authApi,uploadApi,apiContent,apiAuth,apiAdmin,apiUpload api;

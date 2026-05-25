@@ -1,0 +1,71 @@
+flowchart TB
+
+    user["公开访客"]
+    admin["后台管理员"]
+
+    subgraph Frontend["前端应用（Vite + Vue 3 + Pinia + Element Plus）"]
+        publicApp["公开站点<br/>首页 / 产品 / 品牌 / 新闻 / 关于"]
+        adminApp["后台管理台<br/>登录 / 内容编辑 / 发布 / 图片管理 / 用户管理"]
+        storeApi["Store + API 层<br/>siteStore / productStore / authStore<br/>contentApi / authApi / uploadApi"]
+    end
+
+    subgraph Backend["后端服务（Express + TypeScript）"]
+        authRoute["认证接口<br/>/api/auth"]
+        contentRoute["公开内容接口<br/>/api/content"]
+        adminRoute["后台内容接口<br/>/api/admin"]
+        imageRoute["上传与图片接口<br/>/api/admin/upload<br/>/api/admin/*-images"]
+    end
+
+    subgraph Domain["领域服务层"]
+        contentService["contentService<br/>按 contentType 分流"]
+        cmsService["cmsContentService<br/>通用 CMS 内容"]
+        catalogService["catalogContentService<br/>产品 / 品牌 / 活动 / 分类"]
+        authService["authService / adminUserService"]
+        uploadService["uploadService + 各类 imageService"]
+        structuredService["catalogStructuredStorageService"]
+    end
+
+    subgraph Storage["存储层"]
+        sqlite[("SQL.js / SQLite<br/>contents / versions / admins / logs")]
+        catalogTables[("Catalog 结构化镜像表<br/>catalog_products / brands / promotions / categories")]
+        uploadFs["uploads 文件系统"]
+        seedData["public/data 种子数据"]
+    end
+
+    user --> publicApp
+    admin --> adminApp
+
+    publicApp --> storeApi
+    adminApp --> storeApi
+
+    storeApi --> authRoute
+    storeApi --> contentRoute
+    storeApi --> adminRoute
+    storeApi --> imageRoute
+
+    contentRoute --> contentService
+    adminRoute --> contentService
+    authRoute --> authService
+    imageRoute --> uploadService
+
+    contentService --> cmsService
+    contentService --> catalogService
+
+    cmsService --> sqlite
+    catalogService --> sqlite
+    catalogService --> structuredService
+    structuredService --> catalogTables
+    authService --> sqlite
+    uploadService --> uploadFs
+
+    seedData -. 启动初始化 published 内容 .-> sqlite
+
+    classDef app fill:#eef6ff,stroke:#2563eb,stroke-width:2px,color:#111827;
+    classDef api fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#111827;
+    classDef service fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#111827;
+    classDef storage fill:#ecfdf5,stroke:#15803d,stroke-width:2px,color:#111827;
+
+    class publicApp,adminApp,storeApi app;
+    class authRoute,contentRoute,adminRoute,imageRoute api;
+    class contentService,cmsService,catalogService,authService,uploadService,structuredService service;
+    class sqlite,catalogTables,uploadFs,seedData storage;

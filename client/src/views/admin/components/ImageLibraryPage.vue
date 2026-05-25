@@ -493,7 +493,7 @@ onMounted(() => {
 <style scoped>
 .image-library-page {
   padding: 20px;
-  background: #f5f7fa;
+  background: var(--admin-surface);
   min-height: 100%;
   overflow-y: scroll;
 }
@@ -536,7 +536,7 @@ onMounted(() => {
 }
 
 .stat-item.available {
-  color: #67c23a;
+  color: var(--admin-accent);
 }
 
 .header-actions {
@@ -594,13 +594,13 @@ onMounted(() => {
 }
 
 .image-card.selected {
-  border: 2px solid #67c23a;
+  border: 2px solid var(--admin-accent);
   box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2);
 }
 
 .image-preview {
   position: relative;
-  background: #f5f5f5;
+  background: var(--admin-surface-alt);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -647,7 +647,7 @@ onMounted(() => {
 
 .selection-checkbox i {
   font-size: 20px;
-  color: #67c23a;
+  color: var(--admin-accent);
 }
 
 .selection-checkbox .fa-circle {
@@ -685,7 +685,7 @@ onMounted(() => {
 }
 
 .action-btn:hover {
-  background: #667eea;
+  background: #05548C;
   color: #fff;
   transform: scale(1.1);
 }
@@ -695,7 +695,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--admin-border);
 }
 
 .filename {

@@ -427,8 +427,8 @@ const getStatusText = (status: FileItem['status']) => {
 }
 
 .upload-area:hover:not(.disabled) {
-  border-color: #409eff;
-  background: #f5f7fa;
+  border-color: var(--admin-primary);
+  background: var(--admin-surface);
 }
 
 .upload-area.disabled {
@@ -480,7 +480,7 @@ const getStatusText = (status: FileItem['status']) => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: #f5f7fa;
+  background: var(--admin-surface);
   border-bottom: 1px solid #e4e7ed;
   font-size: 13px;
   color: #606266;
@@ -504,7 +504,7 @@ const getStatusText = (status: FileItem['status']) => {
 }
 
 .preview-item.status-success {
-  border-color: #67c23a;
+  border-color: var(--admin-accent);
 }
 
 .preview-item.status-error,
@@ -513,13 +513,13 @@ const getStatusText = (status: FileItem['status']) => {
 }
 
 .preview-item.status-uploading {
-  border-color: #409eff;
+  border-color: var(--admin-primary);
 }
 
 .preview-image {
   position: relative;
   aspect-ratio: 1;
-  background: #fafafa;
+  background: var(--admin-surface-alt);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -542,12 +542,12 @@ const getStatusText = (status: FileItem['status']) => {
 
 .status-overlay.uploading {
   background: rgba(64, 158, 255, 0.3);
-  color: #409eff;
+  color: var(--admin-primary);
 }
 
 .status-overlay.success {
   background: rgba(103, 194, 58, 0.3);
-  color: #67c23a;
+  color: var(--admin-accent);
 }
 
 .status-overlay.error {
@@ -558,7 +558,7 @@ const getStatusText = (status: FileItem['status']) => {
 .preview-info {
   padding: 8px;
   background: #fff;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--admin-border);
 }
 
 .file-name {
@@ -578,7 +578,7 @@ const getStatusText = (status: FileItem['status']) => {
 }
 
 .file-status.status-success {
-  color: #67c23a;
+  color: var(--admin-accent);
 }
 
 .file-status.status-error,
@@ -587,7 +587,7 @@ const getStatusText = (status: FileItem['status']) => {
 }
 
 .file-status.status-uploading {
-  color: #409eff;
+  color: var(--admin-primary);
 }
 
 .remove-btn {

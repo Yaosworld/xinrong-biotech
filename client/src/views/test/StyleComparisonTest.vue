@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -94,6 +94,7 @@ const styleAnalysis = computed(() => {
     return {
       name: item.name,
       path: item.path,
+      icon: item.icon,
       isActive: active,
       isSpecial: item.isSpecial,
       currentStyles: currentStyles.split(' '),
@@ -147,7 +148,7 @@ onMounted(() => {
             >
               <i :class="item.icon" class="text-center w-4"></i>
               <span>{{ item.name }}</span>
-              <div v-if="item.isActive" class="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">激活</div>
+              <div v-if="isActive(item.path)" class="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">激活</div>
             </div>
           </div>
           <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -172,7 +173,7 @@ onMounted(() => {
             >
               <i :class="item.icon" class="text-center w-4"></i>
               <span>{{ item.name }}</span>
-              <div v-if="item.isActive" class="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">激活</div>
+              <div v-if="isActive(item.path)" class="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">激活</div>
             </div>
           </div>
           <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700">
@@ -202,7 +203,7 @@ onMounted(() => {
             >
               <i :class="item.icon" class="text-center w-4"></i>
               <span>{{ item.name }}</span>
-              <div v-if="item.isActive" class="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">激活</div>
+              <div v-if="isActive(item.path)" class="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">激活</div>
             </div>
           </div>
           <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700">

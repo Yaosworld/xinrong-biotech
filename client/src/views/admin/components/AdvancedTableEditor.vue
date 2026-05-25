@@ -549,7 +549,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--admin-border);
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -585,7 +585,7 @@ onMounted(() => {
 }
 
 :deep(.el-table th) {
-  background: #f9fafb !important;
+  background: var(--admin-panel-bg) !important;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -601,7 +601,7 @@ onMounted(() => {
   border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   background: #f9f9f9;
 }
 
@@ -651,7 +651,7 @@ onMounted(() => {
   padding: 16px 20px;
   display: flex;
   justify-content: flex-end;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--admin-border);
 }
 
 /* 编辑表单 */
@@ -669,7 +669,7 @@ onMounted(() => {
   max-height: 200px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   display: inline-block;
 }
 

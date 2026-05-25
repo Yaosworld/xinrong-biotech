@@ -1755,7 +1755,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--admin-border);
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -1859,7 +1859,7 @@ onBeforeUnmount(() => {
 }
 
 .scope-option:hover {
-  border-color: #409eff;
+  border-color: var(--admin-primary);
   background: #f0f9ff;
 }
 
@@ -1927,7 +1927,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.el-table th) {
-  background: #f9fafb !important;
+  background: var(--admin-panel-bg) !important;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1942,7 +1942,7 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   background: #f9f9f9;
 }
 
@@ -1982,7 +1982,7 @@ onBeforeUnmount(() => {
   padding: 16px 20px;
   display: flex;
   justify-content: flex-end;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--admin-border);
 }
 
 .edit-form { padding: 0 10px; }
@@ -2012,7 +2012,7 @@ onBeforeUnmount(() => {
   max-height: 150px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   background: #f9f9f9;
   display: flex;
   align-items: center;
@@ -2030,7 +2030,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #f5f7fa;
+  background: var(--admin-surface);
   border-radius: 4px;
   font-size: 13px;
   color: #606266;
@@ -2052,7 +2052,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 30px;
-  background: #fafafa;
+  background: var(--admin-surface-alt);
   border: 1px dashed #dcdfe6;
   border-radius: 8px;
   color: #c0c4cc;
@@ -2073,7 +2073,7 @@ onBeforeUnmount(() => {
   max-height: 150px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   display: inline-block;
 }
 

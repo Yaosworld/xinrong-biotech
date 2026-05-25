@@ -49,7 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const res = await authApi.login(username, password)
-      if (res.success) {
+      if (res.success && res.data?.user) {
         user.value = res.data.user
       }
       return res

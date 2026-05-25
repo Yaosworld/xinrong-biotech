@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 新分类定义对话框
  * 
@@ -263,7 +263,7 @@ const handleClose = () => {
   background: #f9f9f9;
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
 }
 
 .category-header {
@@ -277,7 +277,7 @@ const handleClose = () => {
 
 .category-id {
   padding: 4px 10px;
-  background: #667eea;
+  background: #05548C;
   color: #fff;
   border-radius: 4px;
   font-size: 12px;

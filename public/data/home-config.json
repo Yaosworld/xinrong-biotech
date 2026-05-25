@@ -1,0 +1,13 @@
+{
+  "images": [
+    { "id": "1", "url": "/images/home/多彩细胞.jpg" },
+    { "id": "2", "url": "/images/home/加样-1.jpg" },
+    { "id": "3", "url": "/images/home/加样-2.jpg" },
+    { "id": "4", "url": "/images/home/烧杯加水.jpg" }
+  ],
+  "sections": {
+    "products": { "badge": "热门产品", "title": "精选优质产品" },
+    "brands": { "badge": "品牌矩阵", "title": "知名品牌，值得信赖" },
+    "promotions": { "badge": "最新活动", "title": "优惠活动动态一手掌握" }
+  }
+}

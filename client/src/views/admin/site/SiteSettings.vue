@@ -41,6 +41,13 @@ const contactForm = ref({
 // 表单数据 - 友情链接 & 页脚链接
 const friendLinks = ref<{ name: string; url: string }[]>([])
 const footerLinks = ref<{ name: string; path: string }[]>([])
+const footerMetaForm = ref({
+  copyrightText: '',
+  icpNumber: '',
+  icpUrl: '',
+  publicSecurityNumber: '',
+  publicSecurityUrl: ''
+})
 
 // 原始数据（用于检测变更和重置）
 const originalData = ref<string>('')
@@ -54,7 +61,8 @@ const currentDataString = computed(() => JSON.stringify({
   company: companyForm.value,
   contact: contactForm.value,
   friendLinks: friendLinks.value,
-  footerLinks: footerLinks.value
+  footerLinks: footerLinks.value,
+  footerMeta: footerMetaForm.value
 }))
 
 // 是否有未保存的更改
@@ -119,6 +127,16 @@ const loadData = async () => {
     
     friendLinks.value = data.friendLinks ? JSON.parse(JSON.stringify(data.friendLinks)) : []
     footerLinks.value = data.footerLinks ? JSON.parse(JSON.stringify(data.footerLinks)) : []
+    footerMetaForm.value = {
+      copyrightText: data.footerMeta?.copyrightText || '',
+      icpNumber: data.footerMeta?.icpNumber || '',
+      icpUrl: data.footerMeta?.icpUrl || '',
+      publicSecurityNumber: data.footerMeta?.publicSecurityNumber || '',
+      publicSecurityUrl: data.footerMeta?.publicSecurityUrl || ''
+    }
+    if (data.floatingPanel) {
+      siteStore.floatingPanel = JSON.parse(JSON.stringify(data.floatingPanel))
+    }
     
     // 确保至少有2个电话字段
     while (contactForm.value.phones.length < 2) {
@@ -147,34 +165,17 @@ const loadData = async () => {
     if (data.contact) siteStore.contact = data.contact
     if (data.friendLinks) siteStore.friendLinks = data.friendLinks
     if (data.footerLinks) siteStore.footerLinks = data.footerLinks
+    if (data.footerMeta) siteStore.footerMeta = data.footerMeta
     
     // 保存原始数据快照
     originalData.value = currentDataString.value
     editStatus.value = 'clean'
   } catch (e) {
-    console.warn('Admin API 加载失败，降级到前台 Store:', e)
-    await siteStore.loadSiteConfig()
-    
-    companyForm.value = { ...siteStore.company }
-    contactForm.value = {
-      phones: [...siteStore.contact.phones],
-      email: siteStore.contact.email,
-      qq: siteStore.contact.qq,
-      address: siteStore.contact.address,
-      wechatQrcode: siteStore.contact.wechatQrcode,
-      gzhQrcode: siteStore.contact.gzhQrcode,
-      workTime: siteStore.contact.workTime
-    }
-    friendLinks.value = JSON.parse(JSON.stringify(siteStore.friendLinks))
-    footerLinks.value = JSON.parse(JSON.stringify(siteStore.footerLinks))
-    
-    while (contactForm.value.phones.length < 2) {
-      contactForm.value.phones.push('')
-    }
-    
+    console.error('Admin API 加载失败:', e)
     originalData.value = currentDataString.value
     contentStatus.value = 'unpublished'
     editStatus.value = 'clean'
+    ElMessage.error('加载网站设置失败，请检查后台接口')
   }
 }
 
@@ -193,6 +194,7 @@ const buildFullSiteConfig = () => {
     contact: { ...contactForm.value, phones: validPhones },
     friendLinks: friendLinks.value.filter(l => l.name && l.url),
     footerLinks: footerLinks.value,
+    footerMeta: footerMetaForm.value,
     floatingPanel: siteStore.floatingPanel
   }
 }
@@ -210,6 +212,7 @@ const saveData = async () => {
     Object.assign(siteStore.contact, fullConfig.contact)
     siteStore.friendLinks.splice(0, siteStore.friendLinks.length, ...fullConfig.friendLinks)
     siteStore.footerLinks.splice(0, siteStore.footerLinks.length, ...footerLinks.value)
+    Object.assign(siteStore.footerMeta, fullConfig.footerMeta)
     
     // 更新状态
     originalData.value = currentDataString.value
@@ -358,7 +361,7 @@ onBeforeUnmount(() => {
     <div class="page-header">
       <div class="header-left">
         <h2><i class="fas fa-cog"></i> 网站设置</h2>
-        <span class="subtitle">管理公司信息、联系方式和友情链接</span>
+        <span class="subtitle">管理公司信息、联系方式、页脚备案和友情链接</span>
       </div>
       <div class="header-right">
         <!-- 状态标签 -->
@@ -443,6 +446,34 @@ onBeforeUnmount(() => {
                   <el-button type="danger" text circle size="small" @click="removeFriendLink(index)"><i class="fas fa-times"></i></el-button>
                 </div>
                 <div v-if="friendLinks.length === 0" class="empty-links">暂无友情链接，点击添加</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="edit-panel">
+            <div class="panel-header"><h4><i class="fas fa-id-card"></i> 页脚与备案</h4></div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="form-item full-width">
+                  <label>版权文案</label>
+                  <el-input v-model="footerMetaForm.copyrightText" placeholder="如：© 2026 广州信荣生物科技有限公司 版权所有" />
+                </div>
+                <div class="form-item">
+                  <label>ICP备案号</label>
+                  <el-input v-model="footerMetaForm.icpNumber" placeholder="请输入 ICP 备案号" />
+                </div>
+                <div class="form-item">
+                  <label>ICP备案链接</label>
+                  <el-input v-model="footerMetaForm.icpUrl" placeholder="https://beian.miit.gov.cn/" />
+                </div>
+                <div class="form-item">
+                  <label>公安备案号</label>
+                  <el-input v-model="footerMetaForm.publicSecurityNumber" placeholder="请输入公安备案号" />
+                </div>
+                <div class="form-item">
+                  <label>公安备案链接</label>
+                  <el-input v-model="footerMetaForm.publicSecurityUrl" placeholder="http://www.beian.gov.cn/portal/registerSystemInfo" />
+                </div>
               </div>
             </div>
           </div>
@@ -577,11 +608,17 @@ onBeforeUnmount(() => {
                 <div class="contact-item" v-for="phone in previewPhones" :key="phone">
                   <i class="fas fa-phone-alt"></i><span>{{ phone }}</span>
                 </div>
-                <div class="contact-item"><i class="fas fa-envelope"></i><span>{{ contactForm.email || 'email@example.com' }}</span></div>
-                <div class="contact-item"><i class="fas fa-map-marker-alt"></i><span>{{ contactForm.address || '公司地址' }}</span></div>
+                <div class="contact-item"><i class="fas fa-envelope"></i><span>{{ contactForm.email || '暂未设置邮箱' }}</span></div>
+                <div class="contact-item"><i class="fas fa-map-marker-alt"></i><span>{{ contactForm.address || '暂未设置公司地址' }}</span></div>
               </div>
             </div>
-            <div class="footer-copyright">© {{ new Date().getFullYear() }} {{ companyForm.name || '公司名称' }} 版权所有</div>
+            <div class="footer-copyright">
+              {{ footerMetaForm.copyrightText || '暂未设置版权文案' }}
+            </div>
+            <div v-if="footerMetaForm.icpNumber || footerMetaForm.publicSecurityNumber" class="footer-records">
+              <span v-if="footerMetaForm.icpNumber">ICP备案号：{{ footerMetaForm.icpNumber }}</span>
+              <span v-if="footerMetaForm.publicSecurityNumber">{{ footerMetaForm.publicSecurityNumber }}</span>
+            </div>
           </div>
         </div>
 
@@ -608,7 +645,7 @@ onBeforeUnmount(() => {
                 <div class="tooltip-content-list">
                   <div class="tooltip-item">
                     <span class="item-label">邮箱：</span>
-                    <span class="item-value">{{ contactForm.email || 'email@example.com' }}</span>
+                    <span class="item-value">{{ contactForm.email || '暂未设置邮箱' }}</span>
                   </div>
                   <div v-if="contactForm.qq" class="tooltip-item">
                     <span class="item-label">QQ：</span>
@@ -667,7 +704,7 @@ onBeforeUnmount(() => {
                     <div class="card-text"><h4>邮件咨询</h4><p>商务合作与建议反馈</p></div>
                   </div>
                   <div class="card-email">
-                    <div class="email-box"><i class="fas fa-at"></i><span>{{ contactForm.email || 'email@example.com' }}</span></div>
+                    <div class="email-box"><i class="fas fa-at"></i><span>{{ contactForm.email || '暂未设置邮箱' }}</span></div>
                   </div>
                 </div>
               </div>
@@ -733,8 +770,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #f0f0f0;
-  background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+  border-bottom: 1px solid var(--admin-border);
+  background: linear-gradient(135deg, var(--admin-surface) 0%, #fff 100%);
 }
 
 .header-left h2 {
@@ -747,7 +784,7 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
-.header-left h2 i { color: #667eea; }
+.header-left h2 i { color: #05548C; }
 .subtitle { display: block; margin-top: 4px; font-size: 13px; color: #999; }
 .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
@@ -774,7 +811,7 @@ onBeforeUnmount(() => {
 
 .left-panels { display: flex; flex-direction: column; gap: 16px; }
 .right-panel { display: flex; flex-direction: column; }
-.edit-panel { border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
+.edit-panel { border: 1px solid var(--admin-border); border-radius: 10px; overflow: hidden; }
 .edit-panel.full-height { flex: 1; }
 
 .panel-header {
@@ -782,8 +819,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--admin-panel-bg);
+  border-bottom: 1px solid var(--admin-border);
 }
 
 .panel-header h4 {
@@ -796,7 +833,7 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-.panel-header h4 i { color: #667eea; }
+.panel-header h4 i { color: #05548C; }
 .panel-body { padding: 16px; }
 
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
@@ -812,7 +849,7 @@ onBeforeUnmount(() => {
 
 .logo-preview-box { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
 .preview-label { font-size: 13px; color: #666; }
-.logo-preview { width: 100px; height: 50px; background: #f9fafb; border: 1px solid #e8e8e8; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.logo-preview { width: 100px; height: 50px; background: var(--admin-panel-bg); border: 1px solid var(--admin-border); border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .qrcode-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .qrcode-upload-item { display: flex; flex-direction: column; gap: 8px; }
 .qrcode-upload-item label { font-size: 13px; color: #666; font-weight: 500; }
@@ -822,15 +859,15 @@ onBeforeUnmount(() => {
 .empty-links { text-align: center; padding: 16px; color: #999; font-size: 13px; }
 
 /* 预览区域 */
-.preview-area { border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
-.preview-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e8e8e8; }
+.preview-area { border: 1px solid var(--admin-border); border-radius: 10px; overflow: hidden; }
+.preview-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--admin-panel-bg); border-bottom: 1px solid var(--admin-border); }
 .preview-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #333; }
-.preview-title i { color: #667eea; }
+.preview-title i { color: #05548C; }
 .preview-tabs { display: flex; gap: 4px; }
 .preview-tab { padding: 6px 14px; font-size: 13px; color: #666; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-.preview-tab:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
-.preview-tab.active { background: #667eea; color: #fff; }
-.preview-content { padding: 20px; min-height: 320px; background: #f5f5f5; }
+.preview-tab:hover { background: rgba(5, 84, 140, 0.1); color: #05548C; }
+.preview-tab.active { background: #05548C; color: #fff; }
+.preview-content { padding: 20px; min-height: 320px; background: var(--admin-surface-alt); }
 
 /* 页脚预览 */
 .mock-footer { background: #1a1a2e; border-radius: 8px; overflow: hidden; }
@@ -839,7 +876,7 @@ onBeforeUnmount(() => {
 .company-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .company-logo { width: 40px; height: 40px; background: #fff; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .company-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.company-logo span { font-weight: bold; color: #667eea; }
+.company-logo span { font-weight: bold; color: #05548C; }
 .company-name { font-size: 13px; font-weight: 600; }
 .company-en { font-size: 8px; color: rgba(255,255,255,0.5); }
 .qrcodes { display: flex; gap: 12px; }
@@ -858,6 +895,7 @@ onBeforeUnmount(() => {
 .footer-contact .contact-item { display: flex; align-items: flex-start; gap: 6px; font-size: 10px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
 .footer-contact .contact-item i { margin-top: 2px; font-size: 9px; }
 .footer-copyright { background: rgba(0,0,0,0.3); padding: 10px; text-align: center; font-size: 10px; color: rgba(255,255,255,0.5); }
+.footer-records { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; padding: 8px 10px 12px; font-size: 9px; color: rgba(255,255,255,0.45); background: rgba(0,0,0,0.18); }
 
 /* 悬浮面板预览 */
 .floating-preview { display: flex; justify-content: center; align-items: center; }
@@ -867,7 +905,7 @@ onBeforeUnmount(() => {
 .float-item.phone { background: linear-gradient(45deg, #10b981, #1cc285); }
 .float-item.email { background: linear-gradient(45deg, #f59e0b, #fbbf24); }
 .float-item.social { background: linear-gradient(45deg, #d84040, #d84040); }
-.float-item.top { background: linear-gradient(45deg, #6366f1, #8b5cf6); }
+.float-item.top { background: linear-gradient(45deg, #05548C, #43CEED); }
 .float-tooltip { background: #fff; padding: 15px 20px; border-radius: 12px; border: 2px solid #080808; box-shadow: 0 8px 30px rgba(0,0,0,0.15); font-size: 14px; text-align: left; white-space: nowrap; }
 .tooltip-title { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 16px; }
 .tooltip-content-list { color: #666; line-height: 1.5; }
@@ -875,7 +913,7 @@ onBeforeUnmount(() => {
 .tooltip-item:last-child { margin-bottom: 0; }
 .item-label { font-weight: 600; color: #333; margin-right: 5px; }
 .item-value { color: #2563eb; font-weight: 500; }
-.tooltip-qr { width: 120px; height: 120px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 8px auto 0; overflow: hidden; }
+.tooltip-qr { width: 120px; height: 120px; background: var(--admin-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 8px auto 0; overflow: hidden; }
 .tooltip-qr img { width: 100%; height: 100%; object-fit: cover; }
 .tooltip-qr i { font-size: 32px; color: #07c160; }
 
@@ -898,10 +936,10 @@ onBeforeUnmount(() => {
 .card-qr img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
 .card-qr i { font-size: 40px; color: #07c160; }
 .card-phones { display: flex; flex-direction: column; gap: 8px; }
-.phone-box { display: flex; align-items: center; padding: 10px 12px; background: #f9fafb; border-radius: 8px; font-size: 13px; color: #1f2937; }
+.phone-box { display: flex; align-items: center; padding: 10px 12px; background: var(--admin-panel-bg); border-radius: 8px; font-size: 13px; color: #1f2937; }
 .phone-box i { margin-right: 10px; color: #9ca3af; font-size: 12px; }
 .card-email { display: flex; justify-content: center; }
-.email-box { display: flex; align-items: center; padding: 10px 16px; background: #f9fafb; border-radius: 8px; font-size: 13px; color: #1f2937; }
+.email-box { display: flex; align-items: center; padding: 10px 16px; background: var(--admin-panel-bg); border-radius: 8px; font-size: 13px; color: #1f2937; }
 .email-box i { margin-right: 10px; color: #9ca3af; }
 
 .mr-1 { margin-right: 4px; }

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useSiteStore } from '@/stores/siteStore'
 
 // 延迟导入 authStore 避免循环依赖
 let authStoreInstance: any = null
@@ -242,16 +243,21 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
   const authStore = await getAuthStore()
+  const siteStore = useSiteStore()
   
   // 初始化认证状态
   if (!authStore.initialized) {
     await authStore.init()
   }
+
+  if (!siteStore.loaded && !siteStore.loading) {
+    await siteStore.loadSiteConfig()
+  }
   
   // 设置页面标题
-  const baseTitle = '广州信荣生物科技有限公司'
+  const baseTitle = '信荣生物 | 科研试剂耗材一站式供应'
   const pageTitle = to.meta.title as string
-  document.title = pageTitle ? `${pageTitle} - ${baseTitle}` : baseTitle
+  document.title = pageTitle ? `${pageTitle} - 信荣生物` : baseTitle
   
   // 检查是否需要登录
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {

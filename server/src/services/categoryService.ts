@@ -9,6 +9,7 @@
  */
 import db from '../db'
 import { categoryImageService } from './categoryImageService'
+import { catalogStructuredStorageService } from './catalogStructuredStorageService'
 import { 
   CategoryData, 
   CategoryWithImage, 
@@ -28,12 +29,14 @@ interface ProductCountCache {
   data: Map<string, number>
   timestamp: number
   ttl: number // 缓存有效期（毫秒）
+  sourceSignature: string
 }
 
 const productCountCache: ProductCountCache = {
   data: new Map(),
   timestamp: 0,
-  ttl: 60000 // 1分钟缓存
+  ttl: 60000, // 1分钟缓存
+  sourceSignature: ''
 }
 
 /**
@@ -42,6 +45,21 @@ const productCountCache: ProductCountCache = {
 function invalidateCache(): void {
   productCountCache.timestamp = 0
   productCountCache.data.clear()
+  productCountCache.sourceSignature = ''
+}
+
+function getProductSourceSignature(): string {
+  const source = db.queryOne(`
+    SELECT
+      COUNT(*) as count,
+      COALESCE(MAX(id), 0) as max_id,
+      COALESCE(SUM(id), 0) as sum_id,
+      MAX(updated_at) as max_updated_at
+    FROM contents
+    WHERE content_type = 'product' AND status != 'deleted'
+  `)
+
+  return `${source?.count || 0}:${source?.max_id || 0}:${source?.sum_id || 0}:${source?.max_updated_at || ''}`
 }
 
 /**
@@ -49,38 +67,23 @@ function invalidateCache(): void {
  */
 function getProductCountMap(): Map<string, number> {
   const now = Date.now()
+  const currentSignature = getProductSourceSignature()
   
   // 检查缓存是否有效
   if (productCountCache.timestamp > 0 && 
-      now - productCountCache.timestamp < productCountCache.ttl) {
+      now - productCountCache.timestamp < productCountCache.ttl &&
+      productCountCache.sourceSignature === currentSignature) {
     return productCountCache.data
   }
-  
-  // 重新计算
-  const countMap = new Map<string, number>()
-  const productRows = db.queryAll(`
-    SELECT draft_data, published_data FROM contents 
-    WHERE content_type = 'product' AND status != 'deleted'
-  `)
-  
-  productRows.forEach(row => {
-    // 优先使用草稿数据（与 canDelete 逻辑保持一致）
-    const data = row.draft_data || row.published_data
-    if (data) {
-      try {
-        const product = JSON.parse(data)
-        if (product.categoryId) {
-          countMap.set(product.categoryId, (countMap.get(product.categoryId) || 0) + 1)
-        }
-      } catch {
-        // 忽略解析错误
-      }
-    }
-  })
+
+  // 重新同步并计算
+  catalogStructuredStorageService.ensureContentTypeSynced('product')
+  const countMap = catalogStructuredStorageService.getProductCountMap()
   
   // 更新缓存
   productCountCache.data = countMap
   productCountCache.timestamp = now
+  productCountCache.sourceSignature = currentSignature
   
   return countMap
 }
@@ -119,8 +122,21 @@ function getImageUrl(imageId: number | null | undefined, imageMap: Map<number, {
  * 构建图片映射表
  */
 function buildImageMap(): Map<number, { filename: string; path: string }> {
-  const imageRows = db.queryAll('SELECT id, filename, path FROM category_images')
-  return new Map(imageRows.map(row => [row.id, { filename: row.filename, path: row.path }]))
+  try {
+    const imageRows = db.queryAll('SELECT id, filename, path FROM category_images')
+    return new Map(imageRows.map(row => [row.id, { filename: row.filename, path: row.path }]))
+  } catch {
+    // 测试库或最小化部署场景下，图片表可能尚未初始化
+    return new Map()
+  }
+}
+
+function getStructuredCategories(mode: 'published' | 'active'): CategoryData[] {
+  catalogStructuredStorageService.ensureContentTypeSynced('category')
+
+  return mode === 'published'
+    ? catalogStructuredStorageService.listPublishedData('category') as CategoryData[]
+    : catalogStructuredStorageService.listActiveData('category') as CategoryData[]
 }
 
 // ========================================
@@ -137,16 +153,10 @@ export const categoryService = {
    * 获取所有已发布的分类（用于前台）
    */
   getAllPublished(): CategoryWithImage[] {
-    const rows = db.queryAll(`
-      SELECT published_data FROM contents 
-      WHERE content_type = 'category' AND status = 'published' AND published_data IS NOT NULL
-      ORDER BY sort_order ASC, id ASC
-    `)
-    
+    const categories = getStructuredCategories('published')
     const imageMap = buildImageMap()
     
-    return rows.map(row => {
-      const cat = JSON.parse(row.published_data) as CategoryData
+    return categories.map(cat => {
       const imageName = cat.imageId ? imageMap.get(cat.imageId)?.filename || '' : ''
       return {
         ...cat,
@@ -160,26 +170,17 @@ export const categoryService = {
    * 获取所有分类（包含草稿，用于后台）
    */
   getAllAdmin(): CategoryWithImage[] {
-    const rows = db.queryAll(`
-      SELECT draft_data, published_data FROM contents 
-      WHERE content_type = 'category' AND status != 'deleted'
-      ORDER BY sort_order ASC, id ASC
-    `)
-    
+    const categories = getStructuredCategories('active')
     const imageMap = buildImageMap()
     
-    return rows.map(row => {
-      const data = row.draft_data || row.published_data
-      if (!data) return null
-      
-      const cat = JSON.parse(data) as CategoryData
+    return categories.map(cat => {
       const imageName = cat.imageId ? imageMap.get(cat.imageId)?.filename || '' : ''
       return {
         ...cat,
         imageUrl: getImageUrl(cat.imageId, imageMap),
         imageName
       }
-    }).filter(Boolean) as CategoryWithImage[]
+    })
   },
 
   /**
@@ -260,6 +261,7 @@ export const categoryService = {
       seen.add(value)
       
       const trimmed = value.trim()
+      if (!trimmed) continue
       // 检查是否是有效的ID
       if (validIds.has(trimmed)) continue
       // 检查是否是有效的名称
@@ -307,6 +309,8 @@ export const categoryService = {
         `, ['category', category.id, data, data, index + 1, now, now, now])
       })
     })
+
+    catalogStructuredStorageService.syncContentType('category')
     
     console.log(`✅ 已初始化 ${DEFAULT_CATEGORIES.length} 个默认分类`)
   },
@@ -334,6 +338,7 @@ export const categoryService = {
       })
     })
     
+    catalogStructuredStorageService.syncContentType('category')
     // 使缓存失效
     invalidateCache()
     
@@ -370,6 +375,7 @@ export const categoryService = {
       `, ['category', id, categoryData, sortOrder, now, now])
     }
     
+    catalogStructuredStorageService.syncContentType('category')
     // 使缓存失效
     invalidateCache()
     
@@ -431,6 +437,7 @@ export const categoryService = {
       })
     })
     
+    catalogStructuredStorageService.syncContentType('category')
     // 使缓存失效
     invalidateCache()
   },
@@ -458,6 +465,7 @@ export const categoryService = {
     // 物理删除记录
     db.run(`DELETE FROM contents WHERE content_type = 'category' AND content_key = ?`, [categoryId])
     
+    catalogStructuredStorageService.syncContentType('category')
     // 使缓存失效
     invalidateCache()
     

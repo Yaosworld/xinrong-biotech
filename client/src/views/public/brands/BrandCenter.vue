@@ -148,14 +148,14 @@ onMounted(async () => {
 }
 
 .brand-tab:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #05548C;
+  color: #05548C;
 }
 
 .brand-tab.active {
   @apply text-white border-transparent;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  box-shadow: 0 4px 14px rgba(118, 75, 162, 0.35);
+  background: #05548C;
+  box-shadow: none;
 }
 
 .tab-label {

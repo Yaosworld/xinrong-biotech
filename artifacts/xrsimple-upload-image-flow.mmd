@@ -1,0 +1,69 @@
+flowchart TB
+
+    admin["管理员"]
+    adminUi["后台图片管理页面<br/>分类 / 品牌 / 活动 / 首页 / 网站 / 头像"]
+    uploadApi["uploadApi<br/>upload / listFiles / deleteFile"]
+
+    subgraph UploadRoutes["上传相关接口"]
+        single["POST /api/admin/upload/:category"]
+        batch["POST /api/admin/upload/:category/batch"]
+        check["POST /api/admin/upload/:category/check-names"]
+        list["GET /api/admin/upload/:category/list"]
+        del["DELETE /api/admin/upload"]
+        imageRoutes["/api/admin/*-images<br/>图片实体管理接口"]
+    end
+
+    subgraph BackendFlow["后端处理"]
+        auth["authenticate"]
+        multer["multer memoryStorage"]
+        uploadService["uploadService<br/>目录映射 / 命名 / 校验 / 保存"]
+        imageServices["categoryImageService / promotionImageService / homeImageService / brandImageService / avatarImageService / siteImageService"]
+        decode["中文文件名解码"]
+    end
+
+    subgraph Storage["存储"]
+        uploadFs["uploads/images/... 文件系统"]
+        imageTables[("各类 image 表<br/>category_images / brand_images / ...")]
+        publicUrl["/uploads/... 静态访问"]
+    end
+
+    admin --> adminUi
+    adminUi --> uploadApi
+
+    uploadApi --> single
+    uploadApi --> batch
+    uploadApi --> list
+    uploadApi --> del
+
+    single --> auth
+    batch --> auth
+    check --> auth
+    list --> auth
+    del --> auth
+    imageRoutes --> auth
+
+    single --> multer
+    batch --> multer
+    multer --> decode
+    decode --> uploadService
+
+    check --> uploadService
+    list --> uploadService
+    del --> uploadService
+
+    imageRoutes --> imageServices
+    imageServices --> imageTables
+
+    uploadService --> uploadFs
+    uploadService --> publicUrl
+    imageServices --> uploadFs
+
+    classDef actor fill:#eef6ff,stroke:#2563eb,stroke-width:2px,color:#111827;
+    classDef route fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#111827;
+    classDef svc fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#111827;
+    classDef storage fill:#ecfdf5,stroke:#15803d,stroke-width:2px,color:#111827;
+
+    class admin,adminUi,uploadApi actor;
+    class single,batch,check,list,del,imageRoutes route;
+    class auth,multer,uploadService,imageServices,decode svc;
+    class uploadFs,imageTables,publicUrl storage;

@@ -25,6 +25,13 @@
     { "name": "品牌中心", "path": "/brands" },
     { "name": "关于我们", "path": "/about" }
   ],
+  "footerMeta": {
+    "copyrightText": "© 2026 广州信荣生物科技有限公司 版权所有",
+    "icpNumber": "粤ICP备2025507620号",
+    "icpUrl": "https://beian.miit.gov.cn/",
+    "publicSecurityNumber": "粤公网安备 44xxxxxxxxx号",
+    "publicSecurityUrl": "http://www.beian.gov.cn/portal/registerSystemInfo"
+  },
   "floatingPanel": {
     "phone": {
       "emoji": "📞",

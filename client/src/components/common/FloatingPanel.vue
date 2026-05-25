@@ -1,7 +1,8 @@
 <template>
   <!-- 右侧悬浮面板 -->
-  <div class="floating-panel" v-if="panelData">
+  <div class="floating-panel" v-if="hasPanelData">
     <div
+      v-if="hasPhone"
       class="floating-item phone"
       @mouseenter="showTooltip('phone')"
       @mouseleave="hideTooltip"
@@ -22,6 +23,7 @@
     </div>
 
     <div
+      v-if="hasEmail"
       class="floating-item email"
       @mouseenter="showTooltip('email')"
       @mouseleave="hideTooltip"
@@ -46,6 +48,7 @@
     </div>
 
     <div
+      v-if="hasSocial"
       class="floating-item social"
       @mouseenter="showTooltip('social')"
       @mouseleave="hideTooltip"
@@ -95,6 +98,10 @@ const siteStore = useSiteStore()
 
 // 从 store 获取悬浮面板数据
 const panelData = computed(() => siteStore.floatingPanelData)
+const hasPhone = computed(() => panelData.value.phone.phones.length > 0)
+const hasEmail = computed(() => Boolean(panelData.value.email.content || panelData.value.email.qq))
+const hasSocial = computed(() => Boolean(panelData.value.social.wechat.qrUrl))
+const hasPanelData = computed(() => siteStore.loaded && (hasPhone.value || hasEmail.value || hasSocial.value))
 
 // 提示框显示状态
 const tooltipVisible = ref<string | null>(null)
@@ -174,7 +181,7 @@ const backToTop = () => {
 }
 
 .floating-item.back-to-top {
-  background: linear-gradient(45deg, #6366f1, #8b5cf6);
+  background: linear-gradient(45deg, #05548C, #43CEED);
 }
 
 .floating-item.back-to-top:hover {

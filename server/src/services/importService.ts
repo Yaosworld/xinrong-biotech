@@ -1,5 +1,7 @@
 import db from '../db'
 import * as XLSX from 'xlsx'
+import { categoryService } from './categoryService'
+import { catalogStructuredStorageService } from './catalogStructuredStorageService'
 
 export type ImportMode = 'replace' | 'merge' | 'append'
 
@@ -269,6 +271,14 @@ export const importService = {
     
     // 获取日志ID
     const importLogId = db.lastInsertRowId()
+
+    if (catalogStructuredStorageService.supports(contentType)) {
+      catalogStructuredStorageService.syncContentType(contentType)
+    }
+
+    if (contentType === 'product' || contentType === 'category') {
+      categoryService.invalidateCache()
+    }
     
     return {
       success: true,

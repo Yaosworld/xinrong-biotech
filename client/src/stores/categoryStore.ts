@@ -1,14 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Category } from '@/types'
-import { 
-  DEFAULT_CATEGORIES, 
-  DEFAULT_IMAGE_PATH, 
-  PRODUCT_IMAGE_BASE_PATH 
-} from '@/constants/categories'
-
-// API 基础路径
-const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+import { DEFAULT_IMAGE_PATH } from '@/constants/categories'
+import { contentApi } from '@/api/contentApi'
 
 export const useCategoryStore = defineStore('category', () => {
   // ========================================
@@ -50,18 +44,14 @@ export const useCategoryStore = defineStore('category', () => {
     error.value = null
     
     try {
-      const res = await fetch(`${API_BASE}/content/category/published?pageSize=100`)
-      if (!res.ok) throw new Error('获取分类数据失败')
-      
-      const result = await res.json()
+      const result = await contentApi.getPublishedList<Category>('category', { pageSize: 100 })
       categories.value = result.data || []
       initialized.value = true
     } catch (e) {
-      console.warn('加载分类失败，使用默认数据:', e)
-      // 降级到默认数据
-      categories.value = [...DEFAULT_CATEGORIES]
+      console.warn('加载分类失败:', e)
+      categories.value = []
       error.value = e instanceof Error ? e.message : '加载分类失败'
-      initialized.value = true
+      initialized.value = false
     } finally {
       loading.value = false
     }
@@ -71,12 +61,7 @@ export const useCategoryStore = defineStore('category', () => {
    * 根据ID获取分类
    */
   function getCategoryById(id: string): Category | undefined {
-    // 优先从已加载数据中查找
-    if (initialized.value) {
-      return categoryMap.value.get(id)
-    }
-    // 降级到默认数据
-    return DEFAULT_CATEGORIES.find(c => c.id === id)
+    return categoryMap.value.get(id)
   }
 
   /**

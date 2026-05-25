@@ -244,7 +244,7 @@ watch(() => props.visible, (newVal) => {
 
 .version-list,
 .version-detail {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -257,8 +257,8 @@ watch(() => props.visible, (newVal) => {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--admin-panel-bg);
+  border-bottom: 1px solid var(--admin-border);
   font-size: 14px;
   font-weight: 600;
   color: #333;
@@ -266,7 +266,7 @@ watch(() => props.visible, (newVal) => {
 
 .list-header i,
 .detail-header i {
-  color: #667eea;
+  color: #05548C;
 }
 
 .version-count,
@@ -275,13 +275,13 @@ watch(() => props.visible, (newVal) => {
   font-size: 12px;
   font-weight: 500;
   color: #999;
-  background: #f0f0f0;
+  background: var(--admin-border);
   padding: 2px 8px;
   border-radius: 10px;
 }
 
 .detail-version {
-  background: #667eea;
+  background: #05548C;
   color: #fff;
 }
 
@@ -304,12 +304,12 @@ watch(() => props.visible, (newVal) => {
 }
 
 .version-item:hover {
-  background: #f5f5f5;
+  background: var(--admin-surface-alt);
 }
 
 .version-item.active {
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.3);
+  background: rgba(5, 84, 140, 0.1);
+  border: 1px solid rgba(5, 84, 140, 0.3);
 }
 
 .version-info {
@@ -421,8 +421,8 @@ watch(() => props.visible, (newVal) => {
 .data-content pre {
   margin: 0;
   padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e8e8e8;
+  background: var(--admin-panel-bg);
+  border: 1px solid var(--admin-border);
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.5;

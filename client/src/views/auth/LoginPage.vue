@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useSiteStore } from '@/stores/siteStore'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const siteStore = useSiteStore()
 
 const form = reactive({
   username: '',
@@ -16,6 +18,10 @@ const form = reactive({
 
 const loading = ref(false)
 const showPassword = ref(false)
+
+const loginSubtitle = computed(() => {
+  return siteStore.company.name || siteStore.company.shortName || '内容管理后台'
+})
 
 async function handleLogin() {
   if (!form.username.trim()) {
@@ -39,7 +45,10 @@ async function handleLogin() {
       ElMessage.error(res.error?.message || '登录失败')
     }
   } catch (error) {
-    ElMessage.error('网络错误，请稍后重试')
+    const message = error instanceof Error && error.message
+      ? error.message
+      : '无法连接后台服务，请确认 CMS 后端已启动'
+    ElMessage.error(message)
   } finally {
     loading.value = false
   }
@@ -48,6 +57,12 @@ async function handleLogin() {
 function goHome() {
   router.push('/')
 }
+
+onMounted(() => {
+  if (!siteStore.loaded && !siteStore.loading) {
+    siteStore.loadSiteConfig()
+  }
+})
 </script>
 
 <template>
@@ -65,7 +80,7 @@ function goHome() {
       </div>
       
       <h1 class="login-title">后台管理系统</h1>
-      <p class="login-subtitle">广州信荣生物科技有限公司</p>
+      <p class="login-subtitle">{{ loginSubtitle }}</p>
       
       <form class="login-form" @submit.prevent="handleLogin">
         <div class="form-item">
@@ -111,7 +126,7 @@ function goHome() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   position: relative;
   overflow: hidden;
 }
@@ -156,12 +171,12 @@ function goHome() {
   width: 72px;
   height: 72px;
   margin: 0 auto 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(5, 84, 140, 0.4);
 }
 
 .login-logo i { font-size: 32px; color: #fff; }
@@ -215,8 +230,8 @@ function goHome() {
   outline: none;
 }
 
-.login-input:focus { border-color: #667eea; }
-.login-input:focus ~ .input-icon { color: #667eea; }
+.login-input:focus { border-color: #05548C; }
+.login-input:focus ~ .input-icon { color: #05548C; }
 .login-input::placeholder { color: #bbb; }
 
 .toggle-password {
@@ -227,7 +242,7 @@ function goHome() {
   transition: color 0.2s;
 }
 
-.toggle-password:hover { color: #667eea; }
+.toggle-password:hover { color: #05548C; }
 
 .remember { margin-top: -8px; }
 
@@ -243,13 +258,13 @@ function goHome() {
 .checkbox-label input {
   width: 16px;
   height: 16px;
-  accent-color: #667eea;
+  accent-color: #05548C;
 }
 
 .login-btn {
   width: 100%;
   height: 48px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -261,12 +276,12 @@ function goHome() {
   justify-content: center;
   gap: 8px;
   transition: all 0.2s;
-  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 14px rgba(5, 84, 140, 0.4);
 }
 
 .login-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 6px 20px rgba(5, 84, 140, 0.5);
 }
 
 .login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
@@ -285,7 +300,7 @@ function goHome() {
   transition: color 0.2s;
 }
 
-.back-home:hover { color: #667eea; }
+.back-home:hover { color: #05548C; }
 
 @media (max-width: 480px) {
   .login-card { padding: 32px 24px; }

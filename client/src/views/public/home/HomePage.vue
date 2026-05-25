@@ -62,7 +62,7 @@ const latestPromotions = computed(() => {
   // 使用 store 中已经排好序的活动（已经按照状态优先级排序）
   // filteredPromotions 是排好序的，但不包括已结束的活动
   const activePromotions = promotionStore.sortedPromotions.filter(p =>
-    p.status !== 'ended' && p.status !== 'all'
+    p.timeStatus !== 'ended'
   )
 
   // 返回前8个活动
@@ -94,22 +94,31 @@ const goTo = (path: string) => {
 <template>
   <div class="home-page">
     <!-- 图片轮播横幅 -->
-    <HomeBanner />
+    <HomeBanner>
+      <!-- 第一张横幅文字覆盖层 -->
+      <div class="banner-text-overlay">
+        <div class="banner-keywords">
+          试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基
+        </div>
+        <h1 class="banner-main-title">科研试剂耗材一站式供应</h1>
+        <p class="banner-slogan">信立科研 · 荣筑未来</p>
+      </div>
+    </HomeBanner>
 
     <!-- 产品分类快捷入口 -->
     <section class="py-10 bg-white">
       <div class="container-base">
-        <div class="flex flex-wrap justify-center gap-3">
+        <div class="flex flex-wrap justify-center gap-4">
           <button
             v-for="category in categories.slice(0, 8)"
             :key="category.id"
-            class="filter-tag"
+            class="category-entry-btn"
             @click="goTo(`/products?category=${category.id}`)"
           >
             {{ category.name }}
           </button>
           <button
-            class="filter-tag !bg-gradient-50 !text-gradient-600"
+            class="category-entry-btn category-entry-btn--highlight"
             @click="goTo('/products')"
           >
             查看全部 →
@@ -195,3 +204,74 @@ const goTo = (path: string) => {
 
   </div>
 </template>
+
+<style scoped>
+/* 横幅文字覆盖层 */
+.banner-text-overlay {
+  text-align: center;
+  padding: 60px 100px;
+  background: rgba(5, 84, 140, 0.7);
+  backdrop-filter: blur(3px);
+}
+
+.banner-keywords {
+  display: inline-block;
+  padding: 10px 32px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #05548C;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-bottom: 28px;
+}
+
+.banner-main-title {
+  font-size: 4rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 24px;
+  letter-spacing: 8px;
+}
+
+.banner-slogan {
+  font-size: 1.6rem;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+  letter-spacing: 10px;
+  font-weight: 300;
+}
+
+/* 首页分类入口按钮 */
+.category-entry-btn {
+  padding: 12px 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #334155;
+  background: #f1f5f9;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-entry-btn:hover {
+  color: #05548C;
+  background: #e8f4fa;
+  border-color: #43CEED;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 84, 140, 0.15);
+}
+
+.category-entry-btn--highlight {
+  color: #05548C;
+  background: #e8f8fd;
+  border-color: #43CEED;
+  font-weight: 700;
+}
+
+.category-entry-btn--highlight:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #05548C, #43CEED);
+  border-color: transparent;
+}
+</style>

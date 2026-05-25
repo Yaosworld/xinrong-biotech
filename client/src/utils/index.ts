@@ -4,5 +4,9 @@
 
 export * from './excelProcessor'
 export * from './fileHandler'
-export * from './configValidator'
+export { ConfigValidator } from './configValidator'
+export type {
+  ValidationError as ConfigValidationError,
+  ValidationResult as ConfigValidationResult
+} from './configValidator'
 

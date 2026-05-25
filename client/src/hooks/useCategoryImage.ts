@@ -1,33 +1,32 @@
 import { computed, type Ref, type ComputedRef } from 'vue'
 import type { Category } from '@/types'
 import { useCategoryStore } from '@/stores/categoryStore'
-import { DEFAULT_CATEGORIES, DEFAULT_IMAGE_PATH } from '@/constants/categories'
+import { DEFAULT_IMAGE_PATH } from '@/constants/categories'
 
 // ========================================
 // 动态分类数据（从 store 获取）
 // ========================================
 
+const emptyCategories: Category[] = []
+
 /**
- * 获取分类列表（优先从 store，降级到默认值）
+ * 获取分类列表（仅从 store/API 获取）
  */
 export function getCategories(): Category[] {
   try {
     const store = useCategoryStore()
-    if (store.initialized && store.categories.length > 0) {
-      return store.categories
-    }
+    return store.categories
   } catch {
-    // store 未初始化时使用默认值
+    return emptyCategories
   }
-  return DEFAULT_CATEGORIES
 }
 
 /**
  * 导出 CATEGORIES 作为计算属性的替代（向后兼容）
  * 注意：这是一个 getter，每次访问都会获取最新数据
  */
-export const CATEGORIES = new Proxy(DEFAULT_CATEGORIES, {
-  get(target, prop) {
+export const CATEGORIES = new Proxy(emptyCategories, {
+  get(_target, prop) {
     const categories = getCategories()
     if (prop === 'length') return categories.length
     if (prop === Symbol.iterator) return categories[Symbol.iterator].bind(categories)
@@ -37,7 +36,7 @@ export const CATEGORIES = new Proxy(DEFAULT_CATEGORIES, {
     if (typeof prop === 'string' && prop in Array.prototype) {
       return (categories as any)[prop]
     }
-    return (target as any)[prop]
+    return (categories as any)[prop]
   }
 }) as Category[]
 
@@ -124,4 +123,3 @@ export function useCategoryImageWithFallback(
     handleError
   }
 }
-

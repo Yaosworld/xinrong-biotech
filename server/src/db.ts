@@ -4,13 +4,22 @@ import path from 'path'
 import fs from 'fs'
 import bcrypt from 'bcryptjs'
 
+const isTestEnv =
+  Boolean(process.env.VITEST) ||
+  process.env.NODE_ENV === 'test' ||
+  process.argv.some(arg => arg.toLowerCase().includes('vitest'))
+
+const defaultDbFilename = isTestEnv ? 'test-cms.db' : 'cms.db'
+const configuredDbPath = process.env.CMS_DB_PATH
+const dbPath = configuredDbPath
+  ? path.resolve(configuredDbPath)
+  : path.join(__dirname, '../data', defaultDbFilename)
+
 // 确保 data 目录存在
-const dataDir = path.join(__dirname, '../data')
+const dataDir = path.dirname(dbPath)
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true })
 }
-
-const dbPath = path.join(dataDir, 'cms.db')
 
 let db: SqlJsDatabase | null = null
 
@@ -73,12 +82,162 @@ async function initDb(): Promise<SqlJsDatabase> {
       created_at      TEXT DEFAULT (datetime('now', 'localtime'))
     )
   `)
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS catalog_products (
+      content_id              INTEGER PRIMARY KEY,
+      content_key             TEXT NOT NULL UNIQUE,
+      status                  TEXT NOT NULL,
+      sort_order              INTEGER DEFAULT 0,
+      created_at              TEXT,
+      updated_at              TEXT,
+      published_at            TEXT,
+      draft_payload_json      TEXT,
+      draft_name              TEXT,
+      draft_category_id       TEXT,
+      draft_brand             TEXT,
+      draft_sku               TEXT,
+      draft_price             TEXT,
+      draft_specs             TEXT,
+      draft_unit              TEXT,
+      draft_desc              TEXT,
+      published_payload_json  TEXT,
+      published_name          TEXT,
+      published_category_id   TEXT,
+      published_brand         TEXT,
+      published_sku           TEXT,
+      published_price         TEXT,
+      published_specs         TEXT,
+      published_unit          TEXT,
+      published_desc          TEXT,
+      FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE
+    )
+  `)
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS catalog_brands (
+      content_id                      INTEGER PRIMARY KEY,
+      content_key                     TEXT NOT NULL UNIQUE,
+      status                          TEXT NOT NULL,
+      sort_order                      INTEGER DEFAULT 0,
+      created_at                      TEXT,
+      updated_at                      TEXT,
+      published_at                    TEXT,
+      draft_payload_json              TEXT,
+      draft_name                      TEXT,
+      draft_logo_url                  TEXT,
+      draft_certificate_url           TEXT,
+      draft_brand_type                TEXT,
+      draft_country                   TEXT,
+      draft_description               TEXT,
+      draft_website                   TEXT,
+      draft_sort_order_value          INTEGER,
+      draft_is_own_brand              INTEGER,
+      draft_brand_id                  TEXT,
+      draft_show_name                 TEXT,
+      draft_is_own                    INTEGER,
+      draft_website_url               TEXT,
+      published_payload_json          TEXT,
+      published_name                  TEXT,
+      published_logo_url              TEXT,
+      published_certificate_url       TEXT,
+      published_brand_type            TEXT,
+      published_country               TEXT,
+      published_description           TEXT,
+      published_website               TEXT,
+      published_sort_order_value      INTEGER,
+      published_is_own_brand          INTEGER,
+      published_brand_id              TEXT,
+      published_show_name             TEXT,
+      published_is_own                INTEGER,
+      published_website_url           TEXT,
+      FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE
+    )
+  `)
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS catalog_promotions (
+      content_id                        INTEGER PRIMARY KEY,
+      content_key                       TEXT NOT NULL UNIQUE,
+      status                            TEXT NOT NULL,
+      sort_order                        INTEGER DEFAULT 0,
+      created_at                        TEXT,
+      updated_at                        TEXT,
+      published_at                      TEXT,
+      draft_payload_json                TEXT,
+      draft_title                       TEXT,
+      draft_summary                     TEXT,
+      draft_description                 TEXT,
+      draft_cover_id                    INTEGER,
+      draft_poster_id                   INTEGER,
+      draft_cover_url                   TEXT,
+      draft_poster_url                  TEXT,
+      draft_icon_class                  TEXT,
+      draft_publish_date                TEXT,
+      draft_start_date                  TEXT,
+      draft_end_date                    TEXT,
+      draft_original_price              REAL,
+      draft_current_price               REAL,
+      draft_discount_badge              TEXT,
+      draft_tags_json                   TEXT,
+      draft_applicable_products         TEXT,
+      published_payload_json            TEXT,
+      published_title                   TEXT,
+      published_summary                 TEXT,
+      published_description             TEXT,
+      published_cover_id                INTEGER,
+      published_poster_id               INTEGER,
+      published_cover_url               TEXT,
+      published_poster_url              TEXT,
+      published_icon_class              TEXT,
+      published_publish_date            TEXT,
+      published_start_date              TEXT,
+      published_end_date                TEXT,
+      published_original_price          REAL,
+      published_current_price           REAL,
+      published_discount_badge          TEXT,
+      published_tags_json               TEXT,
+      published_applicable_products     TEXT,
+      FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE
+    )
+  `)
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS catalog_categories (
+      content_id                INTEGER PRIMARY KEY,
+      content_key               TEXT NOT NULL UNIQUE,
+      status                    TEXT NOT NULL,
+      sort_order                INTEGER DEFAULT 0,
+      created_at                TEXT,
+      updated_at                TEXT,
+      published_at              TEXT,
+      draft_payload_json        TEXT,
+      draft_name                TEXT,
+      draft_image_id            INTEGER,
+      draft_image_name          TEXT,
+      draft_description         TEXT,
+      published_payload_json    TEXT,
+      published_name            TEXT,
+      published_image_id        INTEGER,
+      published_image_name      TEXT,
+      published_description     TEXT,
+      FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE
+    )
+  `)
   
   // 创建索引
   db.run(`CREATE INDEX IF NOT EXISTS idx_contents_type ON contents(content_type)`)
   db.run(`CREATE INDEX IF NOT EXISTS idx_contents_status ON contents(status)`)
   db.run(`CREATE INDEX IF NOT EXISTS idx_contents_sort ON contents(content_type, sort_order)`)
   db.run(`CREATE INDEX IF NOT EXISTS idx_versions_content ON content_versions(content_id)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_products_status_sort ON catalog_products(status, sort_order)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_products_category ON catalog_products(published_category_id)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_products_brand ON catalog_products(published_brand)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_brands_status_sort ON catalog_brands(status, sort_order)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_brands_brand_type ON catalog_brands(published_brand_type)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_promotions_status_sort ON catalog_promotions(status, sort_order)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_promotions_dates ON catalog_promotions(published_publish_date, published_start_date, published_end_date)`)
+  db.run(`CREATE INDEX IF NOT EXISTS idx_catalog_categories_status_sort ON catalog_categories(status, sort_order)`)
   
   // 创建管理员表
   db.run(`

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useBrandStore } from '@/stores/brandStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
@@ -51,7 +52,7 @@ const columns = computed(() => [
 
 // 生成品牌ID - 基于当前编辑器数据和 store 数据，避免 ID 冲突
 const handleGenerateBrandId = (currentData: any[]) => {
-  const allBrands = [...currentData, ...localBrands.value, ...brandStore.brands]
+  const allBrands = [...currentData, ...localBrands.value]
   return generateBrandId(allBrands)
 }
 
@@ -89,18 +90,11 @@ const loadAdminData = async () => {
         (data as any).brand_type = (data as any).is_own_brand === true ? 'own' : 'partner'
       }
       return data
-    })
+    }).filter(Boolean)
   } catch (e) {
-    console.warn('Admin API 加载失败，降级到前台 Store:', e)
-    // 降级到前台 Store
-    await brandStore.loadBrands()
-    localBrands.value = brandStore.brands.map(brand => {
-      // 兼容旧数据
-      if (!brand.brand_type && brand.is_own_brand !== undefined) {
-        return { ...brand, brand_type: brand.is_own_brand === true ? 'own' : 'partner' }
-      }
-      return { ...brand }
-    })
+    console.error('Admin API 加载失败:', e)
+    localBrands.value = []
+    ElMessage.error('加载品牌数据失败，请检查后台接口')
   } finally {
     loading.value = false
   }

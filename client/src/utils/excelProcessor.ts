@@ -4,12 +4,7 @@
  */
 
 import { useCategoryStore } from '@/stores/categoryStore'
-import { 
-  DEFAULT_CATEGORY_IDS, 
-  CATEGORY_ID_TO_NAME, 
-  CATEGORY_NAME_TO_ID,
-  UNCATEGORIZED_ID 
-} from '@/constants/categories'
+import { UNCATEGORIZED_ID } from '@/constants/categories'
 import { PendingCategoryError, ValidationError } from '@/types/errors'
 
 export interface ValidationResult {
@@ -52,7 +47,9 @@ export class ExcelProcessor {
       const workbook = XLSX.read(arrayBuffer)
       const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]])
 
-      const validation = this.validateProductData(data, options?.skipCategoryValidation)
+      await this.ensureCategoryStoreReady()
+
+      const validation = await this.validateProductData(data, options?.skipCategoryValidation)
       const formattedData = this.formatProductsData(data, existingIds, options?.newCategoryMap)
 
       return {
@@ -172,29 +169,33 @@ export class ExcelProcessor {
     }
   }
 
-  // 使用统一的常量定义
-  static readonly DEFAULT_CATEGORY_IDS = DEFAULT_CATEGORY_IDS
+  static async ensureCategoryStoreReady(): Promise<void> {
+    const store = useCategoryStore()
+    if (!store.initialized && !store.loading) {
+      await store.loadCategories()
+    }
+
+    if (!store.initialized && store.error) {
+      throw new Error('分类数据加载失败，无法校验导入内容')
+    }
+  }
 
   /**
-   * 动态获取分类映射表（从 categoryStore）
+   * 动态获取分类映射表（仅从 categoryStore/API 获取）
    */
   static getCategoryMap(): { idToName: Map<string, string>; nameToId: Map<string, string>; validIds: Set<string> } {
     try {
       const store = useCategoryStore()
-      if (store.initialized && store.categories.length > 0) {
-        const idToName = new Map(store.categories.map(c => [c.id, c.name]))
-        const nameToId = new Map(store.categories.map(c => [c.name, c.id]))
-        const validIds = new Set(store.categories.map(c => c.id))
-        return { idToName, nameToId, validIds }
-      }
+      const idToName = new Map(store.categories.map(c => [c.id, c.name]))
+      const nameToId = new Map(store.categories.map(c => [c.name, c.id]))
+      const validIds = new Set(store.categories.map(c => c.id))
+      return { idToName, nameToId, validIds }
     } catch {
-      // store 未初始化
-    }
-    // 降级到统一的默认值
-    return { 
-      idToName: new Map(CATEGORY_ID_TO_NAME), 
-      nameToId: new Map(CATEGORY_NAME_TO_ID), 
-      validIds: new Set(DEFAULT_CATEGORY_IDS) 
+      return {
+        idToName: new Map(),
+        nameToId: new Map(),
+        validIds: new Set()
+      }
     }
   }
 
@@ -230,7 +231,8 @@ export class ExcelProcessor {
   /**
    * 检测未定义的分类
    */
-  static detectUndefinedCategories(categoryValues: string[]): string[] {
+  static async detectUndefinedCategories(categoryValues: string[]): Promise<string[]> {
+    await this.ensureCategoryStoreReady()
     const { validIds, nameToId } = this.getCategoryMap()
     const undefined_: string[] = []
     const seen = new Set<string>()
@@ -252,7 +254,14 @@ export class ExcelProcessor {
    * @param data 原始数据
    * @param skipCategoryValidation 是否跳过分类验证（用于检测新分类场景）
    */
-  static validateProductData(data: any[], skipCategoryValidation = false): ValidationResult & { undefinedCategories: string[] } {
+  static async validateProductData(
+    data: any[],
+    skipCategoryValidation = false
+  ): Promise<ValidationResult & { undefinedCategories: string[] }> {
+    if (!skipCategoryValidation) {
+      await this.ensureCategoryStoreReady()
+    }
+
     const requiredFields = ['name', 'categoryId', 'specs', 'desc']
     const errors: string[] = []
     const warnings: string[] = []

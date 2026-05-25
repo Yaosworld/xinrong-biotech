@@ -83,10 +83,19 @@ const loadData = async () => {
     const data = (content.draftData || content.publishedData || {}) as any
     
     formData.value = {
-      sections: data.sections || {
-        intro: { badge: '公司简介', title: '值得信赖的科研合作伙伴' },
-        advantages: { badge: '核心优势', title: '为什么选择我们' },
-        contact: { badge: '联系我们', title: '期待与您的合作' }
+      sections: {
+        intro: {
+          badge: data.sections?.intro?.badge || '',
+          title: data.sections?.intro?.title || ''
+        },
+        advantages: {
+          badge: data.sections?.advantages?.badge || '',
+          title: data.sections?.advantages?.title || ''
+        },
+        contact: {
+          badge: data.sections?.contact?.badge || '',
+          title: data.sections?.contact?.title || ''
+        }
       },
       introCards: data.introCards || [],
       advantages: data.advantages || []
@@ -109,18 +118,21 @@ const loadData = async () => {
     originalData.value = currentDataString.value
     editStatus.value = 'clean'
   } catch (e) {
-    console.warn('API 加载失败，使用 store 数据:', e)
-    await aboutStore.loadAboutData()
-    
+    console.error('API 加载失败:', e)
     formData.value = {
-      sections: JSON.parse(JSON.stringify(aboutStore.sections)),
-      introCards: JSON.parse(JSON.stringify(aboutStore.introCards)),
-      advantages: JSON.parse(JSON.stringify(aboutStore.advantages))
+      sections: {
+        intro: { badge: '', title: '' },
+        advantages: { badge: '', title: '' },
+        contact: { badge: '', title: '' }
+      },
+      introCards: [],
+      advantages: []
     }
     
     originalData.value = currentDataString.value
     contentStatus.value = 'unpublished'
     editStatus.value = 'clean'
+    ElMessage.error('加载关于我们内容失败，请检查后台接口')
   }
 }
 
@@ -366,7 +378,7 @@ onBeforeUnmount(() => {
                     <label>图标</label>
                     <el-select v-model="card.icon" size="small">
                       <el-option v-for="icon in commonIcons" :key="icon" :value="icon">
-                        <i :class="icon" style="margin-right: 8px; color: #667eea;"></i>{{ icon.replace('fas fa-', '') }}
+                        <i :class="icon" style="margin-right: 8px; color: #05548C;"></i>{{ icon.replace('fas fa-', '') }}
                       </el-option>
                     </el-select>
                   </div>
@@ -428,7 +440,7 @@ onBeforeUnmount(() => {
                     <label>图标</label>
                     <el-select v-model="item.icon" size="small">
                       <el-option v-for="icon in commonIcons" :key="icon" :value="icon">
-                        <i :class="icon" style="margin-right: 8px; color: #667eea;"></i>{{ icon.replace('fas fa-', '') }}
+                        <i :class="icon" style="margin-right: 8px; color: #05548C;"></i>{{ icon.replace('fas fa-', '') }}
                       </el-option>
                     </el-select>
                   </div>
@@ -457,7 +469,7 @@ onBeforeUnmount(() => {
                     <label>图标</label>
                     <el-select v-model="item.icon" size="small">
                       <el-option v-for="icon in commonIcons" :key="icon" :value="icon">
-                        <i :class="icon" style="margin-right: 8px; color: #667eea;"></i>{{ icon.replace('fas fa-', '') }}
+                        <i :class="icon" style="margin-right: 8px; color: #05548C;"></i>{{ icon.replace('fas fa-', '') }}
                       </el-option>
                     </el-select>
                   </div>
@@ -571,9 +583,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .about-content { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); overflow: hidden; }
 
-.page-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid #f0f0f0; background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%); }
+.page-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--admin-border); background: linear-gradient(135deg, var(--admin-surface) 0%, #fff 100%); }
 .header-left h2 { margin: 0; font-size: 18px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 10px; }
-.header-left h2 i { color: #667eea; }
+.header-left h2 i { color: #05548C; }
 .subtitle { display: block; margin-top: 4px; font-size: 13px; color: #999; }
 .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
@@ -582,27 +594,27 @@ onBeforeUnmount(() => {
 @keyframes pulse-animation { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 .version-tag { margin-right: 8px; }
 
-.page-tabs { display: flex; border-bottom: 1px solid #f0f0f0; background: #fafafa; }
+.page-tabs { display: flex; border-bottom: 1px solid var(--admin-border); background: var(--admin-surface-alt); }
 .tab-item { display: flex; align-items: center; gap: 8px; padding: 14px 24px; cursor: pointer; color: #666; font-size: 14px; border-bottom: 2px solid transparent; transition: all 0.2s; }
-.tab-item:hover { color: #667eea; background: rgba(102, 126, 234, 0.05); }
-.tab-item.active { color: #667eea; border-bottom-color: #667eea; background: #fff; }
+.tab-item:hover { color: #05548C; background: rgba(5, 84, 140, 0.05); }
+.tab-item.active { color: #05548C; border-bottom-color: #05548C; background: #fff; }
 .tab-item i { font-size: 16px; }
 
 .content-area { padding: 20px 24px; }
 
 .split-layout { display: grid; grid-template-columns: 480px 1fr; gap: 20px; min-height: 500px; }
-.edit-side, .preview-side { border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+.edit-side, .preview-side { border: 1px solid var(--admin-border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
 
-.edit-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f9fafb; border-bottom: 1px solid #e8e8e8; }
+.edit-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--admin-panel-bg); border-bottom: 1px solid var(--admin-border); }
 .edit-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #333; }
-.edit-title i { color: #667eea; }
-.count-badge { background: #667eea; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.edit-title i { color: #05548C; }
+.count-badge { background: #05548C; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
 
 .edit-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-.edit-card { border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; background: #fff; }
-.card-top { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f9fafb; border-bottom: 1px solid #e8e8e8; }
-.card-icon-preview { width: 32px; height: 32px; background: rgba(102, 126, 234, 0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #667eea; font-size: 14px; }
-.advantage-number { width: 28px; height: 28px; background: #667eea; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+.edit-card { border: 1px solid var(--admin-border); border-radius: 8px; overflow: hidden; background: #fff; }
+.card-top { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--admin-panel-bg); border-bottom: 1px solid var(--admin-border); }
+.card-icon-preview { width: 32px; height: 32px; background: rgba(5, 84, 140, 0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #05548C; font-size: 14px; }
+.advantage-number { width: 28px; height: 28px; background: #05548C; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
 .card-index { font-size: 12px; color: #999; margin-left: auto; margin-right: 4px; }
 .card-top .el-button { margin-left: auto; }
 .advantage-edit .card-top .el-button { margin-left: 0; }
@@ -612,59 +624,59 @@ onBeforeUnmount(() => {
 .field-row label { font-size: 12px; color: #666; font-weight: 500; }
 
 .sections-edit { padding: 12px; display: flex; flex-direction: column; gap: 16px; }
-.section-edit-item { border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; }
-.section-edit-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f9fafb; border-bottom: 1px solid #e8e8e8; font-size: 13px; font-weight: 600; color: #333; }
-.section-edit-header i { color: #667eea; }
+.section-edit-item { border: 1px solid var(--admin-border); border-radius: 8px; overflow: hidden; }
+.section-edit-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--admin-panel-bg); border-bottom: 1px solid var(--admin-border); font-size: 13px; font-weight: 600; color: #333; }
+.section-edit-header i { color: #05548C; }
 .section-edit-fields { padding: 12px; }
 
 .empty-tip { text-align: center; padding: 30px; color: #999; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .empty-tip i { font-size: 32px; color: #ddd; }
 .empty-tip.small { padding: 16px; font-size: 12px; }
 
-.preview-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e8e8e8; font-size: 14px; font-weight: 600; color: #333; }
-.preview-header i { color: #667eea; }
+.preview-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--admin-panel-bg); border-bottom: 1px solid var(--admin-border); font-size: 14px; font-weight: 600; color: #333; }
+.preview-header i { color: #05548C; }
 .preview-content { flex: 1; overflow-y: auto; padding: 24px; background: #fff; }
 .preview-empty { text-align: center; padding: 40px; color: #ccc; font-size: 14px; }
 
 .preview-section-header { text-align: center; margin-bottom: 24px; }
-.section-badge { display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 12px; padding: 4px 14px; border-radius: 20px; margin-bottom: 10px; }
+.section-badge { display: inline-block; background: linear-gradient(135deg, #05548C, #43CEED); color: #fff; font-size: 12px; padding: 4px 14px; border-radius: 20px; margin-bottom: 10px; }
 .section-title { margin: 0; font-size: 20px; font-weight: 700; color: #1f2937; }
 
 .intro-preview { background: #fff; }
 .intro-cards-list { display: flex; flex-direction: column; gap: 16px; }
 .intro-card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); border: 1px solid #f3f4f6; transition: all 0.3s; }
-.intro-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-color: rgba(102, 126, 234, 0.3); }
+.intro-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-color: rgba(5, 84, 140, 0.3); }
 .intro-card-inner { display: flex; align-items: flex-start; gap: 16px; }
-.intro-card-icon { width: 56px; height: 56px; border-radius: 12px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); color: #667eea; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.intro-card-icon { width: 56px; height: 56px; border-radius: 12px; background: linear-gradient(135deg, rgba(5, 84, 140, 0.1), rgba(5, 84, 140, 0.1)); color: #05548C; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
 .intro-card-content { flex: 1; }
 .intro-card-title { margin: 0 0 8px; font-size: 18px; font-weight: 600; color: #1f2937; }
 .intro-card-text { margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6; }
 
-.advantages-preview { background: #f9fafb; border-radius: 8px; }
+.advantages-preview { background: var(--admin-panel-bg); border-radius: 8px; }
 .advantage-timeline { position: relative; max-width: 100%; }
-.advantage-timeline::before { content: ''; position: absolute; left: 24px; top: 24px; bottom: 24px; width: 2px; background: rgba(102, 126, 234, 0.2); }
+.advantage-timeline::before { content: ''; position: absolute; left: 24px; top: 24px; bottom: 24px; width: 2px; background: rgba(5, 84, 140, 0.2); }
 .advantage-item { position: relative; display: flex; gap: 16px; margin-bottom: 24px; }
 .advantage-item:last-child { margin-bottom: 0; }
-.advantage-num { width: 48px; height: 48px; border-radius: 50%; background: #667eea; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0; position: relative; z-index: 1; }
+.advantage-num { width: 48px; height: 48px; border-radius: 50%; background: #05548C; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0; position: relative; z-index: 1; }
 .advantage-card { flex: 1; background: #fff; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); border: 1px solid #f3f4f6; transition: all 0.3s; }
-.advantage-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-color: rgba(102, 126, 234, 0.3); }
+.advantage-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-color: rgba(5, 84, 140, 0.3); }
 .advantage-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.advantage-card-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(102, 126, 234, 0.1); color: #667eea; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.advantage-card-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(5, 84, 140, 0.1); color: #05548C; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 .advantage-card-title { margin: 0; font-size: 16px; font-weight: 600; color: #1f2937; }
 .advantage-card-text { margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5; }
 
 .sections-preview { display: flex; flex-direction: column; gap: 20px; }
 .section-preview-block { background: #fff; border-radius: 12px; padding: 32px; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); border: 1px solid #f3f4f6; }
-.section-preview-block.alt { background: #f9fafb; }
+.section-preview-block.alt { background: var(--admin-panel-bg); }
 
 .vertical-layout { display: flex; flex-direction: column; gap: 20px; }
-.edit-panel-horizontal, .preview-panel-horizontal { border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; }
+.edit-panel-horizontal, .preview-panel-horizontal { border: 1px solid var(--admin-border); border-radius: 10px; overflow: hidden; }
 .edit-cards-grid { display: flex; gap: 12px; padding: 12px; flex-wrap: wrap; }
 .edit-cards-grid .edit-card { flex: 1; min-width: 280px; }
-.edit-card.compact { border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; background: #fff; }
+.edit-card.compact { border: 1px solid var(--admin-border); border-radius: 8px; overflow: hidden; background: #fff; }
 
 .three-column-layout { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 16px; min-height: 500px; }
-.edit-column, .preview-column { border: 1px solid #e8e8e8; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+.edit-column, .preview-column { border: 1px solid var(--admin-border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
 
 .publish-dialog-content { display: flex; flex-direction: column; gap: 16px; }
 .publish-info { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; color: #0369a1; font-size: 13px; line-height: 1.5; }

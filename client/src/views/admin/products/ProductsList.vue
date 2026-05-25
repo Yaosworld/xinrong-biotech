@@ -30,17 +30,7 @@ const products = computed(() => localProducts.value)
 
 // 分类选项（从 store 动态获取）
 const categoryOptions = computed(() => {
-  if (categoryStore.initialized && categoryStore.categories.length > 0) {
-    return categoryStore.categories.map(c => ({ label: c.name, value: c.id }))
-  }
-  // 降级到默认值
-  return [
-    { label: '仪器设备', value: 'C01' },
-    { label: '实验耗材', value: 'C02' },
-    { label: '实验试剂', value: 'C03' },
-    { label: '细胞相关产品', value: 'C04' },
-    { label: '分子生物实验产品', value: 'C05' }
-  ]
+  return categoryStore.categories.map(c => ({ label: c.name, value: c.id }))
 })
 
 // 列配置
@@ -93,7 +83,7 @@ const handleExcelImport = async (file: File) => {
   
   // 提取分类值并检测未定义分类
   const categoryValues = ExcelProcessor.extractCategoryValues(parseResult.data)
-  const undefinedCategories = ExcelProcessor.detectUndefinedCategories(categoryValues)
+  const undefinedCategories = await ExcelProcessor.detectUndefinedCategories(categoryValues)
   
   // 如果有未定义分类，显示弹窗让用户处理
   if (undefinedCategories.length > 0) {
@@ -110,10 +100,7 @@ const handleExcelImport = async (file: File) => {
 
 // 实际处理导入文件
 const processImportFile = async (file: File, newCategoryMap?: Map<string, string>) => {
-  const existingIds = [
-    ...localProducts.value.map(p => p.id),
-    ...productStore.products.map(p => p.id)
-  ].filter(Boolean)
+  const existingIds = localProducts.value.map(p => p.id).filter(Boolean)
   
   const result = await ExcelProcessor.processProducts(file, existingIds, { 
     skipCategoryValidation: !!newCategoryMap,
@@ -232,8 +219,8 @@ const beforeSave = (data: any[]) => {
 // 生成产品ID - 基于当前编辑器数据和 store 数据，避免 ID 冲突
 // 使用 ExcelProcessor 中的统一方法，确保格式一致（P + 6位数字）
 const generateProductId = (currentData: any[]) => {
-  // 合并当前编辑器数据、本地数据和 store 数据，取最大值
-  const allProducts = [...currentData, ...localProducts.value, ...productStore.products]
+  // 合并当前编辑器数据和本地管理数据，取最大值
+  const allProducts = [...currentData, ...localProducts.value]
   const maxIdNum = allProducts.reduce((max, item) => {
     return Math.max(max, ExcelProcessor.extractProductIdNum(item.id))
   }, 0)
@@ -284,10 +271,9 @@ const loadAdminData = async () => {
     console.log(`[loadAdminData] 过滤后 ${products.length} 条有效数据`)
     localProducts.value = products
   } catch (e) {
-    console.warn('Admin API 加载失败，降级到前台 Store:', e)
-    // 降级到前台 Store
-    await productStore.loadProducts()
-    localProducts.value = [...productStore.products]
+    console.error('Admin API 加载失败:', e)
+    localProducts.value = []
+    ElMessage.error('加载产品数据失败，请检查后台接口')
   } finally {
     loading.value = false
   }

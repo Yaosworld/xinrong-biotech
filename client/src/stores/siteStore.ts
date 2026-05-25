@@ -33,6 +33,14 @@ export interface FooterLink {
   path: string
 }
 
+export interface FooterMeta {
+  copyrightText: string
+  icpNumber: string
+  icpUrl: string
+  publicSecurityNumber: string
+  publicSecurityUrl: string
+}
+
 export interface FloatingPanelConfig {
   phone: {
     emoji: string
@@ -63,65 +71,67 @@ export const useSiteStore = defineStore('site', () => {
   // State - 公司信息
   // ========================================
   const company = ref<CompanyInfo>({
-    name: '广州信荣生物科技有限公司',
-    shortName: '信荣生物',
-    englishName: 'GUANGZHOU XINRONG BIOTECHNOLOGY CO., LTD.',
-    logo: '/images/common/logo.png'
+    name: '',
+    shortName: '',
+    englishName: '',
+    logo: ''
   })
 
   // ========================================
   // State - 联系信息
   // ========================================
   const contact = ref<ContactInfo>({
-    phones: ['15919646073', '13422057239'],
-    email: '15919646073@139.com',
-    qq: '3566549322',
-    address: '广东省广州市黄埔区云埔街道双井东路2号鸫汇商业中心612',
-    wechatQrcode: '/images/common/wx-qrcode-contact.png',
-    gzhQrcode: '/images/common/gzh-qrcode.jpg',
-    workTime: '周一至周五 8:00 - 17:30'
+    phones: [],
+    email: '',
+    qq: '',
+    address: '',
+    wechatQrcode: '',
+    gzhQrcode: '',
+    workTime: ''
   })
 
   // ========================================
   // State - 友情链接
   // ========================================
-  const friendLinks = ref<FriendLink[]>([
-    { name: '锐竞平台', url: 'https://www.ringbio.com' },
-    { name: '喀斯玛平台', url: 'https://www.casmart.com.cn' },
-    { name: '丁香平台', url: 'https://www.dxy.cn' }
-  ])
+  const friendLinks = ref<FriendLink[]>([])
 
   // ========================================
   // State - 页脚导航链接
   // ========================================
-  const footerLinks = ref<FooterLink[]>([
-    { name: '产品中心', path: '/products' },
-    { name: '资讯中心', path: '/news' },
-    { name: '品牌中心', path: '/brands' },
-    { name: '关于我们', path: '/about' }
-  ])
+  const footerLinks = ref<FooterLink[]>([])
+
+  // ========================================
+  // State - 页脚附加信息
+  // ========================================
+  const footerMeta = ref<FooterMeta>({
+    copyrightText: '',
+    icpNumber: '',
+    icpUrl: '',
+    publicSecurityNumber: '',
+    publicSecurityUrl: ''
+  })
 
   // ========================================
   // State - 悬浮面板配置
   // ========================================
   const floatingPanel = ref<FloatingPanelConfig>({
     phone: {
-      emoji: '📞',
-      title: '联系电话'
+      emoji: '',
+      title: ''
     },
     email: {
-      emoji: '✉️',
-      title: '联系方式'
+      emoji: '',
+      title: ''
     },
     social: {
-      emoji: '💬',
-      title: '扫码关注',
-      wechatLabel: '微信客服'
+      emoji: '',
+      title: '',
+      wechatLabel: ''
     },
     backToTop: {
-      emoji: '⬆️',
-      title: '返回顶部',
-      content: '点击回到页面顶部'
+      emoji: '',
+      title: '',
+      content: ''
     }
   })
 
@@ -136,7 +146,7 @@ export const useSiteStore = defineStore('site', () => {
   // Actions
   // ========================================
   
-  // 从 API 或 JSON 文件加载网站配置
+  // 从 API 加载网站配置
   async function loadSiteConfig() {
     // 如果已经加载过，直接返回
     if (loaded.value) {
@@ -155,28 +165,13 @@ export const useSiteStore = defineStore('site', () => {
       if (data.contact) contact.value = data.contact
       if (data.friendLinks) friendLinks.value = data.friendLinks
       if (data.footerLinks) footerLinks.value = data.footerLinks
+      if (data.footerMeta) footerMeta.value = data.footerMeta
       if (data.floatingPanel) floatingPanel.value = data.floatingPanel
       
       loaded.value = true
       return true
     } catch (e) {
-      // API 失败时降级到静态 JSON
-      console.warn('API 加载失败，降级到静态 JSON:', e)
-      try {
-        const response = await fetch('/data/site-config.json')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.company) company.value = data.company
-          if (data.contact) contact.value = data.contact
-          if (data.friendLinks) friendLinks.value = data.friendLinks
-          if (data.footerLinks) footerLinks.value = data.footerLinks
-          if (data.floatingPanel) floatingPanel.value = data.floatingPanel
-          loaded.value = true
-          return true
-        }
-      } catch {
-        error.value = '加载网站配置失败'
-      }
+      error.value = e instanceof Error ? e.message : '加载网站配置失败'
       return false
     } finally {
       loading.value = false
@@ -201,7 +196,7 @@ export const useSiteStore = defineStore('site', () => {
 
   // 获取版权信息
   const copyright = computed(() => {
-    return `© 2025 ${company.value.name} 版权所有`
+    return footerMeta.value.copyrightText
   })
 
   // 悬浮面板完整数据（组合 contact 信息）
@@ -234,6 +229,7 @@ export const useSiteStore = defineStore('site', () => {
     contact,
     friendLinks,
     footerLinks,
+    footerMeta,
     floatingPanel,
     loading,
     loaded,

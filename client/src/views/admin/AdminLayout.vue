@@ -381,8 +381,8 @@ async function handleChangePwd() {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: #f0f2f5;
-  color: #667eea;
+  background: var(--admin-app-bg);
+  color: var(--admin-primary);
   font-size: 16px;
 }
 
@@ -392,14 +392,15 @@ async function handleChangePwd() {
 
 .admin-layout {
   min-height: 100vh;
-  background: #f0f2f5;
+  background: var(--admin-app-bg);
 }
 
 /* 顶部导航 */
 .admin-header {
   height: 60px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--admin-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -409,7 +410,7 @@ async function handleChangePwd() {
   left: 0;
   right: 0;
   z-index: 100;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--admin-shadow);
 }
 
 .header-left {
@@ -422,22 +423,22 @@ async function handleChangePwd() {
   width: 40px;
   height: 40px;
   border: none;
-  background: #f5f5f5;
+  background: var(--admin-surface-alt);
   border-radius: 8px;
   cursor: pointer;
-  color: #666;
+  color: var(--admin-text-muted);
   transition: all 0.2s;
 }
 
 .toggle-btn:hover {
-  background: #e8e8e8;
-  color: #333;
+  background: #dce9f0;
+  color: var(--admin-text);
 }
 
 .header-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--admin-text);
 }
 
 .header-right {
@@ -451,7 +452,7 @@ async function handleChangePwd() {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-soft));
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -462,7 +463,7 @@ async function handleChangePwd() {
 
 .frontend-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 20px rgba(5, 84, 140, 0.26);
 }
 
 /* 用户信息 */
@@ -477,13 +478,13 @@ async function handleChangePwd() {
 }
 
 .user-info:hover {
-  background: #f5f5f5;
+  background: var(--admin-surface-alt);
 }
 
 .user-avatar {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-soft));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -501,7 +502,7 @@ async function handleChangePwd() {
 
 .user-name {
   font-size: 14px;
-  color: #333;
+  color: var(--admin-text);
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -510,7 +511,7 @@ async function handleChangePwd() {
 
 .user-arrow {
   font-size: 12px;
-  color: #999;
+  color: var(--admin-text-muted);
 }
 
 /* 主体区域 */
@@ -523,7 +524,8 @@ async function handleChangePwd() {
 /* 侧边栏 */
 .admin-sidebar {
   width: 240px;
-  background: #001529;
+  background: var(--admin-sidebar-bg);
+  background-image: linear-gradient(180deg, rgba(67, 206, 237, 0.06), transparent 18%);
   position: fixed;
   top: 60px;
   left: 0;
@@ -578,14 +580,14 @@ async function handleChangePwd() {
 }
 
 .expand-toggle-btn:hover {
-  background: rgba(102, 126, 234, 0.3);
+  background: rgba(67, 206, 237, 0.22);
   color: #fff;
 }
 
 .logo i {
   width: 24px;
   font-size: 24px;
-  color: #667eea;
+  color: var(--admin-primary-soft);
   flex-shrink: 0;
   text-align: center;
 }
@@ -650,13 +652,14 @@ async function handleChangePwd() {
 
 .nav-item:hover {
   color: #fff;
-  background: rgba(102, 126, 234, 0.15);
+  background: var(--admin-sidebar-hover);
 }
 
 /* 一级菜单激活状态 - 统一样式 */
 .nav-item.active {
   color: #fff;
-  background: rgba(102, 126, 234, 0.2);
+  background: var(--admin-sidebar-active);
+  box-shadow: inset 0 0 0 1px rgba(67, 206, 237, 0.16);
 }
 
 /* 有子菜单的一级项 */
@@ -699,8 +702,8 @@ async function handleChangePwd() {
 }
 
 .submenu-item.active {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  color: var(--admin-primary-soft);
+  background: rgba(67, 206, 237, 0.08);
   font-weight: 500;
 }
 
@@ -722,8 +725,8 @@ async function handleChangePwd() {
 }
 
 .submenu-item.active::before {
-  background: #667eea;
-  box-shadow: 0 0 6px rgba(102, 126, 234, 0.6);
+  background: var(--admin-primary-soft);
+  box-shadow: 0 0 6px rgba(67, 206, 237, 0.6);
 }
 
 /* 内容区域 */

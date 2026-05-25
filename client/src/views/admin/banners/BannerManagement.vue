@@ -230,7 +230,7 @@ onMounted(() => editor.loadData())
 .stat-item .el-input:first-of-type { flex-shrink: 0; }
 
 .preview-banner { padding: 16px; }
-.banner-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 40px 30px; text-align: center; }
+.banner-bg { background: linear-gradient(135deg, #05548C 0%, #43CEED 100%); border-radius: 12px; padding: 40px 30px; text-align: center; }
 .banner-slogans { margin-bottom: 24px; }
 .banner-slogan { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 .banner-slogan:last-child { margin-bottom: 0; }

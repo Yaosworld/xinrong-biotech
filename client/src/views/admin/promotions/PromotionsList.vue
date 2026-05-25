@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { usePromotionStore } from '@/stores/promotionStore'
 import { useAdminStore } from '@/stores/adminStore'
 import UnifiedTableEditor from '../components/UnifiedTableEditor.vue'
@@ -52,7 +53,7 @@ const columns = computed(() => [
 
 // 生成活动ID - 统一使用字符串格式 "A001"
 const generateId = (currentData: any[]) => {
-  const allPromotions = [...currentData, ...localPromotions.value, ...promotionStore.promotions]
+  const allPromotions = [...currentData, ...localPromotions.value]
   const maxIdNum = allPromotions.reduce((max, item) => {
     return Math.max(max, extractPromotionIdNum(item.id))
   }, 0)
@@ -103,9 +104,9 @@ const loadAdminData = async () => {
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
   } catch (e) {
-    console.warn('Admin API 加载失败，降级到前台 Store:', e)
-    await promotionStore.loadPromotions()
-    localPromotions.value = promotionStore.promotions.map(p => ({ ...p, id: String(p.id) }))
+    console.error('Admin API 加载失败:', e)
+    localPromotions.value = []
+    ElMessage.error('加载活动数据失败，请检查后台接口')
   } finally {
     loading.value = false
   }

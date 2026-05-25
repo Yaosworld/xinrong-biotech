@@ -1,0 +1,90 @@
+flowchart TB
+
+    subgraph Entry["server/src/index.ts"]
+        expressApp["Express App"]
+        middleware["cors + json + /uploads 静态服务"]
+        startup["启动初始化<br/>initDb / default categories / bootstrap content / syncAll / image sync"]
+    end
+
+    subgraph PublicApi["公开接口"]
+        authRoute["/api/auth"]
+        contentRoute["/api/content"]
+        health["/api/health"]
+    end
+
+    subgraph ProtectedApi["受保护接口"]
+        adminUsers["/api/admin/users"]
+        adminContent["/api/admin"]
+        upload["/api/admin/upload"]
+        categoryImages["/api/admin/category-images"]
+        promotionImages["/api/admin/promotion-images"]
+        homeImages["/api/admin/home-images"]
+        brandImages["/api/admin/brand-images"]
+        avatarImages["/api/admin/avatar-images"]
+        siteImages["/api/admin/site-images"]
+    end
+
+    subgraph Middleware["中间件"]
+        authMw["authenticate<br/>JWT 校验 / req.user"]
+        multerMw["multer memoryStorage"]
+    end
+
+    subgraph Services["服务层"]
+        contentSvc["contentService -> cms / catalog"]
+        authSvc["authService"]
+        userSvc["adminUserService"]
+        uploadSvc["uploadService"]
+        imageSvcs["category / promotion / home / brand / avatar / site image services"]
+        categorySvc["categoryService"]
+    end
+
+    expressApp --> middleware
+    expressApp --> startup
+    expressApp --> authRoute
+    expressApp --> contentRoute
+    expressApp --> health
+
+    expressApp --> adminUsers
+    expressApp --> adminContent
+    expressApp --> upload
+    expressApp --> categoryImages
+    expressApp --> promotionImages
+    expressApp --> homeImages
+    expressApp --> brandImages
+    expressApp --> avatarImages
+    expressApp --> siteImages
+
+    adminUsers --> authMw
+    adminContent --> authMw
+    upload --> authMw
+    categoryImages --> authMw
+    promotionImages --> authMw
+    homeImages --> authMw
+    brandImages --> authMw
+    avatarImages --> authMw
+    siteImages --> authMw
+
+    upload --> multerMw
+
+    authRoute --> authSvc
+    contentRoute --> contentSvc
+    adminContent --> contentSvc
+    adminContent --> categorySvc
+    adminUsers --> userSvc
+    upload --> uploadSvc
+    categoryImages --> imageSvcs
+    promotionImages --> imageSvcs
+    homeImages --> imageSvcs
+    brandImages --> imageSvcs
+    avatarImages --> imageSvcs
+    siteImages --> imageSvcs
+
+    classDef entry fill:#eef6ff,stroke:#2563eb,stroke-width:2px,color:#111827;
+    classDef route fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#111827;
+    classDef mw fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#111827;
+    classDef svc fill:#ecfdf5,stroke:#15803d,stroke-width:2px,color:#111827;
+
+    class expressApp,middleware,startup entry;
+    class authRoute,contentRoute,health,adminUsers,adminContent,upload,categoryImages,promotionImages,homeImages,brandImages,avatarImages,siteImages route;
+    class authMw,multerMw mw;
+    class contentSvc,authSvc,userSvc,uploadSvc,imageSvcs,categorySvc svc;

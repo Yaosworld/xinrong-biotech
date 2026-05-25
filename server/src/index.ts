@@ -21,6 +21,8 @@ import { homeImageService } from './services/homeImageService'
 import { brandImageService } from './services/brandImageService'
 import { avatarImageService } from './services/avatarImageService'
 import { siteImageService } from './services/siteImageService'
+import { contentBootstrapService } from './services/contentBootstrapService'
+import { catalogStructuredStorageService } from './services/catalogStructuredStorageService'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -60,6 +62,12 @@ async function start() {
     
     // 初始化默认分类数据
     categoryService.initDefaultCategories()
+    
+    // 初始化 CMS 发布内容（将旧静态 JSON 迁移为数据库发布数据）
+    contentBootstrapService.initializePublishedContent()
+
+    // 同步 Catalog 结构化镜像表
+    catalogStructuredStorageService.syncAll()
     
     // 初始化分类图片表并同步文件系统
     categoryImageService.initTable()

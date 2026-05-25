@@ -75,9 +75,9 @@ export function generateBrandId(existingBrands: Array<{ id?: string }>): string 
 }
 
 /**
- * 品牌占位符渐变色（统一使用主题蓝紫渐变）
+ * 品牌占位符渐变色（统一使用主题蓝色渐变）
  */
-export const BRAND_PLACEHOLDER_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+export const BRAND_PLACEHOLDER_GRADIENT = 'linear-gradient(135deg, #05548C 0%, #43CEED 100%)'
 
 /**
  * 默认品牌图片路径

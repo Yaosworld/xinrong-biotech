@@ -72,20 +72,9 @@ export const useBannerStore = defineStore('banner', () => {
         loaded.value = true
         return banners.value
       }
-      throw new Error('No banner data loaded')
+      throw new Error('未获取到任何 Banner 配置')
     } catch (e) {
-      // API 失败时降级到静态 JSON
-      console.warn('API 加载失败，降级到静态 JSON:', e)
-      try {
-        const response = await fetch('/data/banners.json')
-        if (response.ok) {
-          banners.value = await response.json()
-          loaded.value = true
-          return banners.value
-        }
-      } catch {
-        error.value = '加载 Banner 数据失败'
-      }
+      error.value = e instanceof Error ? e.message : '加载 Banner 数据失败'
       return null
     } finally {
       loading.value = false

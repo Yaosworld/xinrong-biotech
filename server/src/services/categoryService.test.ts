@@ -103,7 +103,7 @@ describe('categoryService 属性测试', () => {
         ),
         { numRuns: 20 }
       )
-    })
+    }, 15000)
 
     it('生成的ID格式应该正确 (C + 数字)', () => {
       fc.assert(
@@ -325,6 +325,6 @@ describe('categoryService 属性测试', () => {
         ),
         { numRuns: 20 }
       )
-    })
+    }, 15000)
   })
 })

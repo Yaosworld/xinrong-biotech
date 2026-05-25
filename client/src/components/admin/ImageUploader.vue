@@ -300,23 +300,23 @@ defineExpose({
   cursor: pointer;
   transition: all 0.3s;
   overflow: hidden;
-  background: #fafafa;
+  background: var(--admin-surface-alt);
 }
 
 .upload-area:hover {
-  border-color: #667eea;
+  border-color: #05548C;
   background: #f5f7ff;
 }
 
 .image-uploader.drag-over .upload-area {
-  border-color: #667eea;
+  border-color: #05548C;
   background: #f0f3ff;
   transform: scale(1.02);
 }
 
 .upload-area.has-image {
   border-style: solid;
-  border-color: #e8e8e8;
+  border-color: var(--admin-border);
   background: #fff;
 }
 
@@ -426,7 +426,7 @@ defineExpose({
   left: 0;
   top: 0;
   bottom: 0;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: linear-gradient(90deg, #05548C, #43CEED);
   transition: width 0.2s;
 }
 
@@ -444,7 +444,7 @@ defineExpose({
   justify-content: space-between;
   margin-top: 8px;
   padding: 8px 12px;
-  background: #f5f7fa;
+  background: var(--admin-surface);
   border-radius: 4px;
 }
 
@@ -499,7 +499,7 @@ defineExpose({
 
 .image-loading i {
   font-size: 24px;
-  color: #667eea;
+  color: #05548C;
 }
 
 /* 图片加载失败 */

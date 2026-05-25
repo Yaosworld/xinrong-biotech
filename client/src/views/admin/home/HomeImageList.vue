@@ -455,7 +455,7 @@ onMounted(() => {
 <style scoped>
 .home-image-page {
   padding: 20px;
-  background: #f5f7fa;
+  background: var(--admin-surface);
   min-height: 100%;
   overflow-y: scroll;
 }
@@ -501,11 +501,11 @@ onMounted(() => {
 }
 
 .stat-item.used {
-  color: #409eff;
+  color: var(--admin-primary);
 }
 
 .stat-item.available {
-  color: #67c23a;
+  color: var(--admin-accent);
 }
 
 .header-actions {
@@ -554,13 +554,13 @@ onMounted(() => {
 }
 
 .image-card.used {
-  border: 2px solid #409eff;
+  border: 2px solid var(--admin-primary);
 }
 
 .image-preview {
   position: relative;
   aspect-ratio: 16 / 9;
-  background: #f5f5f5;
+  background: var(--admin-surface-alt);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -594,7 +594,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--admin-border);
 }
 
 .filename {
@@ -613,7 +613,7 @@ onMounted(() => {
 
 /* 选中状态 */
 .image-card.selected {
-  border: 2px solid #67c23a;
+  border: 2px solid var(--admin-accent);
   box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2);
 }
 
@@ -635,7 +635,7 @@ onMounted(() => {
 
 .selection-checkbox i {
   font-size: 20px;
-  color: #67c23a;
+  color: var(--admin-accent);
 }
 
 .selection-checkbox .fa-circle {
@@ -674,7 +674,7 @@ onMounted(() => {
 }
 
 .action-btn:hover {
-  background: #667eea;
+  background: #05548C;
   color: #fff;
   transform: scale(1.1);
 }

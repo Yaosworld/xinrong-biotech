@@ -5,13 +5,12 @@
  * 使用 DetailPageLayout 通用布局组件
  */
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useBrandStore } from '@/stores/brandStore'
 import { BRAND_TYPE_CONFIG, type BrandType } from '@/types'
 import DetailPageLayout from '@/components/common/DetailPageLayout.vue'
 
 const route = useRoute()
-const router = useRouter()
 const brandStore = useBrandStore()
 
 const brandId = computed(() => route.params.id as string)
@@ -156,7 +155,7 @@ onMounted(async () => {
 /* 品牌特有样式 */
 .brand-header {
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  border-bottom: 1px solid rgba(5, 84, 140, 0.1);
 }
 
 .logo-and-title {
@@ -172,8 +171,8 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   padding: 8px;
-  border: 2px solid rgba(102, 126, 234, 0.2);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  border: 2px solid rgba(5, 84, 140, 0.2);
+  box-shadow: 0 4px 12px rgba(5, 84, 140, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -189,7 +188,7 @@ onMounted(async () => {
 .logo-fallback {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   border-radius: 8px;
   color: white;
   font-size: 2rem;
@@ -214,7 +213,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   color: white;
   font-size: 0.75rem;
   font-weight: 500;
@@ -232,9 +231,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(102, 126, 234, 0.03);
+  background: rgba(5, 84, 140, 0.03);
   border-radius: 16px;
-  border: 2px dashed rgba(102, 126, 234, 0.15);
+  border: 2px dashed rgba(5, 84, 140, 0.15);
   position: relative;
   overflow: hidden;
 }

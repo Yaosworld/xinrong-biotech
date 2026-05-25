@@ -1,0 +1,28 @@
+:root {
+  --admin-primary: #05548c;
+  --admin-primary-strong: #044370;
+  --admin-primary-soft: #43ceed;
+  --admin-accent: #1a9fd4;
+  --admin-app-bg: #edf4f8;
+  --admin-surface: #f3f8fb;
+  --admin-surface-alt: #eef3f6;
+  --admin-panel-bg: #f8fbfd;
+  --admin-border: #d7e3eb;
+  --admin-text: #1e293b;
+  --admin-text-muted: #64748b;
+  --admin-sidebar-bg: #033254;
+  --admin-sidebar-hover: rgba(67, 206, 237, 0.14);
+  --admin-sidebar-active: rgba(67, 206, 237, 0.22);
+  --admin-shadow: 0 10px 24px rgba(3, 50, 84, 0.08);
+  --el-color-primary: var(--admin-primary);
+  --el-color-primary-dark-2: var(--admin-primary-strong);
+  --el-color-primary-light-3: #0d7fb3;
+  --el-color-primary-light-5: var(--admin-accent);
+  --el-color-primary-light-7: #9fd2ef;
+  --el-color-primary-light-8: #c5e4f5;
+  --el-color-primary-light-9: #e8f4fa;
+}
+
+body {
+  --admin-success: var(--admin-accent);
+}

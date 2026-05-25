@@ -30,9 +30,6 @@ export const useProductStore = defineStore('product', () => {
   // 排序状态
   const sortBy = ref<SortOption>('name-asc')
   
-  // 是否使用后端分页模式
-  const useBackendPagination = ref(true)
-  
   // 所有品牌列表（从后端获取）
   const allBrandsList = ref<string[]>([])
 
@@ -145,40 +142,20 @@ export const useProductStore = defineStore('product', () => {
       if (!initialized.value) {
         loadFilterOptions()
       }
-      
-      if (useBackendPagination.value) {
-        // 后端分页模式
-        const result = await contentApi.getPublishedList<Product>('product', {
-          page,
-          pageSize: pagination.value.pageSize,
-          search: filters.value.search || undefined,
-          categoryId: filters.value.categoryId || undefined,
-          brand: filters.value.brand || undefined,
-          sortBy: sortBy.value
-        })
-        products.value = result.data
-        pagination.value = result.pagination
-      } else {
-        // 前端分页模式（降级方案）
-        const data = await contentApi.getAllPublished<Product>('product')
-        products.value = data
-        pagination.value.total = data.length
-        pagination.value.totalPages = Math.ceil(data.length / pagination.value.pageSize)
-      }
+
+      const result = await contentApi.getPublishedList<Product>('product', {
+        page,
+        pageSize: pagination.value.pageSize,
+        search: filters.value.search || undefined,
+        categoryId: filters.value.categoryId || undefined,
+        brand: filters.value.brand || undefined,
+        sortBy: sortBy.value
+      })
+      products.value = result.data
+      pagination.value = result.pagination
       initialized.value = true
     } catch (e) {
-      // API 失败时降级到静态 JSON
-      console.warn('API 加载失败，降级到静态 JSON:', e)
-      try {
-        const response = await fetch('/data/products.json')
-        if (response.ok) {
-          products.value = await response.json()
-          useBackendPagination.value = false
-          initialized.value = true
-        }
-      } catch {
-        error.value = e instanceof Error ? e.message : '加载产品数据失败'
-      }
+      error.value = e instanceof Error ? e.message : '加载产品数据失败'
     } finally {
       loading.value = false
     }
@@ -209,9 +186,7 @@ export const useProductStore = defineStore('product', () => {
   // 更新筛选条件（后端分页模式下会重新加载）
   function setFilter<K extends keyof ProductFilters>(key: K, value: ProductFilters[K]) {
     filters.value[key] = value
-    if (useBackendPagination.value) {
-      loadProducts(1) // 筛选变化时重新加载第一页
-    }
+    loadProducts(1)
   }
 
   // 清空所有筛选
@@ -221,17 +196,13 @@ export const useProductStore = defineStore('product', () => {
       categoryId: '',
       brand: ''
     }
-    if (useBackendPagination.value) {
-      loadProducts(1)
-    }
+    loadProducts(1)
   }
 
   // 设置排序
   function setSortBy(sort: SortOption) {
     sortBy.value = sort
-    if (useBackendPagination.value) {
-      loadProducts(1)
-    }
+    loadProducts(1)
   }
 
   // 清除缓存（发布后调用）
@@ -250,7 +221,6 @@ export const useProductStore = defineStore('product', () => {
     filters,
     sortBy,
     pagination,
-    useBackendPagination,
     
     // Getters
     allBrands,

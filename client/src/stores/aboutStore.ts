@@ -35,6 +35,12 @@ export interface AboutPageData {
   advantages: Advantage[]
 }
 
+const emptySections: AboutPageData['sections'] = {
+  intro: { badge: '', title: '' },
+  advantages: { badge: '', title: '' },
+  contact: { badge: '', title: '' }
+}
+
 // ========================================
 // Store 定义
 // ========================================
@@ -53,11 +59,7 @@ export const useAboutStore = defineStore('about', () => {
   // ========================================
 
   // 区块标题配置
-  const sections = computed(() => pageData.value?.sections || {
-    intro: { badge: '公司简介', title: '值得信赖的科研合作伙伴' },
-    advantages: { badge: '核心优势', title: '为什么选择我们' },
-    contact: { badge: '联系我们', title: '期待与您的合作' }
-  })
+  const sections = computed(() => pageData.value?.sections || emptySections)
 
   // 介绍卡片
   const introCards = computed(() => pageData.value?.introCards || [])
@@ -92,18 +94,7 @@ export const useAboutStore = defineStore('about', () => {
       loaded.value = true
       return pageData.value
     } catch (e) {
-      // API 失败时降级到静态 JSON
-      console.warn('API 加载失败，降级到静态 JSON:', e)
-      try {
-        const response = await fetch('/data/about.json')
-        if (response.ok) {
-          pageData.value = await response.json()
-          loaded.value = true
-          return pageData.value
-        }
-      } catch {
-        error.value = '加载关于我们数据失败'
-      }
+      error.value = e instanceof Error ? e.message : '加载关于我们数据失败'
       return null
     } finally {
       loading.value = false

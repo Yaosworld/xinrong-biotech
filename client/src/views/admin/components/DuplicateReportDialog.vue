@@ -162,7 +162,7 @@ const handleClose = () => {
   width: 56px;
   height: 56px;
   margin: 0 auto 16px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #05548C, #43CEED);
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -192,7 +192,7 @@ const handleClose = () => {
 
 .stat-card {
   flex: 1;
-  background: #f9fafb;
+  background: var(--admin-panel-bg);
   border-radius: 12px;
   padding: 16px 12px;
   text-align: center;
@@ -233,7 +233,7 @@ const handleClose = () => {
 }
 
 .dup-list {
-  background: #f9fafb;
+  background: var(--admin-panel-bg);
   border-radius: 12px;
   padding: 16px;
 }

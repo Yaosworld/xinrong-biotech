@@ -1,0 +1,73 @@
+flowchart TB
+
+    visitor["公开访客<br/>PC / Mobile"]
+    admin["后台管理员<br/>内容维护 / 图片上传"]
+
+    publicSite["前端公开站点<br/>Vue 3 + Vite + Vue Router<br/>首页 / 产品 / 品牌 / 新闻 / 关于"]
+    adminSite["前端后台管理台<br/>登录 / 发布 / 内容编辑 / 图片管理"]
+    dataLayer["前端数据层<br/>Pinia Stores + API Client<br/>contentApi / authApi / uploadApi"]
+
+    publicApi["公开内容接口<br/>/api/content<br/>读取已发布内容"]
+    authApi["认证接口<br/>/api/auth<br/>登录 / me / 改密码"]
+    adminApi["后台内容接口<br/>/api/admin<br/>草稿 / 发布 / 版本管理"]
+    uploadApi["上传与图片接口<br/>/upload + 各类 image routes<br/>需认证"]
+
+    contentServices["内容服务层<br/>contentService<br/>cmsContentService<br/>contentQueryUtils"]
+    authServices["认证与管理员服务<br/>authService<br/>adminUserService<br/>middleware/auth"]
+    catalogWrite["Catalog 内容写入层<br/>catalogContentService<br/>versionedContentRepository"]
+    imageServices["图片与上传服务<br/>uploadService<br/>category / brand / home / site image services"]
+    structuredService["结构化镜像层<br/>catalogStructuredStorageService<br/>启动时 syncAll + 增量物化"]
+
+    sqliteDb[("SQLite 主数据库<br/>contents / users / categories<br/>草稿 + 已发布内容")]
+    seedData["public/data 种子数据<br/>site-config / about / brands / products ..."]
+    uploadFs["uploads 文件系统<br/>分类图 / 品牌图 / 首页图<br/>站点图片 / 头像"]
+    structuredTable[("结构化镜像表<br/>按条 / 按批增量更新<br/>供 Catalog 快速消费")]
+
+    visitor -->|浏览| publicSite
+    admin -->|维护| adminSite
+
+    publicSite -->|读取内容| dataLayer
+    adminSite -->|调用接口| dataLayer
+
+    dataLayer -->|公开读取| publicApi
+    dataLayer -->|登录鉴权| authApi
+    dataLayer -->|草稿 / 发布| adminApi
+    dataLayer -->|上传图片| uploadApi
+
+    publicApi -->|查询已发布| contentServices
+    authApi -->|认证| authServices
+    adminApi -->|写入 / 发布| catalogWrite
+    uploadApi -->|文件管理| imageServices
+
+    contentServices -->|读内容| sqliteDb
+    authServices -->|用户 / 权限| sqliteDb
+    catalogWrite -->|版本化内容| sqliteDb
+    imageServices -->|文件落盘| uploadFs
+
+    catalogWrite -->|增量物化| structuredService
+    structuredService -->|同步镜像表| structuredTable
+
+    seedData -.->|启动时初始化 published 内容| sqliteDb
+    uploadFs -.->|静态资源访问| uploadApi
+
+    classDef actor fill:#eaf2ff,stroke:#3b82f6,stroke-width:2px,color:#111827;
+    classDef adminActor fill:#f3e8ff,stroke:#8b5cf6,stroke-width:2px,color:#111827;
+    classDef frontend fill:#eef6ff,stroke:#2563eb,stroke-width:2px,color:#111827;
+    classDef data fill:#eefaf8,stroke:#0f766e,stroke-width:2px,color:#111827;
+    classDef api fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#111827;
+    classDef auth fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#111827;
+    classDef service fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px,color:#111827;
+    classDef storage fill:#ecfdf5,stroke:#15803d,stroke-width:2px,color:#111827;
+    classDef file fill:#fff1f2,stroke:#e11d48,stroke-width:2px,color:#111827;
+    classDef mirror fill:#fefce8,stroke:#ca8a04,stroke-width:2px,color:#111827;
+
+    class visitor actor;
+    class admin adminActor;
+    class publicSite,adminSite frontend;
+    class dataLayer data;
+    class publicApi,adminApi,uploadApi api;
+    class authApi auth;
+    class contentServices,authServices,catalogWrite,imageServices,structuredService service;
+    class sqliteDb storage;
+    class seedData,uploadFs file;
+    class structuredTable mirror;

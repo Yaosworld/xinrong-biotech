@@ -32,11 +32,13 @@ interface BannerItem {
   filename?: string    // 文件名
 }
 const bannerImages = ref<BannerItem[]>([])
-const sections = ref({
-  products: { badge: '热门产品', title: '精选优质产品' },
-  brands: { badge: '品牌矩阵', title: '知名品牌，值得信赖' },
-  promotions: { badge: '最新活动', title: '优惠活动动态一手掌握' }
+const createEmptySections = () => ({
+  products: { badge: '', title: '' },
+  brands: { badge: '', title: '' },
+  promotions: { badge: '', title: '' }
 })
+
+const sections = ref(createEmptySections())
 
 const originalData = ref<string>('')
 
@@ -70,12 +72,20 @@ const statusConfig = computed(() => {
   return { type: 'info' as const, icon: 'fas fa-file', text: '未发布', pulse: false }
 })
 
-// ==================== 默认数据 ====================
-const defaultSections = {
-  products: { badge: '热门产品', title: '精选优质产品' },
-  brands: { badge: '品牌矩阵', title: '知名品牌，值得信赖' },
-  promotions: { badge: '最新活动', title: '优惠活动动态一手掌握' }
-}
+const normalizeSections = (data?: any) => ({
+  products: {
+    badge: data?.products?.badge || '',
+    title: data?.products?.title || ''
+  },
+  brands: {
+    badge: data?.brands?.badge || '',
+    title: data?.brands?.title || ''
+  },
+  promotions: {
+    badge: data?.promotions?.badge || '',
+    title: data?.promotions?.title || ''
+  }
+})
 
 // ==================== 数据加载 ====================
 const loadData = async () => {
@@ -96,7 +106,7 @@ const loadData = async () => {
       bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
     }
     
-    sections.value = data.sections ? { ...defaultSections, ...data.sections } : { ...defaultSections }
+    sections.value = normalizeSections(data.sections)
     
     const hasDraft = content.draftData !== null
     const hasPublished = content.publishedData !== null
@@ -107,12 +117,13 @@ const loadData = async () => {
     originalData.value = currentDataString.value
     editStatus.value = 'clean'
   } catch (e) {
-    console.warn('加载首页设置失败，使用默认数据:', e)
+    console.error('加载首页设置失败:', e)
     bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
-    sections.value = { ...defaultSections }
+    sections.value = createEmptySections()
     originalData.value = currentDataString.value
     contentStatus.value = 'unpublished'
     editStatus.value = 'clean'
+    ElMessage.error('加载首页设置失败，请检查后台接口')
   }
 }
 
@@ -424,8 +435,8 @@ onMounted(() => loadData())
 /* ==================== 标签切换 ==================== */
 .tab-bar {
   display: flex;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-bottom: 1px solid var(--admin-border);
+  background: var(--admin-surface-alt);
 }
 
 .tab-item {
@@ -441,13 +452,13 @@ onMounted(() => loadData())
 }
 
 .tab-item:hover {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  color: #05548C;
+  background: rgba(5, 84, 140, 0.05);
 }
 
 .tab-item.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: #05548C;
+  border-bottom-color: #05548C;
   background: #fff;
 }
 
@@ -486,19 +497,19 @@ onMounted(() => loadData())
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--admin-border);
   transition: all 0.2s;
-  background: #f9fafb;
+  background: var(--admin-panel-bg);
 }
 
 .banner-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  border-color: #05548C;
+  box-shadow: 0 4px 12px rgba(5, 84, 140, 0.15);
 }
 
 .banner-card.active {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: #05548C;
+  box-shadow: 0 0 0 3px rgba(5, 84, 140, 0.2);
 }
 
 .card-content {
@@ -521,7 +532,7 @@ onMounted(() => loadData())
   justify-content: center;
   gap: 6px;
   color: #bbb;
-  background: #f5f5f5;
+  background: var(--admin-surface-alt);
 }
 
 .card-empty i { font-size: 28px; }
@@ -533,7 +544,7 @@ onMounted(() => loadData())
   left: 8px;
   width: 24px;
   height: 24px;
-  background: #667eea;
+  background: #05548C;
   color: #fff;
   border-radius: 50%;
   font-size: 12px;
@@ -584,7 +595,7 @@ onMounted(() => loadData())
 }
 
 .action-btn.upload {
-  background: #667eea;
+  background: #05548C;
   color: #fff;
 }
 
@@ -615,10 +626,10 @@ onMounted(() => loadData())
 
 /* 预览区 */
 .preview-section {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   border-radius: 12px;
   overflow: hidden;
-  background: #fafafa;
+  background: var(--admin-surface-alt);
 }
 
 .preview-header {
@@ -627,7 +638,7 @@ onMounted(() => loadData())
   justify-content: space-between;
   padding: 12px 16px;
   background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--admin-border);
 }
 
 .preview-title {
@@ -639,7 +650,7 @@ onMounted(() => loadData())
   gap: 8px;
 }
 
-.preview-title i { color: #667eea; }
+.preview-title i { color: #05548C; }
 
 .preview-hint {
   font-size: 12px;
@@ -752,7 +763,7 @@ onMounted(() => loadData())
 
 .edit-side,
 .preview-side {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   border-radius: 10px;
   overflow: hidden;
   display: flex;
@@ -764,8 +775,8 @@ onMounted(() => loadData())
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--admin-panel-bg);
+  border-bottom: 1px solid var(--admin-border);
 }
 
 .edit-title {
@@ -777,7 +788,7 @@ onMounted(() => loadData())
   color: #333;
 }
 
-.edit-title i { color: #667eea; }
+.edit-title i { color: #05548C; }
 
 .sections-edit {
   padding: 12px;
@@ -787,7 +798,7 @@ onMounted(() => loadData())
 }
 
 .section-edit-item {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--admin-border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -797,14 +808,14 @@ onMounted(() => loadData())
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--admin-panel-bg);
+  border-bottom: 1px solid var(--admin-border);
   font-size: 13px;
   font-weight: 600;
   color: #333;
 }
 
-.section-edit-header i { color: #667eea; }
+.section-edit-header i { color: #05548C; }
 
 .section-edit-fields { padding: 12px; }
 
@@ -828,14 +839,14 @@ onMounted(() => loadData())
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--admin-panel-bg);
+  border-bottom: 1px solid var(--admin-border);
   font-size: 14px;
   font-weight: 600;
   color: #333;
 }
 
-.preview-header i { color: #667eea; }
+.preview-header i { color: #05548C; }
 
 .preview-content {
   flex: 1;
@@ -860,7 +871,7 @@ onMounted(() => loadData())
 }
 
 .section-preview-block.alt {
-  background: #f9fafb;
+  background: var(--admin-panel-bg);
 }
 
 /* 使用全局样式的 section-badge 和 section-title */

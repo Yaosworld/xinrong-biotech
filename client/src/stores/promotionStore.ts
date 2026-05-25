@@ -4,7 +4,6 @@ import type { Promotion, PromotionFilters, PromotionTimeStatus } from '@/types'
 import { contentApi } from '@/api/contentApi'
 import { 
   PROMOTION_STATUS_CONFIG, 
-  PROMOTION_PAGINATION_CONFIG,
   PROMOTION_IMAGE_CONFIG 
 } from '@/constants/promotions'
 
@@ -242,16 +241,7 @@ export const usePromotionStore = defineStore('promotion', () => {
       promotions.value = data
       initialized.value = true
     } catch (e) {
-      console.warn('API 加载失败，降级到静态 JSON:', e)
-      try {
-        const response = await fetch('/data/promotions.json')
-        if (response.ok) {
-          promotions.value = await response.json()
-          initialized.value = true
-        }
-      } catch {
-        error.value = e instanceof Error ? e.message : '加载促销数据失败'
-      }
+      error.value = e instanceof Error ? e.message : '加载促销数据失败'
     } finally {
       loading.value = false
     }
