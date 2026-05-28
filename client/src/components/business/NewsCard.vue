@@ -154,7 +154,7 @@ const goToDetail = () => {
         ></p>
         
         <!-- 标签 -->
-        <div class="flex flex-wrap gap-2 mb-4">
+        <div class="news-card-tags">
           <span
             v-for="tag in (promotion.tags || []).slice(0, 3)"
             :key="tag"
@@ -180,7 +180,7 @@ const goToDetail = () => {
 .news-card-horizontal {
   @apply w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden;
   display: flex;
-  height: 200px; /* 固定高度确保所有卡片一致 */
+  min-height: 200px;
 
   /* 整个卡片的黑色边框 - 参考商品卡片 */
   border: 1px solid rgba(0, 0, 0, 0.15);
@@ -193,7 +193,7 @@ const goToDetail = () => {
 .news-card-image {
   @apply relative flex-shrink-0;
   width: 280px; /* 固定宽度 */
-  height: 200px; /* 与卡片总高度一致 */
+  min-height: 200px;
   background-color: #fff; /* 确保白色背景与内容区一致 */
 }
 
@@ -277,17 +277,23 @@ const goToDetail = () => {
 /* 内容区域 - 占据剩余空间 */
 .news-card-content {
   @apply flex flex-col flex-1 p-6 min-w-0;
-  height: 200px; /* 与图片区域高度一致 */
+  min-height: 200px;
 }
 
 /* 确保内容区域适配 */
 .news-card-content > div:first-child {
-  @apply flex-1 overflow-hidden;
+  @apply flex-1 min-h-0;
+}
+
+.news-card-tags {
+  @apply flex flex-wrap gap-2 mb-4 items-start;
 }
 
 /* 标签样式 */
 .tag-pill {
-  @apply inline-block px-3 py-1 text-xs font-medium bg-gradient-100 text-gradient-700 rounded-full;
+  @apply inline-flex items-center px-3 py-1 text-xs font-medium bg-gradient-100 text-gradient-700 rounded-full;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
 /* 状态标签 */

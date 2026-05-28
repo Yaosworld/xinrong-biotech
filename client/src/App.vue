@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/common/AppHeader.vue'
@@ -12,12 +12,17 @@ const route = useRoute()
 const router = useRouter()
 const siteStore = useSiteStore()
 const bannerStore = useBannerStore()
+const PUBLIC_ROOT_FONT_SIZE = '17px'
 
 // 路由是否准备好
 const isRouterReady = ref(false)
 
 // 判断是否为管理页面
 const isAdminRoute = computed(() => route.path.startsWith('/admin'))
+
+watchEffect(() => {
+  document.documentElement.style.fontSize = isAdminRoute.value ? '' : PUBLIC_ROOT_FONT_SIZE
+})
 
 // 应用启动时加载网站配置
 onMounted(async () => {
@@ -31,10 +36,17 @@ onMounted(async () => {
     bannerStore.loadBanners()
   }
 })
+
+onBeforeUnmount(() => {
+  document.documentElement.style.fontSize = ''
+})
 </script>
 
 <template>
-  <div class="app-container min-h-screen flex flex-col">
+  <div
+    class="app-container min-h-screen flex flex-col"
+    :class="{ 'public-app': !isAdminRoute }"
+  >
     <!-- 等待路由准备好 -->
     <template v-if="isRouterReady">
       <!-- 前台布局 -->
@@ -58,6 +70,10 @@ onMounted(async () => {
 <style scoped>
 .app-container {
   font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+}
+
+.public-app {
+  line-height: 1.65;
 }
 </style>
 

@@ -26,6 +26,9 @@ import { catalogStructuredStorageService } from './services/catalogStructuredSto
 
 const app = express()
 const PORT = process.env.PORT || 3000
+const autoSyncImages = !['false', '0', 'off'].includes(
+  (process.env.CMS_AUTO_SYNC_IMAGES || 'true').toLowerCase()
+)
 
 // 中间件
 app.use(cors())
@@ -68,47 +71,56 @@ async function start() {
 
     // 同步 Catalog 结构化镜像表
     catalogStructuredStorageService.syncAll()
-    
-    // 初始化分类图片表并同步文件系统
-    categoryImageService.initTable()
-    const syncResult = categoryImageService.syncFromFileSystem()
-    if (syncResult.added > 0) {
-      console.log(`📷 同步了 ${syncResult.added} 张分类图片到数据库`)
+
+    const runImageSync = (
+      initTable: () => void,
+      sync: () => { added: number },
+      logMessage: string
+    ) => {
+      initTable()
+      if (!autoSyncImages) {
+        return
+      }
+
+      const syncResult = sync()
+      if (syncResult.added > 0) {
+        console.log(logMessage.replace('{count}', String(syncResult.added)))
+      }
     }
-    
-    // 初始化促销图片表并同步文件系统
-    promotionImageService.initTable()
-    const promoSyncResult = promotionImageService.syncFromFileSystem()
-    if (promoSyncResult.added > 0) {
-      console.log(`🎉 同步了 ${promoSyncResult.added} 张促销图片到数据库`)
-    }
-    
-    // 初始化首页图片表并同步文件系统
-    homeImageService.initTable()
-    const homeSyncResult = homeImageService.syncFromFileSystem()
-    if (homeSyncResult.added > 0) {
-      console.log(`🏠 同步了 ${homeSyncResult.added} 张首页图片到数据库`)
-    }
-    
-    // 初始化品牌图片表并同步文件系统
-    brandImageService.initTable()
-    const brandSyncResult = brandImageService.syncFromFileSystem()
-    if (brandSyncResult.added > 0) {
-      console.log(`🏷️ 同步了 ${brandSyncResult.added} 张品牌图片到数据库`)
-    }
-    
-    // 初始化头像图片表并同步文件系统
-    avatarImageService.initTable()
-    const avatarSyncResult = avatarImageService.syncFromFileSystem()
-    if (avatarSyncResult.added > 0) {
-      console.log(`👤 同步了 ${avatarSyncResult.added} 张头像图片到数据库`)
-    }
-    
-    // 初始化网站图片表并同步文件系统
-    siteImageService.initTable()
-    const siteSyncResult = siteImageService.syncFromFileSystem()
-    if (siteSyncResult.added > 0) {
-      console.log(`🌐 同步了 ${siteSyncResult.added} 张网站图片到数据库`)
+
+    runImageSync(
+      () => categoryImageService.initTable(),
+      () => categoryImageService.syncFromFileSystem(),
+      '📷 同步了 {count} 张分类图片到数据库'
+    )
+    runImageSync(
+      () => promotionImageService.initTable(),
+      () => promotionImageService.syncFromFileSystem(),
+      '🎉 同步了 {count} 张促销图片到数据库'
+    )
+    runImageSync(
+      () => homeImageService.initTable(),
+      () => homeImageService.syncFromFileSystem(),
+      '🏠 同步了 {count} 张首页图片到数据库'
+    )
+    runImageSync(
+      () => brandImageService.initTable(),
+      () => brandImageService.syncFromFileSystem(),
+      '🏷️ 同步了 {count} 张品牌图片到数据库'
+    )
+    runImageSync(
+      () => avatarImageService.initTable(),
+      () => avatarImageService.syncFromFileSystem(),
+      '👤 同步了 {count} 张头像图片到数据库'
+    )
+    runImageSync(
+      () => siteImageService.initTable(),
+      () => siteImageService.syncFromFileSystem(),
+      '🌐 同步了 {count} 张网站图片到数据库'
+    )
+
+    if (!autoSyncImages) {
+      console.log('🧊 已关闭启动时图片自动同步（CMS_AUTO_SYNC_IMAGES=false）')
     }
     
     app.listen(PORT, () => {
