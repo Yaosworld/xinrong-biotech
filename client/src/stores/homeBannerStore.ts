@@ -11,6 +11,12 @@ export interface HomeBannerItem {
   url: string
 }
 
+export interface HomeHeroConfig {
+  keywords: string
+  title: string
+  subtitle: string
+}
+
 export interface SectionConfig {
   badge: string
   title: string
@@ -18,6 +24,7 @@ export interface SectionConfig {
 
 export interface HomeConfig {
   images: HomeBannerItem[]
+  hero: HomeHeroConfig
   sections: {
     products: SectionConfig
     brands: SectionConfig
@@ -25,10 +32,24 @@ export interface HomeConfig {
   }
 }
 
+const createEmptyHero = (): HomeHeroConfig => ({
+  keywords: '',
+  title: '',
+  subtitle: ''
+})
+
 const createEmptySections = (): HomeConfig['sections'] => ({
   products: { badge: '', title: '' },
   brands: { badge: '', title: '' },
   promotions: { badge: '', title: '' }
+})
+
+const normalizeHero = (
+  hero?: Partial<HomeHeroConfig>
+): HomeHeroConfig => ({
+  keywords: hero?.keywords || '',
+  title: hero?.title || '',
+  subtitle: hero?.subtitle || ''
 })
 
 const normalizeSections = (
@@ -57,6 +78,7 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
   // State
   // ========================================
   const banners = ref<HomeBannerItem[]>([])
+  const hero = ref<HomeHeroConfig>(createEmptyHero())
   const sections = ref<HomeConfig['sections']>(createEmptySections())
   const loading = ref(false)
   const loaded = ref(false)
@@ -78,12 +100,13 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
     try {
       const data = await contentApi.getPublishedOne<HomeConfig>('home_config', 'main')
       banners.value = Array.isArray(data?.images) ? data.images.filter(item => item?.url) : []
+      hero.value = normalizeHero(data?.hero)
       sections.value = normalizeSections(data?.sections)
       loaded.value = true
-      return { banners: banners.value, sections: sections.value }
+      return { banners: banners.value, hero: hero.value, sections: sections.value }
     } catch (e) {
       error.value = e instanceof Error ? e.message : '加载首页配置失败'
-      return { banners: banners.value, sections: sections.value }
+      return { banners: banners.value, hero: hero.value, sections: sections.value }
     } finally {
       loading.value = false
     }
@@ -102,6 +125,7 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
    */
   function clearCache() {
     banners.value = []
+    hero.value = createEmptyHero()
     sections.value = createEmptySections()
     loaded.value = false
     error.value = null
@@ -120,6 +144,7 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
   return {
     // State
     banners,
+    hero,
     sections,
     loading,
     loaded,

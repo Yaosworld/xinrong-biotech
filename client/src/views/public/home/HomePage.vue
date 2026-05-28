@@ -21,6 +21,14 @@ const homeBannerStore = useHomeBannerStore()
 // 从 store 获取分类列表（用于快捷入口）
 const categories = computed(() => categoryStore.categories)
 
+const defaultHero = {
+  keywords: '试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基',
+  title: '科研试剂耗材一站式供应',
+  subtitle: '信立科研 · 荣筑未来'
+}
+
+const hero = computed(() => homeBannerStore.hero)
+
 // 从 store 获取区块标题配置
 const sections = computed(() => homeBannerStore.sections)
 
@@ -95,13 +103,12 @@ const goTo = (path: string) => {
   <div class="home-page">
     <!-- 图片轮播横幅 -->
     <HomeBanner>
-      <!-- 第一张横幅文字覆盖层 -->
       <div class="banner-text-overlay">
         <div class="banner-keywords">
-          试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基
+          {{ hero.keywords || defaultHero.keywords }}
         </div>
-        <h1 class="banner-main-title">科研试剂耗材一站式供应</h1>
-        <p class="banner-slogan">信立科研 · 荣筑未来</p>
+        <h1 class="banner-main-title">{{ hero.title || defaultHero.title }}</h1>
+        <p class="banner-slogan">{{ hero.subtitle || defaultHero.subtitle }}</p>
       </div>
     </HomeBanner>
 
@@ -223,6 +230,7 @@ const goTo = (path: string) => {
   font-weight: 600;
   letter-spacing: 2px;
   margin-bottom: 28px;
+  white-space: pre-line;
 }
 
 .banner-main-title {
@@ -231,6 +239,7 @@ const goTo = (path: string) => {
   color: #fff;
   margin: 0 0 24px;
   letter-spacing: 8px;
+  white-space: pre-line;
 }
 
 .banner-slogan {
@@ -239,6 +248,7 @@ const goTo = (path: string) => {
   margin: 0;
   letter-spacing: 10px;
   font-weight: 300;
+  white-space: pre-line;
 }
 
 /* 首页分类入口按钮 */

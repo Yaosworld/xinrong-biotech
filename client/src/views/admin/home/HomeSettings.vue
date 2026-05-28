@@ -9,7 +9,7 @@ import VersionHistoryDialog from '../components/VersionHistoryDialog.vue'
 const adminStore = useAdminStore()
 
 // ==================== 标签切换 ====================
-const activeTab = ref<'banners' | 'sections'>('banners')
+const activeTab = ref<'banners' | 'hero' | 'sections'>('banners')
 
 // ==================== 状态管理 ====================
 type EditStatus = 'clean' | 'dirty' | 'saving' | 'publishing'
@@ -31,20 +31,48 @@ interface BannerItem {
   url: string          // 图片URL（用于显示）
   filename?: string    // 文件名
 }
+
+interface HeroConfig {
+  keywords: string
+  title: string
+  subtitle: string
+}
+
 const bannerImages = ref<BannerItem[]>([])
+const createEmptyHero = (): HeroConfig => ({
+  keywords: '',
+  title: '',
+  subtitle: ''
+})
 const createEmptySections = () => ({
   products: { badge: '', title: '' },
   brands: { badge: '', title: '' },
   promotions: { badge: '', title: '' }
 })
 
+const defaultHero = {
+  keywords: '试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基',
+  title: '科研试剂耗材一站式供应',
+  subtitle: '信立科研 · 荣筑未来'
+}
+
+const hero = ref<HeroConfig>(createEmptyHero())
 const sections = ref(createEmptySections())
 
 const originalData = ref<string>('')
 
 // ==================== 计算属性 ====================
-const currentDataString = computed(() => JSON.stringify({ images: bannerImages.value, sections: sections.value }))
+const currentDataString = computed(() => JSON.stringify({
+  images: bannerImages.value,
+  hero: hero.value,
+  sections: sections.value
+}))
 const hasUnsavedChanges = computed(() => originalData.value !== '' && currentDataString.value !== originalData.value)
+const heroPreview = computed(() => ({
+  keywords: hero.value.keywords || defaultHero.keywords,
+  title: hero.value.title || defaultHero.title,
+  subtitle: hero.value.subtitle || defaultHero.subtitle
+}))
 
 // 已使用的图片ID集合（用于防止重复选择）
 const getUsedImageIds = (excludeIndex: number): Set<number> => {
@@ -70,6 +98,12 @@ const statusConfig = computed(() => {
   if (contentStatus.value === 'draft') return { type: 'warning' as const, icon: 'fas fa-file-alt', text: '草稿 · 待发布', pulse: false }
   if (contentStatus.value === 'published') return { type: 'success' as const, icon: 'fas fa-check-circle', text: '已发布', pulse: false }
   return { type: 'info' as const, icon: 'fas fa-file', text: '未发布', pulse: false }
+})
+
+const normalizeHero = (data?: Partial<HeroConfig>): HeroConfig => ({
+  keywords: data?.keywords || '',
+  title: data?.title || '',
+  subtitle: data?.subtitle || ''
 })
 
 const normalizeSections = (data?: any) => ({
@@ -106,6 +140,7 @@ const loadData = async () => {
       bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
     }
     
+    hero.value = normalizeHero(data.hero)
     sections.value = normalizeSections(data.sections)
     
     const hasDraft = content.draftData !== null
@@ -119,6 +154,7 @@ const loadData = async () => {
   } catch (e) {
     console.error('加载首页设置失败:', e)
     bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
+    hero.value = createEmptyHero()
     sections.value = createEmptySections()
     originalData.value = currentDataString.value
     contentStatus.value = 'unpublished'
@@ -130,6 +166,7 @@ const loadData = async () => {
 // ==================== 横幅操作 ====================
 const previewIndex = ref(0)
 const pickerRefs = ref<Record<number, any>>({})
+const currentPreviewBanner = computed(() => bannerImages.value[previewIndex.value] || bannerImages.value[0] || null)
 const addBanner = () => bannerImages.value.push({ id: String(Date.now()), imageId: null, url: '', filename: '' })
 
 // 打开图片选择器
@@ -181,7 +218,10 @@ const buildData = () => ({
     imageId: b.imageId,
     url: b.url,
     filename: b.filename
-  })), 
+  })),
+  hero: {
+    ...hero.value
+  },
   sections: sections.value 
 })
 
@@ -238,7 +278,7 @@ onMounted(() => loadData())
     <div class="page-header">
       <div class="header-left">
         <h2><i class="fas fa-home"></i> 首页设置</h2>
-        <span class="subtitle">管理首页横幅图片和区块标题</span>
+        <span class="subtitle">管理首页横幅图片、横幅文案和区块标题</span>
       </div>
       <div class="header-right">
         <el-tag :type="statusConfig.type" size="small" :class="['status-tag', { pulse: statusConfig.pulse }]">
@@ -264,6 +304,9 @@ onMounted(() => loadData())
     <div class="tab-bar">
       <div class="tab-item" :class="{ active: activeTab === 'banners' }" @click="activeTab = 'banners'">
         <i class="fas fa-images"></i><span>横幅图片</span>
+      </div>
+      <div class="tab-item" :class="{ active: activeTab === 'hero' }" @click="activeTab = 'hero'">
+        <i class="fas fa-font"></i><span>横幅文案</span>
       </div>
       <div class="tab-item" :class="{ active: activeTab === 'sections' }" @click="activeTab = 'sections'">
         <i class="fas fa-heading"></i><span>区块标题</span>
@@ -338,12 +381,95 @@ onMounted(() => loadData())
                 <span>暂无图片</span>
               </div>
             </div>
+            <div class="preview-hero-overlay">
+              <div class="preview-hero-panel">
+                <div class="preview-hero-keywords">{{ heroPreview.keywords }}</div>
+                <h2 class="preview-hero-title">{{ heroPreview.title }}</h2>
+                <p class="preview-hero-subtitle">{{ heroPreview.subtitle }}</p>
+              </div>
+            </div>
             <!-- 左右切换按钮 -->
             <button v-if="bannerImages.length > 1" class="nav-btn prev" @click="prevBanner"><i class="fas fa-chevron-left"></i></button>
             <button v-if="bannerImages.length > 1" class="nav-btn next" @click="nextBanner"><i class="fas fa-chevron-right"></i></button>
             <!-- 指示点 -->
             <div v-if="bannerImages.length > 1" class="preview-dots">
               <button v-for="(_, i) in bannerImages" :key="i" class="dot" :class="{ active: i === previewIndex }" @click="previewIndex = i"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 横幅文案设置 -->
+      <div v-show="activeTab === 'hero'" class="tab-content">
+        <div class="split-layout">
+          <div class="edit-side">
+            <div class="edit-header">
+              <div class="edit-title"><i class="fas fa-font"></i><span>横幅文案设置</span></div>
+            </div>
+            <div class="sections-edit">
+              <div class="section-edit-item">
+                <div class="section-edit-header"><i class="fas fa-tags"></i><span>顶部关键词条</span></div>
+                <div class="section-edit-fields">
+                  <div class="field-row">
+                    <label>关键词行</label>
+                    <el-input
+                      v-model="hero.keywords"
+                      type="textarea"
+                      :rows="2"
+                      placeholder="如：试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基"
+                    />
+                  </div>
+                  <div class="field-help">建议使用竖线分隔关键词，前台会按一整行显示。</div>
+                </div>
+              </div>
+
+              <div class="section-edit-item">
+                <div class="section-edit-header"><i class="fas fa-heading"></i><span>主标题</span></div>
+                <div class="section-edit-fields">
+                  <div class="field-row">
+                    <label>主标题内容</label>
+                    <el-input
+                      v-model="hero.title"
+                      placeholder="如：科研试剂耗材一站式供应"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-edit-item">
+                <div class="section-edit-header"><i class="fas fa-quote-right"></i><span>副标题 / 标语</span></div>
+                <div class="section-edit-fields">
+                  <div class="field-row">
+                    <label>副标题内容</label>
+                    <el-input
+                      v-model="hero.subtitle"
+                      placeholder="如：信立科研 · 荣筑未来"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-side">
+            <div class="preview-header"><i class="fas fa-eye"></i><span>效果预览</span></div>
+            <div class="preview-content hero-preview-content">
+              <div class="hero-preview-stage">
+                <img v-if="currentPreviewBanner && currentPreviewBanner.url" :src="currentPreviewBanner.url" alt="" />
+                <div v-else class="hero-preview-fallback">
+                  <i class="fas fa-image"></i>
+                  <span>当前未选择横幅图片</span>
+                </div>
+                <div class="hero-preview-mask"></div>
+                <div class="preview-hero-overlay">
+                  <div class="preview-hero-panel">
+                    <div class="preview-hero-keywords">{{ heroPreview.keywords }}</div>
+                    <h2 class="preview-hero-title">{{ heroPreview.title }}</h2>
+                    <p class="preview-hero-subtitle">{{ heroPreview.subtitle }}</p>
+                  </div>
+                </div>
+              </div>
+              <p class="hero-preview-tip">预览使用当前选中的横幅图片；若未选择图片，则显示默认背景。</p>
             </div>
           </div>
         </div>
@@ -678,6 +804,57 @@ onMounted(() => loadData())
   object-fit: cover;
 }
 
+.preview-hero-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.preview-hero-panel {
+  width: min(78%, 760px);
+  padding: 28px 48px;
+  text-align: center;
+  background: rgba(5, 84, 140, 0.72);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.preview-hero-keywords {
+  display: inline-block;
+  padding: 10px 28px;
+  margin-bottom: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #05548C;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  white-space: pre-line;
+}
+
+.preview-hero-title {
+  margin: 0 0 18px;
+  color: #fff;
+  font-size: clamp(30px, 3.2vw, 64px);
+  font-weight: 800;
+  letter-spacing: 4px;
+  line-height: 1.2;
+  white-space: pre-line;
+}
+
+.preview-hero-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: clamp(18px, 1.5vw, 28px);
+  font-weight: 400;
+  letter-spacing: 6px;
+  white-space: pre-line;
+}
+
 .preview-empty {
   width: 100%;
   height: 100%;
@@ -834,6 +1011,12 @@ onMounted(() => loadData())
   font-weight: 500;
 }
 
+.field-help {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #909399;
+}
+
 .preview-header {
   display: flex;
   align-items: center;
@@ -853,6 +1036,54 @@ onMounted(() => loadData())
   overflow-y: auto;
   padding: 24px;
   background: #fff;
+}
+
+.hero-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero-preview-stage {
+  position: relative;
+  aspect-ratio: 2.4 / 1;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+}
+
+.hero-preview-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-preview-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.hero-preview-fallback i {
+  font-size: 44px;
+}
+
+.hero-preview-mask {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.72));
+}
+
+.hero-preview-tip {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #909399;
 }
 
 .sections-preview-content {
@@ -902,6 +1133,25 @@ onMounted(() => loadData())
   
   .banner-cards {
     gap: 12px;
+  }
+
+  .preview-hero-panel {
+    width: 100%;
+    padding: 20px 18px;
+  }
+
+  .preview-hero-keywords {
+    font-size: 12px;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+  }
+
+  .preview-hero-title {
+    letter-spacing: 1px;
+  }
+
+  .preview-hero-subtitle {
+    letter-spacing: 2px;
   }
 }
 </style>
