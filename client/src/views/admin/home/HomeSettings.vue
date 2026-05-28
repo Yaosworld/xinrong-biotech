@@ -394,15 +394,17 @@ const duplicateHeroGroup = (groupId: string) => {
 }
 
 // ==================== 保存发布 ====================
-// 构建保存数据，只保存有图片的横幅
-const buildData = () => ({ 
-  slides: bannerImages.value.filter(b => b.imageId && b.url).map(b => ({
-    id: b.id,
-    imageId: b.imageId,
-    url: b.url,
-    filename: b.filename,
-    heroGroupId: b.heroGroupId || heroGroups.value[0]?.id || DEFAULT_HERO_GROUP_ID
-  })),
+// 构建保存数据：兼容旧的 URL-only 横幅，不因缺少 imageId 被过滤掉
+const buildData = () => ({
+  slides: bannerImages.value
+    .filter(banner => banner.url.trim())
+    .map(banner => ({
+      id: banner.id,
+      imageId: banner.imageId,
+      url: banner.url.trim(),
+      filename: banner.filename,
+      heroGroupId: banner.heroGroupId || heroGroups.value[0]?.id || DEFAULT_HERO_GROUP_ID
+    })),
   heroGroups: heroGroups.value.map(group => ({
     id: group.id,
     name: group.name.trim() || '未命名文案组',
@@ -410,7 +412,7 @@ const buildData = () => ({
     title: group.title,
     subtitle: group.subtitle
   })),
-  sections: sections.value 
+  sections: sections.value
 })
 
 const saveData = async () => {
