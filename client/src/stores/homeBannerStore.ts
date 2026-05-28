@@ -8,13 +8,27 @@ import { contentApi } from '@/api/contentApi'
 
 export interface HomeBannerItem {
   id: string
+  imageId: number | null
   url: string
+  filename: string
+  heroGroupId: string
+  hero: HomeHeroGroup
 }
 
-export interface HomeHeroConfig {
+export interface HomeHeroGroup {
+  id: string
+  name: string
   keywords: string
   title: string
   subtitle: string
+}
+
+export interface HomeSlideItem {
+  id: string
+  imageId: number | null
+  url: string
+  filename: string
+  heroGroupId: string
 }
 
 export interface SectionConfig {
@@ -23,8 +37,19 @@ export interface SectionConfig {
 }
 
 export interface HomeConfig {
-  images: HomeBannerItem[]
-  hero: HomeHeroConfig
+  slides?: HomeSlideItem[]
+  heroGroups?: HomeHeroGroup[]
+  images?: Array<{
+    id: string
+    imageId?: number | null
+    url: string
+    filename?: string
+  }>
+  hero?: {
+    keywords?: string
+    title?: string
+    subtitle?: string
+  }
   sections: {
     products: SectionConfig
     brands: SectionConfig
@@ -32,10 +57,17 @@ export interface HomeConfig {
   }
 }
 
-const createEmptyHero = (): HomeHeroConfig => ({
+const DEFAULT_HERO_GROUP_ID = 'hero_default'
+
+const createEmptyHeroGroup = (
+  overrides: Partial<HomeHeroGroup> = {}
+): HomeHeroGroup => ({
+  id: overrides.id || DEFAULT_HERO_GROUP_ID,
+  name: overrides.name || '默认文案',
   keywords: '',
   title: '',
-  subtitle: ''
+  subtitle: '',
+  ...overrides
 })
 
 const createEmptySections = (): HomeConfig['sections'] => ({
@@ -44,13 +76,62 @@ const createEmptySections = (): HomeConfig['sections'] => ({
   promotions: { badge: '', title: '' }
 })
 
-const normalizeHero = (
-  hero?: Partial<HomeHeroConfig>
-): HomeHeroConfig => ({
-  keywords: hero?.keywords || '',
-  title: hero?.title || '',
-  subtitle: hero?.subtitle || ''
-})
+const normalizeHeroGroups = (
+  heroGroups?: Partial<HomeHeroGroup>[],
+  legacyHero?: { keywords?: string; title?: string; subtitle?: string }
+): HomeHeroGroup[] => {
+  if (Array.isArray(heroGroups) && heroGroups.length > 0) {
+    return heroGroups.map((group, index) =>
+      createEmptyHeroGroup({
+        id: group?.id || `hero_${index + 1}`,
+        name: group?.name || `文案组 ${index + 1}`,
+        keywords: group?.keywords || '',
+        title: group?.title || '',
+        subtitle: group?.subtitle || ''
+      })
+    )
+  }
+
+  return [
+    createEmptyHeroGroup({
+      id: DEFAULT_HERO_GROUP_ID,
+      name: '默认文案',
+      keywords: legacyHero?.keywords || '',
+      title: legacyHero?.title || '',
+      subtitle: legacyHero?.subtitle || ''
+    })
+  ]
+}
+
+const normalizeSlides = (
+  slides: HomeConfig['slides'],
+  legacyImages: HomeConfig['images'],
+  heroGroups: HomeHeroGroup[]
+): HomeSlideItem[] => {
+  const fallbackHeroGroupId = heroGroups[0]?.id || DEFAULT_HERO_GROUP_ID
+
+  if (Array.isArray(slides) && slides.length > 0) {
+    return slides.map((slide, index) => ({
+      id: slide?.id || `slide_${index + 1}`,
+      imageId: typeof slide?.imageId === 'number' ? slide.imageId : null,
+      url: slide?.url || '',
+      filename: slide?.filename || '',
+      heroGroupId: slide?.heroGroupId || fallbackHeroGroupId
+    }))
+  }
+
+  if (Array.isArray(legacyImages) && legacyImages.length > 0) {
+    return legacyImages.map((image, index) => ({
+      id: image?.id || `slide_${index + 1}`,
+      imageId: typeof image?.imageId === 'number' ? image.imageId : null,
+      url: image?.url || '',
+      filename: image?.filename || '',
+      heroGroupId: fallbackHeroGroupId
+    }))
+  }
+
+  return []
+}
 
 const normalizeSections = (
   sections?: Partial<HomeConfig['sections']>
@@ -77,8 +158,9 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
   // ========================================
   // State
   // ========================================
+  const slides = ref<HomeSlideItem[]>([])
+  const heroGroups = ref<HomeHeroGroup[]>([createEmptyHeroGroup()])
   const banners = ref<HomeBannerItem[]>([])
-  const hero = ref<HomeHeroConfig>(createEmptyHero())
   const sections = ref<HomeConfig['sections']>(createEmptySections())
   const loading = ref(false)
   const loaded = ref(false)
@@ -92,21 +174,47 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
    * 加载首页配置数据
    */
   async function loadBanners() {
-    if (loaded.value) return { banners: banners.value, sections: sections.value }
+    if (loaded.value) {
+      return {
+        slides: slides.value,
+        heroGroups: heroGroups.value,
+        banners: banners.value,
+        sections: sections.value
+      }
+    }
 
     loading.value = true
     error.value = null
 
     try {
       const data = await contentApi.getPublishedOne<HomeConfig>('home_config', 'main')
-      banners.value = Array.isArray(data?.images) ? data.images.filter(item => item?.url) : []
-      hero.value = normalizeHero(data?.hero)
+
+      heroGroups.value = normalizeHeroGroups(data?.heroGroups, data?.hero)
+      slides.value = normalizeSlides(data?.slides, data?.images, heroGroups.value)
+      banners.value = slides.value
+        .filter(item => item?.url)
+        .map(item => ({
+          ...item,
+          hero: heroGroups.value.find(group => group.id === item.heroGroupId) || heroGroups.value[0]
+        }))
+
       sections.value = normalizeSections(data?.sections)
       loaded.value = true
-      return { banners: banners.value, hero: hero.value, sections: sections.value }
+
+      return {
+        slides: slides.value,
+        heroGroups: heroGroups.value,
+        banners: banners.value,
+        sections: sections.value
+      }
     } catch (e) {
       error.value = e instanceof Error ? e.message : '加载首页配置失败'
-      return { banners: banners.value, hero: hero.value, sections: sections.value }
+      return {
+        slides: slides.value,
+        heroGroups: heroGroups.value,
+        banners: banners.value,
+        sections: sections.value
+      }
     } finally {
       loading.value = false
     }
@@ -124,8 +232,9 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
    * 清除缓存
    */
   function clearCache() {
+    slides.value = []
+    heroGroups.value = [createEmptyHeroGroup()]
     banners.value = []
-    hero.value = createEmptyHero()
     sections.value = createEmptySections()
     loaded.value = false
     error.value = null
@@ -143,8 +252,9 @@ export const useHomeBannerStore = defineStore('homeBanner', () => {
 
   return {
     // State
+    slides,
+    heroGroups,
     banners,
-    hero,
     sections,
     loading,
     loaded,

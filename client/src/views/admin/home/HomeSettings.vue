@@ -29,50 +29,165 @@ interface BannerItem {
   id: string           // 横幅位置唯一标识
   imageId: number | null  // 关联的图片库图片ID
   url: string          // 图片URL（用于显示）
-  filename?: string    // 文件名
+  filename: string     // 文件名
+  heroGroupId: string  // 绑定的文案组
 }
 
-interface HeroConfig {
+interface HeroGroupItem {
+  id: string
+  name: string
   keywords: string
   title: string
   subtitle: string
 }
 
-const bannerImages = ref<BannerItem[]>([])
-const createEmptyHero = (): HeroConfig => ({
-  keywords: '',
-  title: '',
-  subtitle: ''
-})
-const createEmptySections = () => ({
-  products: { badge: '', title: '' },
-  brands: { badge: '', title: '' },
-  promotions: { badge: '', title: '' }
-})
-
+const DEFAULT_HERO_GROUP_ID = 'hero_default'
 const defaultHero = {
   keywords: '试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基',
   title: '科研试剂耗材一站式供应',
   subtitle: '信立科研 · 荣筑未来'
 }
 
-const hero = ref<HeroConfig>(createEmptyHero())
+const createId = (prefix: string) =>
+  `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+const createHeroGroup = (overrides: Partial<HeroGroupItem> = {}): HeroGroupItem => ({
+  id: overrides.id || createId('hero'),
+  name: overrides.name || '未命名文案组',
+  keywords: overrides.keywords || '',
+  title: overrides.title || '',
+  subtitle: overrides.subtitle || ''
+})
+
+const createEmptySections = () => ({
+  products: { badge: '', title: '' },
+  brands: { badge: '', title: '' },
+  promotions: { badge: '', title: '' }
+})
+
+const bannerImages = ref<BannerItem[]>([])
+const heroGroups = ref<HeroGroupItem[]>([
+  createHeroGroup({
+    id: DEFAULT_HERO_GROUP_ID,
+    name: '默认文案',
+    ...defaultHero
+  })
+])
+const selectedHeroGroupId = ref<string>(DEFAULT_HERO_GROUP_ID)
 const sections = ref(createEmptySections())
 
 const originalData = ref<string>('')
 
 // ==================== 计算属性 ====================
 const currentDataString = computed(() => JSON.stringify({
-  images: bannerImages.value,
-  hero: hero.value,
+  slides: bannerImages.value,
+  heroGroups: heroGroups.value,
   sections: sections.value
 }))
 const hasUnsavedChanges = computed(() => originalData.value !== '' && currentDataString.value !== originalData.value)
-const heroPreview = computed(() => ({
-  keywords: hero.value.keywords || defaultHero.keywords,
-  title: hero.value.title || defaultHero.title,
-  subtitle: hero.value.subtitle || defaultHero.subtitle
+
+const getHeroGroupById = (groupId?: string | null) =>
+  heroGroups.value.find(group => group.id === groupId) || heroGroups.value[0] || null
+
+const normalizeHeroGroups = (
+  groups?: any[],
+  legacyHero?: { keywords?: string; title?: string; subtitle?: string }
+): HeroGroupItem[] => {
+  if (Array.isArray(groups) && groups.length > 0) {
+    return groups.map((group, index) => createHeroGroup({
+      id: group?.id || createId(`hero_${index + 1}`),
+      name: group?.name || `文案组 ${index + 1}`,
+      keywords: group?.keywords || '',
+      title: group?.title || '',
+      subtitle: group?.subtitle || ''
+    }))
+  }
+
+  return [
+    createHeroGroup({
+      id: DEFAULT_HERO_GROUP_ID,
+      name: '默认文案',
+      keywords: legacyHero?.keywords || defaultHero.keywords,
+      title: legacyHero?.title || defaultHero.title,
+      subtitle: legacyHero?.subtitle || defaultHero.subtitle
+    })
+  ]
+}
+
+const normalizeSlides = (data: any, availableHeroGroups: HeroGroupItem[]): BannerItem[] => {
+  const fallbackHeroGroupId = availableHeroGroups[0]?.id || DEFAULT_HERO_GROUP_ID
+  const rawSlides = Array.isArray(data?.slides)
+    ? data.slides
+    : Array.isArray(data?.images)
+      ? data.images
+      : []
+
+  if (rawSlides.length === 0) {
+    return [{
+      id: createId('slide'),
+      imageId: null,
+      url: '',
+      filename: '',
+      heroGroupId: fallbackHeroGroupId
+    }]
+  }
+
+  return rawSlides.map((slide: any, index: number) => ({
+    id: slide?.id || createId(`slide_${index + 1}`),
+    imageId: typeof slide?.imageId === 'number' ? slide.imageId : null,
+    url: slide?.url || '',
+    filename: slide?.filename || '',
+    heroGroupId: slide?.heroGroupId || fallbackHeroGroupId
+  }))
+}
+
+const syncBannerHeroGroupIds = () => {
+  const fallbackHeroGroupId = heroGroups.value[0]?.id || DEFAULT_HERO_GROUP_ID
+  const validIds = new Set(heroGroups.value.map(group => group.id))
+
+  bannerImages.value.forEach(banner => {
+    if (!banner.heroGroupId || !validIds.has(banner.heroGroupId)) {
+      banner.heroGroupId = fallbackHeroGroupId
+    }
+  })
+}
+
+const ensureSelectedHeroGroup = () => {
+  if (!selectedHeroGroupId.value || !heroGroups.value.some(group => group.id === selectedHeroGroupId.value)) {
+    selectedHeroGroupId.value = heroGroups.value[0]?.id || DEFAULT_HERO_GROUP_ID
+  }
+}
+
+const currentPreviewHeroGroup = computed(() => {
+  const previewBanner = bannerImages.value[previewIndex.value] || bannerImages.value[0] || null
+  return getHeroGroupById(previewBanner?.heroGroupId)
+})
+
+const currentPreviewHero = computed(() => ({
+  keywords: currentPreviewHeroGroup.value?.keywords || defaultHero.keywords,
+  title: currentPreviewHeroGroup.value?.title || defaultHero.title,
+  subtitle: currentPreviewHeroGroup.value?.subtitle || defaultHero.subtitle
 }))
+
+const selectedHeroGroup = computed(() => getHeroGroupById(selectedHeroGroupId.value))
+
+const selectedHeroPreview = computed(() => ({
+  keywords: selectedHeroGroup.value?.keywords || defaultHero.keywords,
+  title: selectedHeroGroup.value?.title || defaultHero.title,
+  subtitle: selectedHeroGroup.value?.subtitle || defaultHero.subtitle
+}))
+
+const selectedHeroSlides = computed(() => {
+  if (!selectedHeroGroup.value) return []
+  return bannerImages.value.filter(banner => banner.heroGroupId === selectedHeroGroup.value?.id)
+})
+
+const selectedHeroPreviewBanner = computed(() => {
+  return selectedHeroSlides.value[0] || bannerImages.value[previewIndex.value] || bannerImages.value[0] || null
+})
+
+const getHeroGroupUsageCount = (groupId: string) =>
+  bannerImages.value.filter(banner => banner.heroGroupId === groupId).length
 
 // 已使用的图片ID集合（用于防止重复选择）
 const getUsedImageIds = (excludeIndex: number): Set<number> => {
@@ -100,12 +215,6 @@ const statusConfig = computed(() => {
   return { type: 'info' as const, icon: 'fas fa-file', text: '未发布', pulse: false }
 })
 
-const normalizeHero = (data?: Partial<HeroConfig>): HeroConfig => ({
-  keywords: data?.keywords || '',
-  title: data?.title || '',
-  subtitle: data?.subtitle || ''
-})
-
 const normalizeSections = (data?: any) => ({
   products: {
     badge: data?.products?.badge || '',
@@ -126,21 +235,11 @@ const loadData = async () => {
   try {
     const content = await adminApi.getOne('home_config', 'main')
     const data = (content.draftData || content.publishedData || {}) as any
-    
-    // 兼容旧数据格式（只有url）和新数据格式（有imageId）
-    if (data.images && Array.isArray(data.images)) {
-      bannerImages.value = data.images.map((img: any, index: number) => ({
-        id: img.id || String(Date.now() + index),
-        imageId: img.imageId || null,
-        url: img.url || '',
-        filename: img.filename || ''
-      }))
-    } else {
-      // 没有数据时创建一个空位置
-      bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
-    }
-    
-    hero.value = normalizeHero(data.hero)
+
+    heroGroups.value = normalizeHeroGroups(data.heroGroups, data.hero)
+    bannerImages.value = normalizeSlides(data, heroGroups.value)
+    syncBannerHeroGroupIds()
+    ensureSelectedHeroGroup()
     sections.value = normalizeSections(data.sections)
     
     const hasDraft = content.draftData !== null
@@ -153,8 +252,21 @@ const loadData = async () => {
     editStatus.value = 'clean'
   } catch (e) {
     console.error('加载首页设置失败:', e)
-    bannerImages.value = [{ id: String(Date.now()), imageId: null, url: '', filename: '' }]
-    hero.value = createEmptyHero()
+    heroGroups.value = [
+      createHeroGroup({
+        id: DEFAULT_HERO_GROUP_ID,
+        name: '默认文案',
+        ...defaultHero
+      })
+    ]
+    selectedHeroGroupId.value = DEFAULT_HERO_GROUP_ID
+    bannerImages.value = [{
+      id: createId('slide'),
+      imageId: null,
+      url: '',
+      filename: '',
+      heroGroupId: DEFAULT_HERO_GROUP_ID
+    }]
     sections.value = createEmptySections()
     originalData.value = currentDataString.value
     contentStatus.value = 'unpublished'
@@ -167,7 +279,13 @@ const loadData = async () => {
 const previewIndex = ref(0)
 const pickerRefs = ref<Record<number, any>>({})
 const currentPreviewBanner = computed(() => bannerImages.value[previewIndex.value] || bannerImages.value[0] || null)
-const addBanner = () => bannerImages.value.push({ id: String(Date.now()), imageId: null, url: '', filename: '' })
+const addBanner = () => bannerImages.value.push({
+  id: createId('slide'),
+  imageId: null,
+  url: '',
+  filename: '',
+  heroGroupId: heroGroups.value[0]?.id || DEFAULT_HERO_GROUP_ID
+})
 
 // 打开图片选择器
 const openImagePicker = (index: number) => {
@@ -190,6 +308,10 @@ const handleImageChange = (index: number, imageInfo: { id: number; url: string; 
   }
 }
 
+const bindHeroGroupToBanner = (index: number, heroGroupId: string) => {
+  bannerImages.value[index].heroGroupId = heroGroupId
+}
+
 const removeBanner = async (index: number) => {
   if (bannerImages.value.length <= 1) { ElMessage.warning('至少保留一个横幅位置'); return }
   try {
@@ -210,18 +332,84 @@ const moveBanner = (index: number, direction: 'up' | 'down') => {
 const prevBanner = () => { previewIndex.value = (previewIndex.value - 1 + bannerImages.value.length) % bannerImages.value.length }
 const nextBanner = () => { previewIndex.value = (previewIndex.value + 1) % bannerImages.value.length }
 
+// ==================== 文案组操作 ====================
+const addHeroGroup = () => {
+  const nextIndex = heroGroups.value.length + 1
+  const newGroup = createHeroGroup({
+    name: `文案组 ${nextIndex}`
+  })
+  heroGroups.value.push(newGroup)
+  selectedHeroGroupId.value = newGroup.id
+}
+
+const removeHeroGroup = async (groupId: string) => {
+  if (heroGroups.value.length <= 1) {
+    ElMessage.warning('至少保留一个文案组')
+    return
+  }
+
+  const targetGroup = getHeroGroupById(groupId)
+  if (!targetGroup) return
+
+  const fallbackGroup = heroGroups.value.find(group => group.id !== groupId)
+  if (!fallbackGroup) return
+
+  const usageCount = getHeroGroupUsageCount(groupId)
+  const confirmText = usageCount > 0
+    ? `该文案组已绑定 ${usageCount} 张横幅，删除后这些横幅将自动改绑到「${fallbackGroup.name}」。确定继续吗？`
+    : '确定要删除这个文案组吗？'
+
+  try {
+    await ElMessageBox.confirm(confirmText, '确认删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    bannerImages.value.forEach(banner => {
+      if (banner.heroGroupId === groupId) {
+        banner.heroGroupId = fallbackGroup.id
+      }
+    })
+
+    heroGroups.value = heroGroups.value.filter(group => group.id !== groupId)
+    selectedHeroGroupId.value = fallbackGroup.id
+    syncBannerHeroGroupIds()
+  } catch {}
+}
+
+const duplicateHeroGroup = (groupId: string) => {
+  const group = getHeroGroupById(groupId)
+  if (!group) return
+
+  const copy = createHeroGroup({
+    name: `${group.name} 副本`,
+    keywords: group.keywords,
+    title: group.title,
+    subtitle: group.subtitle
+  })
+
+  heroGroups.value.push(copy)
+  selectedHeroGroupId.value = copy.id
+}
+
 // ==================== 保存发布 ====================
 // 构建保存数据，只保存有图片的横幅
 const buildData = () => ({ 
-  images: bannerImages.value.filter(b => b.imageId && b.url).map(b => ({
+  slides: bannerImages.value.filter(b => b.imageId && b.url).map(b => ({
     id: b.id,
     imageId: b.imageId,
     url: b.url,
-    filename: b.filename
+    filename: b.filename,
+    heroGroupId: b.heroGroupId || heroGroups.value[0]?.id || DEFAULT_HERO_GROUP_ID
   })),
-  hero: {
-    ...hero.value
-  },
+  heroGroups: heroGroups.value.map(group => ({
+    id: group.id,
+    name: group.name.trim() || '未命名文案组',
+    keywords: group.keywords,
+    title: group.title,
+    subtitle: group.subtitle
+  })),
   sections: sections.value 
 })
 
@@ -364,6 +552,22 @@ onMounted(() => loadData())
               class="hidden-picker"
               @image-change="(info) => handleImageChange(index, info)"
             />
+            <div class="card-meta" @click.stop>
+              <div class="card-meta-label">绑定文案组</div>
+              <el-select
+                v-model="bannerImages[index].heroGroupId"
+                size="small"
+                class="banner-hero-select"
+                @change="value => bindHeroGroupToBanner(index, value)"
+              >
+                <el-option
+                  v-for="group in heroGroups"
+                  :key="group.id"
+                  :label="`${group.name} (${getHeroGroupUsageCount(group.id)} 张)`"
+                  :value="group.id"
+                />
+              </el-select>
+            </div>
           </div>
         </div>
 
@@ -383,9 +587,9 @@ onMounted(() => loadData())
             </div>
             <div class="preview-hero-overlay">
               <div class="preview-hero-panel">
-                <div class="preview-hero-keywords">{{ heroPreview.keywords }}</div>
-                <h2 class="preview-hero-title">{{ heroPreview.title }}</h2>
-                <p class="preview-hero-subtitle">{{ heroPreview.subtitle }}</p>
+                <div class="preview-hero-keywords">{{ currentPreviewHero.keywords }}</div>
+                <h2 class="preview-hero-title">{{ currentPreviewHero.title }}</h2>
+                <p class="preview-hero-subtitle">{{ currentPreviewHero.subtitle }}</p>
               </div>
             </div>
             <!-- 左右切换按钮 -->
@@ -404,16 +608,62 @@ onMounted(() => loadData())
         <div class="split-layout">
           <div class="edit-side">
             <div class="edit-header">
-              <div class="edit-title"><i class="fas fa-font"></i><span>横幅文案设置</span></div>
+              <div class="edit-title"><i class="fas fa-font"></i><span>横幅文案组设置</span></div>
+              <div class="hero-header-actions">
+                <el-button size="small" type="primary" plain @click="addHeroGroup">
+                  <i class="fas fa-plus mr-1"></i> 添加文案组
+                </el-button>
+              </div>
             </div>
             <div class="sections-edit">
-              <div class="section-edit-item">
+              <div class="hero-group-list">
+                <button
+                  v-for="group in heroGroups"
+                  :key="group.id"
+                  type="button"
+                  class="hero-group-chip"
+                  :class="{ active: selectedHeroGroupId === group.id }"
+                  @click="selectedHeroGroupId = group.id"
+                >
+                  <span class="hero-group-chip-name">{{ group.name }}</span>
+                  <span class="hero-group-chip-count">{{ getHeroGroupUsageCount(group.id) }} 张图</span>
+                </button>
+              </div>
+
+              <div v-if="selectedHeroGroup" class="section-edit-item">
+                <div class="section-edit-header hero-group-edit-header">
+                  <div class="hero-group-edit-title">
+                    <i class="fas fa-pen-nib"></i>
+                    <span>编辑文案组</span>
+                  </div>
+                  <div class="hero-group-edit-actions">
+                    <el-button size="small" text @click="duplicateHeroGroup(selectedHeroGroup.id)">
+                      <i class="fas fa-copy mr-1"></i> 复制
+                    </el-button>
+                    <el-button size="small" text type="danger" @click="removeHeroGroup(selectedHeroGroup.id)">
+                      <i class="fas fa-trash mr-1"></i> 删除
+                    </el-button>
+                  </div>
+                </div>
+                <div class="section-edit-fields">
+                  <div class="field-row">
+                    <label>文案组名称</label>
+                    <el-input
+                      v-model="selectedHeroGroup.name"
+                      placeholder="如：科研综合文案"
+                    />
+                  </div>
+                  <div class="field-help">这个名称主要用于后台识别与绑定，不会直接显示到前台首页。</div>
+                </div>
+              </div>
+
+              <div v-if="selectedHeroGroup" class="section-edit-item">
                 <div class="section-edit-header"><i class="fas fa-tags"></i><span>顶部关键词条</span></div>
                 <div class="section-edit-fields">
                   <div class="field-row">
                     <label>关键词行</label>
                     <el-input
-                      v-model="hero.keywords"
+                      v-model="selectedHeroGroup.keywords"
                       type="textarea"
                       :rows="2"
                       placeholder="如：试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基"
@@ -423,26 +673,26 @@ onMounted(() => loadData())
                 </div>
               </div>
 
-              <div class="section-edit-item">
+              <div v-if="selectedHeroGroup" class="section-edit-item">
                 <div class="section-edit-header"><i class="fas fa-heading"></i><span>主标题</span></div>
                 <div class="section-edit-fields">
                   <div class="field-row">
                     <label>主标题内容</label>
                     <el-input
-                      v-model="hero.title"
+                      v-model="selectedHeroGroup.title"
                       placeholder="如：科研试剂耗材一站式供应"
                     />
                   </div>
                 </div>
               </div>
 
-              <div class="section-edit-item">
+              <div v-if="selectedHeroGroup" class="section-edit-item">
                 <div class="section-edit-header"><i class="fas fa-quote-right"></i><span>副标题 / 标语</span></div>
                 <div class="section-edit-fields">
                   <div class="field-row">
                     <label>副标题内容</label>
                     <el-input
-                      v-model="hero.subtitle"
+                      v-model="selectedHeroGroup.subtitle"
                       placeholder="如：信立科研 · 荣筑未来"
                     />
                   </div>
@@ -455,21 +705,21 @@ onMounted(() => loadData())
             <div class="preview-header"><i class="fas fa-eye"></i><span>效果预览</span></div>
             <div class="preview-content hero-preview-content">
               <div class="hero-preview-stage">
-                <img v-if="currentPreviewBanner && currentPreviewBanner.url" :src="currentPreviewBanner.url" alt="" />
+                <img v-if="selectedHeroPreviewBanner && selectedHeroPreviewBanner.url" :src="selectedHeroPreviewBanner.url" alt="" />
                 <div v-else class="hero-preview-fallback">
                   <i class="fas fa-image"></i>
-                  <span>当前未选择横幅图片</span>
+                  <span>当前文案组还没有绑定横幅图片</span>
                 </div>
                 <div class="hero-preview-mask"></div>
                 <div class="preview-hero-overlay">
                   <div class="preview-hero-panel">
-                    <div class="preview-hero-keywords">{{ heroPreview.keywords }}</div>
-                    <h2 class="preview-hero-title">{{ heroPreview.title }}</h2>
-                    <p class="preview-hero-subtitle">{{ heroPreview.subtitle }}</p>
+                    <div class="preview-hero-keywords">{{ selectedHeroPreview.keywords }}</div>
+                    <h2 class="preview-hero-title">{{ selectedHeroPreview.title }}</h2>
+                    <p class="preview-hero-subtitle">{{ selectedHeroPreview.subtitle }}</p>
                   </div>
                 </div>
               </div>
-              <p class="hero-preview-tip">预览使用当前选中的横幅图片；若未选择图片，则显示默认背景。</p>
+              <p class="hero-preview-tip">预览优先使用当前文案组绑定的第一张横幅图片；如果该文案组暂未绑定图片，则显示默认背景。</p>
             </div>
           </div>
         </div>
@@ -679,6 +929,23 @@ onMounted(() => loadData())
   align-items: center;
   justify-content: center;
   z-index: 2;
+}
+
+.card-meta {
+  padding: 10px;
+  border-top: 1px solid var(--admin-border);
+  background: #fff;
+}
+
+.card-meta-label {
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.banner-hero-select {
+  width: 100%;
 }
 
 /* 悬停操作层 */
@@ -967,11 +1234,57 @@ onMounted(() => loadData())
 
 .edit-title i { color: #05548C; }
 
+.hero-header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .sections-edit {
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.hero-group-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hero-group-chip {
+  min-width: 150px;
+  padding: 10px 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.hero-group-chip:hover {
+  border-color: #05548C;
+  box-shadow: 0 4px 12px rgba(5, 84, 140, 0.1);
+}
+
+.hero-group-chip.active {
+  border-color: #05548C;
+  background: rgba(5, 84, 140, 0.05);
+  box-shadow: 0 0 0 2px rgba(5, 84, 140, 0.12);
+}
+
+.hero-group-chip-name {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.hero-group-chip-count {
+  font-size: 12px;
+  color: #909399;
 }
 
 .section-edit-item {
@@ -993,6 +1306,17 @@ onMounted(() => loadData())
 }
 
 .section-edit-header i { color: #05548C; }
+
+.hero-group-edit-header {
+  justify-content: space-between;
+}
+
+.hero-group-edit-title,
+.hero-group-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 .section-edit-fields { padding: 12px; }
 
@@ -1116,6 +1440,10 @@ onMounted(() => loadData())
   .banner-card {
     width: 160px;
   }
+
+  .hero-group-chip {
+    min-width: calc(50% - 5px);
+  }
 }
 
 @media (max-width: 600px) {
@@ -1133,6 +1461,15 @@ onMounted(() => loadData())
   
   .banner-cards {
     gap: 12px;
+  }
+
+  .card-meta {
+    padding: 8px;
+  }
+
+  .hero-group-chip {
+    width: 100%;
+    min-width: 100%;
   }
 
   .preview-hero-panel {

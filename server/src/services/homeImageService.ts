@@ -73,12 +73,13 @@ class HomeImageServiceImpl extends BaseImageService<HomeImage> {
       // 清理草稿数据
       if (configRow.draft_data) {
         const draftConfig = JSON.parse(configRow.draft_data)
-        if (draftConfig.images && Array.isArray(draftConfig.images)) {
-          const originalLength = draftConfig.images.length
-          draftConfig.images = draftConfig.images.filter(
+        const draftSlides = this.getSlides(draftConfig)
+        if (draftSlides.length > 0) {
+          const filteredSlides = draftSlides.filter(
             (img: { imageId?: number }) => img.imageId !== imageId
           )
-          if (draftConfig.images.length !== originalLength) {
+          if (filteredSlides.length !== draftSlides.length) {
+            this.setSlides(draftConfig, filteredSlides)
             db.run(`
               UPDATE contents SET draft_data = ? 
               WHERE content_type = 'home_config' AND content_key = 'main'
@@ -91,12 +92,13 @@ class HomeImageServiceImpl extends BaseImageService<HomeImage> {
       // 清理已发布数据
       if (configRow.published_data) {
         const publishedConfig = JSON.parse(configRow.published_data)
-        if (publishedConfig.images && Array.isArray(publishedConfig.images)) {
-          const originalLength = publishedConfig.images.length
-          publishedConfig.images = publishedConfig.images.filter(
+        const publishedSlides = this.getSlides(publishedConfig)
+        if (publishedSlides.length > 0) {
+          const filteredSlides = publishedSlides.filter(
             (img: { imageId?: number }) => img.imageId !== imageId
           )
-          if (publishedConfig.images.length !== originalLength) {
+          if (filteredSlides.length !== publishedSlides.length) {
+            this.setSlides(publishedConfig, filteredSlides)
             db.run(`
               UPDATE contents SET published_data = ? 
               WHERE content_type = 'home_config' AND content_key = 'main'
@@ -111,6 +113,31 @@ class HomeImageServiceImpl extends BaseImageService<HomeImage> {
       }
     } catch (error) {
       console.error('[HomeImageService] 清理图片引用失败:', error)
+    }
+  }
+
+  /**
+   * 兼容读取新版 slides 和旧版 images 结构
+   */
+  private getSlides(config: any): Array<{ imageId?: number }> {
+    if (config?.slides && Array.isArray(config.slides)) {
+      return config.slides
+    }
+
+    if (config?.images && Array.isArray(config.images)) {
+      return config.images
+    }
+
+    return []
+  }
+
+  /**
+   * 回写 slides，并同步清理旧版 images 字段，避免双结构并存
+   */
+  private setSlides(config: any, slides: Array<{ imageId?: number }>): void {
+    config.slides = slides
+    if (config.images) {
+      delete config.images
     }
   }
   
@@ -131,13 +158,11 @@ class HomeImageServiceImpl extends BaseImageService<HomeImage> {
       if (data) {
         try {
           const config = JSON.parse(data)
-          if (config.images && Array.isArray(config.images)) {
-            config.images.forEach((img: { imageId?: number }) => {
-              if (img.imageId) {
-                map.set(img.imageId, (map.get(img.imageId) || 0) + 1)
-              }
-            })
-          }
+          this.getSlides(config).forEach((img: { imageId?: number }) => {
+            if (img.imageId) {
+              map.set(img.imageId, (map.get(img.imageId) || 0) + 1)
+            }
+          })
         } catch {
           // 忽略解析错误
         }

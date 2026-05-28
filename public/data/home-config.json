@@ -1,27 +1,42 @@
 {
-  "images": [
+  "slides": [
     {
-      "id": "1",
-      "url": "/images/home/多彩细胞.webp"
+      "id": "slide_1",
+      "url": "/images/home/多彩细胞.webp",
+      "heroGroupId": "hero_a"
     },
     {
-      "id": "2",
-      "url": "/images/home/加样-1.webp"
+      "id": "slide_2",
+      "url": "/images/home/加样-1.webp",
+      "heroGroupId": "hero_a"
     },
     {
-      "id": "3",
-      "url": "/images/home/加样-2.webp"
+      "id": "slide_3",
+      "url": "/images/home/加样-2.webp",
+      "heroGroupId": "hero_a"
     },
     {
-      "id": "4",
-      "url": "/images/home/烧杯加水.webp"
+      "id": "slide_4",
+      "url": "/images/home/烧杯加水.webp",
+      "heroGroupId": "hero_b"
     }
   ],
-  "hero": {
-    "keywords": "试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基",
-    "title": "科研试剂耗材一站式供应",
-    "subtitle": "信立科研 · 荣筑未来"
-  },
+  "heroGroups": [
+    {
+      "id": "hero_a",
+      "name": "科研综合文案",
+      "keywords": "试剂 | 耗材 | 仪器 | PCR | 细胞 | 分子生物 | 血清 | 培养基",
+      "title": "科研试剂耗材一站式供应",
+      "subtitle": "信立科研 · 荣筑未来"
+    },
+    {
+      "id": "hero_b",
+      "name": "实验室解决方案",
+      "keywords": "实验室建设 | 技术支持 | 方案集成 | 售后服务",
+      "title": "实验室整体采购与服务支持",
+      "subtitle": "从试剂耗材到设备维保更省心"
+    }
+  ],
   "sections": {
     "products": {
       "badge": "热门产品",

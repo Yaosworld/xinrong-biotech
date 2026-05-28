@@ -27,8 +27,6 @@ const defaultHero = {
   subtitle: '信立科研 · 荣筑未来'
 }
 
-const hero = computed(() => homeBannerStore.hero)
-
 // 从 store 获取区块标题配置
 const sections = computed(() => homeBannerStore.sections)
 
@@ -102,13 +100,13 @@ const goTo = (path: string) => {
 <template>
   <div class="home-page">
     <!-- 图片轮播横幅 -->
-    <HomeBanner>
+    <HomeBanner v-slot="{ currentBanner }">
       <div class="banner-text-overlay">
         <div class="banner-keywords">
-          {{ hero.keywords || defaultHero.keywords }}
+          {{ currentBanner?.hero?.keywords || defaultHero.keywords }}
         </div>
-        <h1 class="banner-main-title">{{ hero.title || defaultHero.title }}</h1>
-        <p class="banner-slogan">{{ hero.subtitle || defaultHero.subtitle }}</p>
+        <h1 class="banner-main-title">{{ currentBanner?.hero?.title || defaultHero.title }}</h1>
+        <p class="banner-slogan">{{ currentBanner?.hero?.subtitle || defaultHero.subtitle }}</p>
       </div>
     </HomeBanner>
 

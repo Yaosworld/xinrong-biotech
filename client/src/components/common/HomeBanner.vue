@@ -7,6 +7,7 @@ const homeBannerStore = useHomeBannerStore()
 // 横幅数据
 const banners = computed(() => homeBannerStore.banners)
 const hasBanners = computed(() => banners.value.length > 0)
+const currentBanner = computed(() => banners.value[currentImageIndex.value] || null)
 
 const currentImageIndex = ref(0)
 const intervalId = ref<number | null>(null)
@@ -131,7 +132,10 @@ onUnmounted(() => {
 
     <!-- 内容插槽 -->
     <div class="absolute inset-0 flex items-center justify-center z-10">
-      <slot></slot>
+      <slot
+        :currentBanner="currentBanner"
+        :currentIndex="currentImageIndex"
+      ></slot>
     </div>
   </section>
 </template>
