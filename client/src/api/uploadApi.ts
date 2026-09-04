@@ -14,6 +14,7 @@ export type UploadCategory =
   | 'promotion-cover' // 活动封面
   | 'promotion-poster'// 活动海报
   | 'product-category'// 产品分类图
+  | 'product-detail'  // 产品详情图
   | 'home-banner'     // 首页 Banner
   | 'site-config'     // 网站配置图片（Logo、二维码等）
   | 'common'          // 通用图片

@@ -42,7 +42,7 @@ const columns = computed(() => [
   { 
     key: 'categoryImage', 
     label: '分类图', 
-    width: 70, 
+    width: 62, 
     type: 'image' as const, 
     editable: false, 
     imageStyle: 'contain' as const, 
@@ -50,19 +50,37 @@ const columns = computed(() => [
     // 动态获取分类图片，确保修改 categoryId 后图片立即更新
     getValue: (row: any) => getCategoryImagePath(row.categoryId)
   },
+  {
+    key: 'detailImageUrl',
+    label: '产品图',
+    width: 70,
+    type: 'image' as const,
+    imageStyle: 'contain' as const,
+    uploadCategory: 'product-detail' as const,
+    placeholder: '上传产品主展示图'
+  },
+  {
+    key: 'descriptionImageUrl',
+    label: '描述海报',
+    width: 70,
+    type: 'image' as const,
+    imageStyle: 'contain' as const,
+    uploadCategory: 'product-detail' as const,
+    placeholder: '上传产品描述海报'
+  },
   { key: 'name', label: '产品名称', width: { min: 100, flex: 1.5 }, required: true },
   { key: 'sku', label: '货号', width: { min: 110, flex: 2 } },
   { key: 'brand', label: '品牌', width: { min: 100, flex: 1.5 } },
   { 
     key: 'price', 
     label: '价格', 
-    width: { min: 140, flex: 1.2 },
+    width: { min: 70, flex: 0.5 },
     placeholder: '如：¥299/盒 或 面议'
   },
   { 
     key: 'categoryId', 
     label: '分类', 
-    width: 120,
+    width: 105,
     type: 'select' as const,
     required: true,
     // 直接在 computed 内部访问 categoryOptions.value，确保响应性
@@ -70,7 +88,7 @@ const columns = computed(() => [
   },
   { key: 'specs', label: '规格', width: 75, truncate: 12, required: true },
   { key: 'unit', label: '单位', width: 55 },
-  { key: 'desc', label: '描述', width: { min: 150, flex: 3 }, type: 'textarea' as const, truncate: 40, required: true }
+  { key: 'desc', label: '描述', width: { min: 120, flex: 4.5 }, type: 'textarea' as const, truncate: 40, required: true }
 ])
 
 // Excel 导入处理 - 返回包含 warnings 的结果，并传入已存在的 ID 避免冲突

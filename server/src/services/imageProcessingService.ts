@@ -8,6 +8,7 @@ export type ImageProcessingProfileKey =
   | 'common'
   | 'home-banner'
   | 'product-category'
+  | 'product-detail'
   | 'promotion-cover'
   | 'promotion-poster'
   | 'site-config'
@@ -68,6 +69,11 @@ const PROFILES: Record<ImageProcessingProfileKey, ImageProcessingProfile> = {
     maxWidth: 1400,
     quality: 82
   },
+  'product-detail': {
+    mode: 'webp',
+    maxWidth: 1800,
+    quality: 84
+  },
   'promotion-cover': {
     mode: 'webp',
     maxWidth: 1600,
@@ -114,6 +120,7 @@ export function getProfileForUploadCategory(category: string): ImageProcessingPr
     common: 'common',
     'home-banner': 'home-banner',
     'product-category': 'product-category',
+    'product-detail': 'product-detail',
     'promotion-cover': 'promotion-cover',
     'promotion-poster': 'promotion-poster',
     'site-config': 'site-config'

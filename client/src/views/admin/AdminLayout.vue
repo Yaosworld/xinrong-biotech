@@ -736,11 +736,15 @@ async function handleChangePwd() {
   padding: 24px;
   transition: margin-left 0.3s;
   min-height: calc(100vh - 60px);
+  min-width: 0;
+  max-width: calc(100vw - 240px);
+  overflow-x: hidden;
 }
 
 .admin-sidebar.collapsed + .admin-content,
 .admin-sidebar.collapsed ~ .admin-content {
   margin-left: 64px;
+  max-width: calc(100vw - 64px);
 }
 
 /* 响应式 */
@@ -756,6 +760,7 @@ async function handleChangePwd() {
 
   .admin-content {
     margin-left: 0;
+    max-width: 100vw;
   }
 }
 </style>

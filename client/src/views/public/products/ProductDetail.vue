@@ -4,7 +4,7 @@
  * 
  * 布局：左侧分类侧栏 + 右侧产品详情 + 底部相关产品推荐
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import { useCategoryStore } from '@/stores/categoryStore'
@@ -14,6 +14,7 @@ import ContactModal from '@/components/common/ContactModal.vue'
 import GeometricBackground from '@/components/common/GeometricBackground.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ShowcaseBanner from '@/components/common/ShowcaseBanner.vue'
+import { renderProductDescription } from '@/utils/productDescription'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,6 +26,8 @@ const productId = computed(() => route.params.id as string)
 const showContactModal = ref(false)
 const loading = ref(true)
 const imageError = ref(false)
+const detailImageError = ref(false)
+const descriptionImageError = ref(false)
 
 // 分类列表
 const categories = computed(() => categoryStore.categories)
@@ -43,8 +46,16 @@ const productCategoryName = computed(() => {
 
 const productImageUrl = computed(() => {
   if (!product.value) return '/images/common/placeholder.png'
+  if (product.value.detailImageUrl && !detailImageError.value) {
+    return product.value.detailImageUrl
+  }
   return getCategoryImagePath(product.value.categoryId)
 })
+
+const hasDescriptionText = computed(() => !!product.value?.desc?.trim())
+const hasDescriptionImage = computed(() => !!product.value?.descriptionImageUrl && !descriptionImageError.value)
+const hasDescription = computed(() => hasDescriptionText.value || hasDescriptionImage.value)
+const descriptionHtml = computed(() => renderProductDescription(product.value?.desc))
 
 const normalizedPrice = computed(() => {
   const rawPrice = product.value?.price
@@ -90,8 +101,22 @@ const closeContactModal = () => {
 }
 
 const handleImageError = () => {
+  if (product.value?.detailImageUrl && !detailImageError.value) {
+    detailImageError.value = true
+    return
+  }
   imageError.value = true
 }
+
+const handleDescriptionImageError = () => {
+  descriptionImageError.value = true
+}
+
+watch(productId, () => {
+  imageError.value = false
+  detailImageError.value = false
+  descriptionImageError.value = false
+})
 
 onMounted(async () => {
   loading.value = true
@@ -232,9 +257,20 @@ onMounted(async () => {
               </div>
 
               <!-- 产品描述 -->
-              <div v-if="product.desc" class="product-desc-section">
+              <div v-if="hasDescription" class="product-desc-section">
                 <h3 class="desc-title"><i class="fas fa-file-alt mr-2"></i>产品描述</h3>
-                <p class="desc-content">{{ product.desc }}</p>
+                <div v-if="hasDescriptionText" class="desc-content product-markdown" v-html="descriptionHtml"></div>
+                <img
+                  v-if="product.descriptionImageUrl && !descriptionImageError"
+                  :src="product.descriptionImageUrl"
+                  :alt="`${product.name}产品描述`"
+                  class="description-image"
+                  @error="handleDescriptionImageError"
+                />
+              </div>
+              <div v-else class="product-desc-section product-desc-empty">
+                <h3 class="desc-title"><i class="fas fa-file-alt mr-2"></i>产品描述</h3>
+                <p class="desc-content">目前没有详情资料</p>
               </div>
             </div>
           </div>
@@ -602,6 +638,119 @@ onMounted(async () => {
   line-height: 1.8;
   font-size: 0.875rem;
   margin: 0;
+}
+
+.product-markdown :deep(p) {
+  margin: 0 0 14px;
+}
+
+.product-markdown :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.product-markdown :deep(h1),
+.product-markdown :deep(h2),
+.product-markdown :deep(h3),
+.product-markdown :deep(h4) {
+  color: #1e293b;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 22px 0 10px;
+}
+
+.product-markdown :deep(h1) { font-size: 1.35rem; }
+.product-markdown :deep(h2) { font-size: 1.15rem; }
+.product-markdown :deep(h3) { font-size: 1rem; }
+.product-markdown :deep(h4) { font-size: 0.95rem; }
+
+.product-markdown :deep(h1:first-child),
+.product-markdown :deep(h2:first-child),
+.product-markdown :deep(h3:first-child),
+.product-markdown :deep(h4:first-child) {
+  margin-top: 0;
+}
+
+.product-markdown :deep(ul),
+.product-markdown :deep(ol) {
+  margin: 10px 0 16px;
+  padding-left: 24px;
+}
+
+.product-markdown :deep(li) {
+  margin: 6px 0;
+  padding-left: 4px;
+}
+
+.product-markdown :deep(strong) {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.product-markdown :deep(blockquote) {
+  margin: 16px 0;
+  padding: 10px 16px;
+  color: #64748b;
+  border-left: 3px solid #43ceed;
+  background: #f0f9ff;
+}
+
+.product-markdown :deep(code) {
+  padding: 2px 5px;
+  color: #075985;
+  background: #e0f2fe;
+  border-radius: 3px;
+}
+
+.product-markdown :deep(pre) {
+  overflow-x: auto;
+  margin: 14px 0;
+  padding: 14px;
+  color: #e2e8f0;
+  background: #1e293b;
+  border-radius: 6px;
+}
+
+.product-markdown :deep(pre code) {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.product-markdown :deep(table) {
+  width: 100%;
+  margin: 16px 0;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.product-markdown :deep(th),
+.product-markdown :deep(td) {
+  padding: 9px 12px;
+  text-align: left;
+  border: 1px solid #dbe5ec;
+}
+
+.product-markdown :deep(th) {
+  color: #1e293b;
+  background: #f0f7fc;
+  font-weight: 600;
+}
+
+.product-markdown :deep(a) {
+  color: #056b9e;
+  text-decoration: underline;
+}
+
+.description-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-top: 20px;
+  object-fit: contain;
+}
+
+.product-desc-empty .desc-content {
+  color: #94a3b8;
 }
 
 /* 响应式 */

@@ -31,6 +31,7 @@ const UPLOAD_DIRS: Record<string, string> = {
   'promotion-cover': 'images/promotions/covers',
   'promotion-poster': 'images/promotions/posters',
   'product-category': 'images/products',
+  'product-detail': 'images/products/details',
   'home-banner': 'images/home',
   'site-config': 'images/site',  // 网站配置图片（Logo、二维码等）
   'common': 'images/common'

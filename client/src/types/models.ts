@@ -27,6 +27,8 @@ export interface Product {
   specs: string         // 规格参数
   unit?: string         // 销售单位, e.g., "台"
   desc: string          // 产品详细描述
+  detailImageUrl?: string        // 产品主展示图，优先于分类图
+  descriptionImageUrl?: string   // 产品描述海报
 }
 
 /**

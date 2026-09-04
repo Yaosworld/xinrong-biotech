@@ -1417,6 +1417,7 @@ onBeforeUnmount(() => {
       ref="tableRef"
       :data="paginatedData"
       :row-key="rowKey"
+      table-layout="fixed"
       border
       stripe
       style="width: 100%"
@@ -1745,9 +1746,12 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .unified-table-editor {
+  min-width: 0;
+  max-width: 100%;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .editor-toolbar {
@@ -1924,6 +1928,24 @@ onBeforeUnmount(() => {
 
 :deep(.el-table) {
   width: 100% !important;
+  table-layout: fixed;
+}
+
+:deep(.el-table__inner-wrapper),
+:deep(.el-table__body-wrapper),
+:deep(.el-table__header-wrapper) {
+  max-width: 100%;
+}
+
+:deep(.el-table__body-wrapper) {
+  overflow-x: hidden !important;
+}
+
+:deep(.el-table .cell) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 :deep(.el-table th) {

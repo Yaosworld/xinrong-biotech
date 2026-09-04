@@ -16,12 +16,19 @@ const props = withDefaults(defineProps<Props>(), {
 
 const router = useRouter()
 const imageError = ref(false)
+const detailImageError = ref(false)
 
 // 获取分类名称
 const categoryName = computed(() => getCategoryName(props.product.categoryId))
 
-// 获取分类图片路径
+// 产品主图优先，详情图加载失败时回退到分类图
 const categoryImagePath = computed(() => getCategoryImagePath(props.product.categoryId))
+const productImagePath = computed(() => {
+  if (props.product.detailImageUrl && !detailImageError.value) {
+    return props.product.detailImageUrl
+  }
+  return categoryImagePath.value
+})
 
 // 安全高亮关键词（使用DOMPurify防止XSS）
 const highlightText = (text: string) => {
@@ -50,6 +57,10 @@ const highlightText = (text: string) => {
 
 // 图片加载错误处理
 const handleImageError = () => {
+  if (props.product.detailImageUrl && !detailImageError.value) {
+    detailImageError.value = true
+    return
+  }
   imageError.value = true
 }
 
@@ -66,7 +77,7 @@ const goToDetail = () => {
       <div class="image-wrapper">
         <img
           v-if="!imageError"
-          :src="categoryImagePath"
+          :src="productImagePath"
           :alt="categoryName"
           @error="handleImageError"
         />
